@@ -4,6 +4,11 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:api": "pnpm --filter @nudge/api dev",
+    "dev:worker": "pnpm --filter @nudge/worker dev",
+    "dev:web": "pnpm --filter @nudge/web dev",
+    "start:api": "pnpm --filter @nudge/api start",
+    "start:worker": "pnpm --filter @nudge/worker start",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
