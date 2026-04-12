@@ -74,3 +74,7 @@ pnpm --filter @nudge/database db:studio  # Open Prisma Studio
 ## Environment Variables
 
 See `.env.example` for all required variables with descriptions.
+
+## Claude Code
+
+This project is configured for Claude Code. See [`CLAUDE.md`](CLAUDE.md) for project overview and [`.claude/rules/`](.claude/rules/) for detailed coding conventions.

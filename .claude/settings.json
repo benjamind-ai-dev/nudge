@@ -1,0 +1,55 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm:*)",
+      "Bash(npx:*)",
+      "Bash(docker compose:*)",
+      "Bash(git:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "Bash(node:*)",
+      "Bash(tsx:*)",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-commit-checks.sh",
+            "statusMessage": "Running lint and typecheck...",
+            "timeout": 120
+          },
+          {
+            "type": "agent",
+            "if": "Bash(git commit *)",
+            "prompt": "You are a code reviewer. Run `git diff --cached` to see the staged changes. Review for:\n\n1. **Code quality**: Unused imports, dead code, overly complex logic, missing error handling\n2. **Architecture compliance**: Onion layer violations (domain importing infrastructure), business logic in controllers, missing business_id scoping\n3. **Convention violations**: class-validator usage, Passport.js, raw SQL, hardcoded queue names, float money values, localStorage usage\n4. **API contract**: Missing Zod validation on endpoints, incorrect response shape (should be { data: T })\n\nIf you find issues, respond with:\n{\"decision\": \"block\", \"reason\": \"<concise list of issues found>\"}\n\nIf the code looks good, respond with:\n{\"decision\": \"allow\", \"reason\": \"Code review passed\"}",
+            "statusMessage": "Running code review...",
+            "timeout": 120
+          },
+          {
+            "type": "agent",
+            "if": "Bash(git commit *)",
+            "prompt": "You are a security reviewer. Run `git diff --cached` to see the staged changes. Check for:\n\n1. **Hardcoded secrets**: API keys, tokens, passwords, connection strings in code (not .env)\n2. **PII exposure**: Logging of email addresses, names, phone numbers, or other PII. Check that PII is anonymized before Claude API calls.\n3. **Missing tenant isolation**: Any database query on tenant data without business_id in the WHERE clause\n4. **Injection risks**: Raw SQL without parameterization, unsanitized user input in queries\n5. **Auth bypass**: Endpoints missing auth guards, direct Clerk token access without middleware\n6. **Sensitive data in responses**: Tokens, internal IDs, or credentials leaked in API responses\n\nIf you find security issues, respond with:\n{\"decision\": \"block\", \"reason\": \"SECURITY: <concise list of issues found>\"}\n\nIf the code passes security review, respond with:\n{\"decision\": \"allow\", \"reason\": \"Security review passed\"}",
+            "statusMessage": "Running security review...",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}
