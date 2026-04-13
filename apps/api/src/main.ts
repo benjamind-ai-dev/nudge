@@ -4,10 +4,12 @@ import { Logger } from "nestjs-pino";
 import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module";
 import { Env } from "./common/config/env.schema";
+import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   const config = app.get(ConfigService<Env, true>);
   const port = config.get("PORT", { infer: true });
