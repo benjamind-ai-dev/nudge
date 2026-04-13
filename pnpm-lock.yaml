@@ -237,12 +237,6 @@ importers:
 
   packages/shared:
     dependencies:
-      bullmq:
-        specifier: ^5.31.0
-        version: 5.73.4
-      ioredis:
-        specifier: ^5.4.0
-        version: 5.10.1
       zod:
         specifier: ^3.23.0
         version: 3.25.76
