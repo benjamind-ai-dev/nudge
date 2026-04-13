@@ -7,5 +7,5 @@ export interface HealthResponse {
 }
 
 export function getHealth(): Promise<HealthResponse> {
-  return apiClient<HealthResponse>("/health");
+  return apiClient<HealthResponse>("/v1/health");
 }
