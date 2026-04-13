@@ -27,6 +27,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
     "@nudge/eslint-config": "workspace:*",
+    "@types/express": "^5.0.6",
     "@types/jest": "^29.5.0",
     "@types/node": "^22.0.0",
     "jest": "^29.7.0",
