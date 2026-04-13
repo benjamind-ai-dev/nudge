@@ -9,6 +9,9 @@ export const envSchema = z.object({
   REDIS_HOST: z.string().default("localhost"),
   REDIS_PORT: z.coerce.number().default(6379),
   REDIS_FAMILY: z.coerce.number().default(4),
+  LOG_LEVEL: z
+    .enum(["fatal", "error", "warn", "info", "debug", "trace"])
+    .optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
