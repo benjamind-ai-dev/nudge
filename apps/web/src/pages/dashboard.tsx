@@ -7,7 +7,7 @@ export default function Dashboard() {
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
       <div className="rounded-lg border p-4 max-w-sm">
-        <h2 className="text-sm font-medium text-gray-500 mb-2">API Health</h2>
+        <h2 className="text-sm font-semibold text-gray-500 mb-2">API Health</h2>
         {isLoading && <p className="text-gray-400">Checking...</p>}
         {error && <p className="text-red-500">Failed to connect</p>}
         {data && (
