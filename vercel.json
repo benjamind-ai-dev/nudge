@@ -1,0 +1,10 @@
+{
+  "buildCommand": "pnpm turbo build --filter=web",
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "pnpm install",
+  "framework": "vite",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- apps/web/ packages/",
+  "rewrites": [
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
+}
