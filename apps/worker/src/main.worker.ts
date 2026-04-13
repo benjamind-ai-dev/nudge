@@ -1,15 +1,15 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const appContext = await NestFactory.createApplicationContext(AppModule, {
-    logger: ["error", "warn", "log"],
+    bufferLogs: true,
   });
 
+  appContext.useLogger(appContext.get(Logger));
   appContext.enableShutdownHooks();
-
-  console.log("Worker started");
 }
 
 bootstrap().catch((err) => {
