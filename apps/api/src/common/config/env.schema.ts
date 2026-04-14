@@ -6,6 +6,10 @@ export const envSchema = z.object({
     .default("development"),
   PORT: z.coerce.number().default(3000),
   DATABASE_URL: z.string().min(1),
+  REDIS_URL: z.string().url().optional(),
+  REDIS_HOST: z.string().default("localhost"),
+  REDIS_PORT: z.coerce.number().default(6379),
+  REDIS_FAMILY: z.coerce.number().default(4),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .optional(),
