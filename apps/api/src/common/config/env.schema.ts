@@ -14,6 +14,11 @@ export const envSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .optional(),
   CORS_ALLOWED_ORIGINS: z.string().default("http://localhost:5173"),
+  STRIPE_SECRET_KEY: z.string().min(1),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1),
+  RESEND_WEBHOOK_SECRET: z.string().min(1),
+  CLERK_SECRET_KEY: z.string().min(1),
+  CLERK_WEBHOOK_SECRET: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

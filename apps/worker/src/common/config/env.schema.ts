@@ -12,6 +12,7 @@ export const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .optional(),
+  RESEND_API_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;
