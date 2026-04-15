@@ -3,7 +3,9 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { LoggerModule } from "nestjs-pino";
 import { envSchema, Env } from "./common/config/env.schema";
 import { DatabaseModule } from "./common/database/database.module";
+import { QueueModule } from "./common/queue/queue.module";
 import { HealthModule } from "./health/health.module";
+import { DebugModule } from "./debug/debug.module";
 
 @Module({
   imports: [
@@ -41,7 +43,9 @@ import { HealthModule } from "./health/health.module";
       },
     }),
     DatabaseModule,
+    QueueModule,
     HealthModule,
+    DebugModule,
   ],
 })
 export class AppModule {}

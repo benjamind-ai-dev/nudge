@@ -11,12 +11,15 @@
     "test": "jest"
   },
   "dependencies": {
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "@nudge/database": "workspace:*",
     "@nudge/shared": "workspace:*",
+    "bullmq": "^5.31.0",
+    "ioredis": "^5.4.0",
     "nestjs-pino": "^4.6.1",
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.0",

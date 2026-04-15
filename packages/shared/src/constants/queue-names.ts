@@ -1,8 +1,16 @@
 export const QUEUE_NAMES = {
-  INVOICE_REMINDER: "invoice-reminder",
-  SEQUENCE_STEP: "sequence-step",
-  EMAIL_SEND: "email-send",
-  WEBHOOK_DELIVERY: "webhook-delivery",
+  INVOICE_SYNC: "invoice-sync",
+  SEQUENCE_TRIGGER: "sequence-trigger",
+  MESSAGE_SEND: "message-send",
+  TOKEN_REFRESH: "token-refresh",
+  DAYS_RECALC: "days-recalc",
+  WEEKLY_SUMMARY: "weekly-summary",
+  PAYMENT_SCORE: "payment-score",
+  AI_DRAFT: "ai-draft",
+  SENDGRID_EVENTS: "sendgrid-events",
+  STRIPE_EVENTS: "stripe-events",
+  QUICKBOOKS_WEBHOOKS: "quickbooks-webhooks",
+  DEAD_LETTER: "dead-letter",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
