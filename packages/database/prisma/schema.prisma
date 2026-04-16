@@ -7,12 +7,286 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------------------------------------------------------------------------
+// 4.1 accounts
+// ---------------------------------------------------------------------------
+model Account {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String    @db.VarChar(255)
+  email                String    @db.VarChar(255)
+  plan                 String    @db.VarChar(50)
+  stripeCustomerId     String?   @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String?   @map("stripe_subscription_id") @db.VarChar(255)
+  trialEndsAt          DateTime? @map("trial_ends_at") @db.Timestamptz
+  status               String    @db.VarChar(20)
+  maxBusinesses        Int       @map("max_businesses")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  users      User[]
+  businesses Business[]
+
+  @@map("accounts")
+}
+
+// ---------------------------------------------------------------------------
+// 4.2 users
+// ---------------------------------------------------------------------------
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId   String    @map("account_id") @db.Uuid
+  email       String    @unique @db.VarChar(255)
+  name        String    @db.VarChar(255)
+  role        String    @db.VarChar(20)
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// 4.3 businesses
+// ---------------------------------------------------------------------------
+model Business {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId          String    @map("account_id") @db.Uuid
+  name               String    @db.VarChar(255)
+  accountingProvider String    @map("accounting_provider") @db.VarChar(50)
+  senderName         String    @map("sender_name") @db.VarChar(255)
+  senderEmail        String    @map("sender_email") @db.VarChar(255)
+  emailSignature     String?   @map("email_signature") @db.Text
+  timezone           String    @db.VarChar(50)
+  isActive           Boolean   @default(true) @map("is_active")
+  lastSyncAt         DateTime? @map("last_sync_at") @db.Timestamptz
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  account           Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  connection        Connection?
+  customers         Customer[]
+  invoices          Invoice[]
+  relationshipTiers RelationshipTier[]
+  sequences         Sequence[]
+  messages          Message[]
+
+  @@map("businesses")
+}
+
+// ---------------------------------------------------------------------------
+// 4.4 connections
+// ---------------------------------------------------------------------------
+model Connection {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId     String    @unique @map("business_id") @db.Uuid
+  provider       String    @db.VarChar(50)
+  accessToken    String    @map("access_token") @db.Text
+  refreshToken   String    @map("refresh_token") @db.Text
+  tokenExpiresAt DateTime  @map("token_expires_at") @db.Timestamptz
+  realmId        String?   @map("realm_id") @db.VarChar(255)
+  scopes         String?   @db.Text
+  syncCursor     String?   @map("sync_cursor") @db.Text
+  lastRefreshAt  DateTime? @map("last_refresh_at") @db.Timestamptz
+  status         String    @db.VarChar(20)
+  errorMessage   String?   @map("error_message") @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([status, tokenExpiresAt], map: "idx_connections_refresh")
+  @@map("connections")
+}
+
+// ---------------------------------------------------------------------------
+// 4.5 customers
+// ---------------------------------------------------------------------------
+model Customer {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId         String    @map("business_id") @db.Uuid
+  externalId         String    @map("external_id") @db.VarChar(255)
+  companyName        String    @map("company_name") @db.VarChar(255)
+  contactName        String?   @map("contact_name") @db.VarChar(255)
+  contactEmail       String?   @map("contact_email") @db.VarChar(255)
+  contactPhone       String?   @map("contact_phone") @db.VarChar(50)
+  relationshipTierId String?   @map("relationship_tier_id") @db.Uuid
+  paymentTerms       String?   @map("payment_terms") @db.VarChar(50)
+  avgDaysToPay       Decimal?  @map("avg_days_to_pay") @db.Decimal(8, 2)
+  totalOutstanding   Int       @default(0) @map("total_outstanding")
+  isActive           Boolean   @default(true) @map("is_active")
+  lastSyncedAt       DateTime? @map("last_synced_at") @db.Timestamptz
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  relationshipTier RelationshipTier? @relation(fields: [relationshipTierId], references: [id], onDelete: SetNull)
+  invoices         Invoice[]
+  messages         Message[]
+
+  @@unique([businessId, externalId], map: "idx_customers_external")
+  @@map("customers")
+}
+
+// ---------------------------------------------------------------------------
+// 4.6 invoices
+// ---------------------------------------------------------------------------
+model Invoice {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId      String    @map("business_id") @db.Uuid
+  customerId      String    @map("customer_id") @db.Uuid
+  externalId      String    @map("external_id") @db.VarChar(255)
+  invoiceNumber   String?   @map("invoice_number") @db.VarChar(100)
+  amountCents     Int       @map("amount_cents")
+  amountPaidCents Int       @default(0) @map("amount_paid_cents")
+  balanceDueCents Int       @map("balance_due_cents")
+  currency        String    @default("USD") @db.VarChar(3)
+  dueDate         DateTime  @map("due_date") @db.Date
+  issuedDate      DateTime? @map("issued_date") @db.Date
+  status          String    @db.VarChar(30)
+  paymentLinkUrl  String?   @map("payment_link_url") @db.Text
+  daysOverdue     Int       @default(0) @map("days_overdue")
+  aiPaymentScore  Int?      @map("ai_payment_score")
+  aiScoreReason   String?   @map("ai_score_reason") @db.Text
+  paidAt          DateTime? @map("paid_at") @db.Timestamptz
+  lastSyncedAt    DateTime? @map("last_synced_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sequenceRuns SequenceRun[]
+  messages     Message[]
+
+  @@unique([businessId, externalId], map: "idx_invoices_external")
+  @@index([businessId, status, dueDate], map: "idx_invoices_overdue")
+  @@index([customerId, status], map: "idx_invoices_customer")
+  @@map("invoices")
+}
+
+// ---------------------------------------------------------------------------
+// 4.7 relationship_tiers
+// ---------------------------------------------------------------------------
+model RelationshipTier {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isDefault   Boolean  @default(false) @map("is_default")
+  sortOrder   Int      @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  business  Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customers Customer[]
+  sequences Sequence[]
+
+  @@map("relationship_tiers")
+}
+
+// ---------------------------------------------------------------------------
+// 4.8 sequences
+// ---------------------------------------------------------------------------
+model Sequence {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId         String   @map("business_id") @db.Uuid
+  relationshipTierId String   @map("relationship_tier_id") @db.Uuid
+  name               String   @db.VarChar(255)
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  business         Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  relationshipTier RelationshipTier @relation(fields: [relationshipTierId], references: [id], onDelete: Cascade)
+  steps            SequenceStep[]
+  runs             SequenceRun[]
+
+  @@map("sequences")
+}
+
+// ---------------------------------------------------------------------------
+// 4.9 sequence_steps
+// ---------------------------------------------------------------------------
+model SequenceStep {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sequenceId      String   @map("sequence_id") @db.Uuid
+  stepOrder       Int      @map("step_order")
+  delayDays       Int      @map("delay_days")
+  channel         String   @db.VarChar(20)
+  subjectTemplate String?  @map("subject_template") @db.Text
+  bodyTemplate    String   @map("body_template") @db.Text
+  isOwnerAlert    Boolean  @default(false) @map("is_owner_alert")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  sequence    Sequence      @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  currentRuns SequenceRun[] @relation("CurrentStep")
+  messages    Message[]
+
+  @@map("sequence_steps")
+}
+
+// ---------------------------------------------------------------------------
+// 4.10 sequence_runs
+// ---------------------------------------------------------------------------
+model SequenceRun {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId     String    @map("invoice_id") @db.Uuid
+  sequenceId    String    @map("sequence_id") @db.Uuid
+  currentStepId String?   @map("current_step_id") @db.Uuid
+  status        String    @db.VarChar(20)
+  pausedReason  String?   @map("paused_reason") @db.VarChar(50)
+  nextSendAt    DateTime? @map("next_send_at") @db.Timestamptz
+  startedAt     DateTime  @map("started_at") @db.Timestamptz
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz
+  stoppedReason String?   @map("stopped_reason") @db.VarChar(50)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  invoice     Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sequence    Sequence      @relation(fields: [sequenceId], references: [id], onDelete: Restrict)
+  currentStep SequenceStep? @relation("CurrentStep", fields: [currentStepId], references: [id], onDelete: SetNull)
+  messages    Message[]
+
+  @@index([status, nextSendAt], map: "idx_runs_next_send")
+  @@index([invoiceId, status], map: "idx_runs_invoice")
+  @@map("sequence_runs")
+}
+
+// ---------------------------------------------------------------------------
+// 4.11 messages
+// ---------------------------------------------------------------------------
+model Message {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sequenceRunId     String    @map("sequence_run_id") @db.Uuid
+  sequenceStepId    String    @map("sequence_step_id") @db.Uuid
+  invoiceId         String    @map("invoice_id") @db.Uuid
+  customerId        String    @map("customer_id") @db.Uuid
+  businessId        String    @map("business_id") @db.Uuid
+  channel           String    @db.VarChar(20)
+  recipientEmail    String?   @map("recipient_email") @db.VarChar(255)
+  recipientPhone    String?   @map("recipient_phone") @db.VarChar(50)
+  subject           String?   @db.Text
+  body              String    @db.Text
+  status            String    @db.VarChar(20)
+  externalMessageId String?   @map("external_message_id") @db.VarChar(255)
+  openedAt          DateTime? @map("opened_at") @db.Timestamptz
+  clickedAt         DateTime? @map("clicked_at") @db.Timestamptz
+  repliedAt         DateTime? @map("replied_at") @db.Timestamptz
+  replyBody         String?   @map("reply_body") @db.Text
+  aiDraftResponse   String?   @map("ai_draft_response") @db.Text
+  sentAt            DateTime? @map("sent_at") @db.Timestamptz
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  sequenceRun  SequenceRun  @relation(fields: [sequenceRunId], references: [id], onDelete: Cascade)
+  sequenceStep SequenceStep @relation(fields: [sequenceStepId], references: [id], onDelete: Restrict)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  business     Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, sentAt], map: "idx_messages_business_sent")
+  @@index([externalMessageId], map: "idx_messages_external")
+  @@map("messages")
 }
