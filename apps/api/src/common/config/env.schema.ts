@@ -25,6 +25,10 @@ export const envSchema = z.object({
   QUICKBOOKS_REDIRECT_URI: z.string().url(),
   QUICKBOOKS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
   QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN: z.string().min(1),
+  XERO_CLIENT_ID: z.string().min(1),
+  XERO_CLIENT_SECRET: z.string().min(1),
+  XERO_REDIRECT_URI: z.string().url(),
+  XERO_WEBHOOK_KEY: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -7,6 +7,7 @@ import { QueueModule } from "./common/queue/queue.module";
 import { HealthModule } from "./health/health.module";
 import { DebugModule } from "./debug/debug.module";
 import { TwilioWebhookModule } from "./modules/twilio-webhook/twilio-webhook.module";
+import { XeroWebhookModule } from "./modules/xero-webhook/xero-webhook.module";
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { TwilioWebhookModule } from "./modules/twilio-webhook/twilio-webhook.mod
     HealthModule,
     DebugModule,
     TwilioWebhookModule,
+    XeroWebhookModule,
   ],
 })
 export class AppModule {}
