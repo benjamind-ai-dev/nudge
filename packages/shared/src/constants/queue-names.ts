@@ -10,6 +10,7 @@ export const QUEUE_NAMES = {
   SENDGRID_EVENTS: "sendgrid-events",
   STRIPE_EVENTS: "stripe-events",
   QUICKBOOKS_WEBHOOKS: "quickbooks-webhooks",
+  SMS_SEND: "sms-send",
   DEAD_LETTER: "dead-letter",
 } as const;
 

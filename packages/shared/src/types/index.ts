@@ -25,4 +25,5 @@ export type {
   StripeEventsJobData,
   QuickbooksWebhooksJobData,
   DeadLetterJobData,
+  SmsSendJobData,
 } from "./jobs";

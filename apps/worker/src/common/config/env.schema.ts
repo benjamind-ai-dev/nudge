@@ -13,6 +13,9 @@ export const envSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .optional(),
   RESEND_API_KEY: z.string().min(1),
+  TWILIO_ACCOUNT_SID: z.string().startsWith("AC"),
+  TWILIO_AUTH_TOKEN: z.string().min(1),
+  TWILIO_PHONE_NUMBER: z.string().startsWith("+"),
 });
 
 export type Env = z.infer<typeof envSchema>;
