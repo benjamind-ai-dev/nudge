@@ -16,6 +16,9 @@ export const envSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().startsWith("AC"),
   TWILIO_AUTH_TOKEN: z.string().min(1),
   TWILIO_PHONE_NUMBER: z.string().startsWith("+"),
+  QUICKBOOKS_CLIENT_ID: z.string().min(1),
+  QUICKBOOKS_CLIENT_SECRET: z.string().min(1),
+  QUICKBOOKS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
 });
 
 export type Env = z.infer<typeof envSchema>;
