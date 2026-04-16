@@ -45,12 +45,14 @@ describe("DebugController", () => {
     });
   });
 
-  it("should reject in production", async () => {
+  it("should enqueue even in production (guard disabled for debugging)", async () => {
     mockConfig.get.mockReturnValue("production");
 
     const result = await controller.enqueueTestJob();
 
-    expect(mockQueue.add).not.toHaveBeenCalled();
-    expect(result.data).toHaveProperty("message");
+    expect(mockQueue.add).toHaveBeenCalled();
+    expect(result).toEqual({
+      data: { jobId: "test-job-1", queue: QUEUE_NAMES.INVOICE_SYNC },
+    });
   });
 });

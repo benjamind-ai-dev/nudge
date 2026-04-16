@@ -103,8 +103,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @nudge/database db:push
-      - run: pnpm --filter @nudge/api test
-      - run: pnpm --filter @nudge/worker test
+      - run: pnpm turbo test --filter=@nudge/api --filter=@nudge/worker
 
   test-web:
     name: Test Web & Shared
@@ -122,8 +121,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @nudge/shared test
-      - run: pnpm --filter @nudge/web test
+      - run: pnpm turbo test --filter=@nudge/shared --filter=@nudge/web
 
   build:
     name: Build
