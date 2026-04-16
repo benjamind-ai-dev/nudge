@@ -5,6 +5,7 @@ import { envSchema } from "./common/config/env.schema";
 import { RedisModule } from "./common/redis/redis.module";
 import { QueueModule } from "./common/queue/queue.module";
 import { DebugModule } from "./debug/debug.module";
+import { SmsModule } from "./modules/sms/sms.module";
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { DebugModule } from "./debug/debug.module";
     RedisModule,
     QueueModule,
     DebugModule,
+    SmsModule,
   ],
 })
 export class AppModule {}

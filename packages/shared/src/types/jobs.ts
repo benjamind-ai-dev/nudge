@@ -51,3 +51,11 @@ export interface DeadLetterJobData {
   failedReason: string;
   failedAt: string;
 }
+
+export interface SmsSendJobData {
+  to: string;
+  body: string;
+  businessId: string;
+  invoiceId?: string;
+  sequenceStepId?: string;
+}

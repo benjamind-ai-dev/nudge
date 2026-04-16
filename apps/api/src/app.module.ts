@@ -6,6 +6,7 @@ import { DatabaseModule } from "./common/database/database.module";
 import { QueueModule } from "./common/queue/queue.module";
 import { HealthModule } from "./health/health.module";
 import { DebugModule } from "./debug/debug.module";
+import { TwilioWebhookModule } from "./modules/twilio-webhook/twilio-webhook.module";
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { DebugModule } from "./debug/debug.module";
     QueueModule,
     HealthModule,
     DebugModule,
+    TwilioWebhookModule,
   ],
 })
 export class AppModule {}
