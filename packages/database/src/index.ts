@@ -1,5 +1,6 @@
 export { PrismaClient } from "@prisma/client";
 export * from "@prisma/client";
+export { createDefaultTiersAndSequences } from "./create-defaults";
 
 import { PrismaClient } from "@prisma/client";
 
