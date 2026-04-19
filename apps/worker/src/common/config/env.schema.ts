@@ -21,6 +21,7 @@ export const envSchema = z.object({
   QUICKBOOKS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
   XERO_CLIENT_ID: z.string().min(1),
   XERO_CLIENT_SECRET: z.string().min(1),
+  ENCRYPTION_KEY: z.string().length(64),
 });
 
 export type Env = z.infer<typeof envSchema>;

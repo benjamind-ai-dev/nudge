@@ -17,3 +17,4 @@ export type {
   DeadLetterJobData,
   SmsSendJobData,
 } from "./types/index";
+export { encrypt, decrypt } from "./crypto/encrypt";
