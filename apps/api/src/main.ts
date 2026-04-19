@@ -7,7 +7,10 @@ import { Env } from "./common/config/env.schema";
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    rawBody: true,
+  });
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new GlobalExceptionFilter());
 
