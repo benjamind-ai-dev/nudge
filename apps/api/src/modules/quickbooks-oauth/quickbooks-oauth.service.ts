@@ -11,13 +11,12 @@ import { PrismaClient } from "@nudge/database";
 import { QUEUE_NAMES, InvoiceSyncJobData, encrypt } from "@nudge/shared";
 import { randomBytes } from "crypto";
 import Redis from "ioredis";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import OAuthClient = require("intuit-oauth");
 import { PRISMA_CLIENT } from "../../common/database/database.module";
 import { REDIS_CLIENT } from "../../common/redis/redis.module";
 import { Env } from "../../common/config/env.schema";
 
-const INTUIT_OAUTH_BASE = "https://appcenter.intuit.com/connect/oauth2";
-const INTUIT_TOKEN_URL =
-  "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
 const STATE_TTL_SECONDS = 600;
 
 @Injectable()
@@ -32,6 +31,17 @@ export class QuickbooksOAuthService {
     private readonly invoiceSyncQueue: Queue<InvoiceSyncJobData>,
   ) {}
 
+  private createOAuthClient(): OAuthClient {
+    return new OAuthClient({
+      clientId: this.config.get("QUICKBOOKS_CLIENT_ID", { infer: true }),
+      clientSecret: this.config.get("QUICKBOOKS_CLIENT_SECRET", {
+        infer: true,
+      }),
+      environment: this.config.get("QUICKBOOKS_ENVIRONMENT", { infer: true }),
+      redirectUri: this.config.get("QUICKBOOKS_REDIRECT_URI", { infer: true }),
+    });
+  }
+
   async authorize(businessId: string): Promise<{ oauthUrl: string }> {
     const business = await this.prisma.business.findUnique({
       where: { id: businessId },
@@ -43,17 +53,20 @@ export class QuickbooksOAuthService {
 
     const state = randomBytes(32).toString("hex");
 
-    await this.redis.set(`oauth:state:${state}`, businessId, "EX", STATE_TTL_SECONDS);
+    await this.redis.set(
+      `oauth:state:${state}`,
+      businessId,
+      "EX",
+      STATE_TTL_SECONDS,
+    );
 
-    const params = new URLSearchParams({
-      client_id: this.config.get("QUICKBOOKS_CLIENT_ID", { infer: true }),
-      redirect_uri: this.config.get("QUICKBOOKS_REDIRECT_URI", { infer: true }),
-      scope: "com.intuit.quickbooks.accounting",
-      response_type: "code",
+    const oauthClient = this.createOAuthClient();
+    const oauthUrl = oauthClient.authorizeUri({
+      scope: [OAuthClient.scopes.Accounting],
       state,
     });
 
-    return { oauthUrl: `${INTUIT_OAUTH_BASE}?${params.toString()}` };
+    return { oauthUrl };
   }
 
   async callback(
@@ -76,52 +89,27 @@ export class QuickbooksOAuthService {
     // 2. Delete state token (single-use)
     await this.redis.del(`oauth:state:${state}`);
 
-    // 3. Exchange authorization code for tokens
-    const clientId = this.config.get("QUICKBOOKS_CLIENT_ID", { infer: true });
-    const clientSecret = this.config.get("QUICKBOOKS_CLIENT_SECRET", {
-      infer: true,
-    });
+    // 3. Exchange authorization code for tokens via Intuit SDK
+    const oauthClient = this.createOAuthClient();
     const redirectUri = this.config.get("QUICKBOOKS_REDIRECT_URI", {
       infer: true,
     });
 
-    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
-      "base64",
-    );
-
-    let tokenResponse: Response;
+    let authResponse: { getJson: () => Record<string, unknown> };
     try {
-      tokenResponse = await fetch(INTUIT_TOKEN_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${credentials}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: redirectUri,
-        }).toString(),
-      });
+      authResponse = await oauthClient.createToken(
+        `${redirectUri}?code=${code}&realmId=${realmId}`,
+      );
     } catch (error) {
       this.logger.error({
-        msg: "Token exchange request failed",
+        msg: "Token exchange failed",
         businessId,
         error: error instanceof Error ? error.message : "Unknown error",
       });
       return errorUrl("token_exchange_failed");
     }
 
-    if (!tokenResponse.ok) {
-      this.logger.error({
-        msg: "Token exchange returned non-OK status",
-        businessId,
-        status: tokenResponse.status,
-      });
-      return errorUrl("token_exchange_failed");
-    }
-
-    const tokens = (await tokenResponse.json()) as {
+    const tokens = authResponse.getJson() as {
       access_token: string;
       refresh_token: string;
       expires_in: number;
@@ -132,9 +120,7 @@ export class QuickbooksOAuthService {
     const encryptedAccessToken = encrypt(tokens.access_token, encryptionKey);
     const encryptedRefreshToken = encrypt(tokens.refresh_token, encryptionKey);
 
-    const tokenExpiresAt = new Date(
-      Date.now() + tokens.expires_in * 1000,
-    );
+    const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
     // 5. Upsert connection record
     const connection = await this.prisma.connection.upsert({
