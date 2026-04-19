@@ -4,9 +4,11 @@ import { LoggerModule } from "nestjs-pino";
 import { envSchema, Env } from "./common/config/env.schema";
 import { DatabaseModule } from "./common/database/database.module";
 import { QueueModule } from "./common/queue/queue.module";
+import { RedisModule } from "./common/redis/redis.module";
 import { HealthModule } from "./health/health.module";
 import { DebugModule } from "./debug/debug.module";
 import { TwilioWebhookModule } from "./modules/twilio-webhook/twilio-webhook.module";
+import { QuickbooksOAuthModule } from "./modules/quickbooks-oauth/quickbooks-oauth.module";
 
 @Module({
   imports: [
@@ -45,9 +47,11 @@ import { TwilioWebhookModule } from "./modules/twilio-webhook/twilio-webhook.mod
     }),
     DatabaseModule,
     QueueModule,
+    RedisModule,
     HealthModule,
     DebugModule,
     TwilioWebhookModule,
+    QuickbooksOAuthModule,
   ],
 })
 export class AppModule {}
