@@ -11,8 +11,7 @@ import { PrismaClient } from "@nudge/database";
 import { QUEUE_NAMES, InvoiceSyncJobData, encrypt } from "@nudge/shared";
 import { randomBytes } from "crypto";
 import Redis from "ioredis";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import OAuthClient = require("intuit-oauth");
+import OAuthClient from "intuit-oauth";
 import { PRISMA_CLIENT } from "../../common/database/database.module";
 import { REDIS_CLIENT } from "../../common/redis/redis.module";
 import { Env } from "../../common/config/env.schema";
