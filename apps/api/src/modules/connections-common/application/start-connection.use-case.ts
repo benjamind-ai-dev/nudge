@@ -6,9 +6,9 @@ import {
 import { BusinessNotFoundError } from "../domain/connection.errors";
 import {
   OAUTH_PROVIDERS,
-  OAuthProviderMap,
-  ProviderName,
-} from "../domain/oauth-provider";
+  type OAuthProviderMap,
+  type ProviderName,
+} from "@nudge/connections-domain";
 import { OAuthStateService } from "../domain/oauth-state.service";
 
 export interface StartConnectionInput {

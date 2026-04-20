@@ -3,11 +3,11 @@ import { ConfigService } from "@nestjs/config";
 import { XeroClient } from "xero-node";
 import { Env } from "../../../common/config/env.schema";
 import {
-  OAuthProvider,
-  ProviderMetadata,
-  ProviderName,
-  ProviderTokens,
-} from "../../connections-common/domain/oauth-provider";
+  type OAuthProvider,
+  type ProviderMetadata,
+  type ProviderName,
+  type ProviderTokens,
+} from "@nudge/connections-domain";
 
 const SCOPES = [
   "openid",

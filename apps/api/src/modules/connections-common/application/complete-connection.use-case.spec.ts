@@ -4,8 +4,7 @@ import {
   CompleteConnectionUseCase,
   CompleteConnectionInput,
 } from "./complete-connection.use-case";
-import { OAuthProvider } from "../domain/oauth-provider";
-import { Connection } from "../domain/connection.entity";
+import { type OAuthProvider, Connection } from "@nudge/connections-domain";
 
 const KEY = "a".repeat(64);
 const SUCCESS = "http://localhost:5173/onboarding/complete?status=success";

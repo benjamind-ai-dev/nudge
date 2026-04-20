@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { PrismaClient } from "@nudge/database";
 import { randomUUID } from "crypto";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
-import { Connection } from "../domain/connection.entity";
+import { Connection } from "@nudge/connections-domain";
 import { PrismaConnectionRepository } from "./prisma-connection.repository";
 
 const KEY = "a".repeat(64);

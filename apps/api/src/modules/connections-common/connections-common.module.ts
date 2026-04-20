@@ -8,11 +8,11 @@ import { XeroOAuthModule } from "../xero-oauth/xero-oauth.module";
 import { CompleteConnectionUseCase } from "./application/complete-connection.use-case";
 import { StartConnectionUseCase } from "./application/start-connection.use-case";
 import { BUSINESS_REPOSITORY } from "./domain/business.repository";
-import { CONNECTION_REPOSITORY } from "./domain/connection.repository";
 import {
+  CONNECTION_REPOSITORY,
   OAUTH_PROVIDERS,
-  OAuthProviderMap,
-} from "./domain/oauth-provider";
+  type OAuthProviderMap,
+} from "@nudge/connections-domain";
 import { OAuthStateService } from "./domain/oauth-state.service";
 import { PrismaBusinessRepository } from "./infrastructure/prisma-business.repository";
 import { PrismaConnectionRepository } from "./infrastructure/prisma-connection.repository";

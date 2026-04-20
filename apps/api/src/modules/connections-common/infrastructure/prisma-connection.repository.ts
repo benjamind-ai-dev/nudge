@@ -3,9 +3,11 @@ import { ConfigService } from "@nestjs/config";
 import { PrismaClient } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import { Env } from "../../../common/config/env.schema";
-import { Connection } from "../domain/connection.entity";
-import { ConnectionRepository } from "../domain/connection.repository";
-import { ProviderName } from "../domain/oauth-provider";
+import {
+  Connection,
+  type ConnectionRepository,
+  type ProviderName,
+} from "@nudge/connections-domain";
 
 @Injectable()
 export class PrismaConnectionRepository implements ConnectionRepository {
