@@ -74,11 +74,12 @@ export class CompleteConnectionUseCase {
         input.providerMetadata,
       );
     } catch (cause) {
+      const errorMessage = cause instanceof Error ? cause.message : "unknown";
       this.logger.error({
-        msg: "Token exchange failed",
+        msg: `Token exchange failed: ${errorMessage}`,
         businessId: payload.businessId,
         provider: payload.provider,
-        errorMessage: cause instanceof Error ? cause.message : "unknown",
+        errorMessage,
       });
       return { redirectUrl: this.errUrl("token_exchange_failed") };
     }
@@ -87,11 +88,12 @@ export class CompleteConnectionUseCase {
     try {
       tenantId = await provider.resolveTenantId(tokens, input.providerMetadata);
     } catch (cause) {
+      const errorMessage = cause instanceof Error ? cause.message : "unknown";
       this.logger.error({
-        msg: "Tenant fetch failed",
+        msg: `Tenant fetch failed: ${errorMessage}`,
         businessId: payload.businessId,
         provider: payload.provider,
-        errorMessage: cause instanceof Error ? cause.message : "unknown",
+        errorMessage,
       });
       return { redirectUrl: this.errUrl("tenant_fetch_failed") };
     }
@@ -123,11 +125,12 @@ export class CompleteConnectionUseCase {
       });
       return { redirectUrl: this.successUrl() };
     } catch (cause) {
+      const errorMessage = cause instanceof Error ? cause.message : "unknown";
       this.logger.error({
-        msg: "Connection persist failed",
+        msg: `Connection persist failed: ${errorMessage}`,
         businessId: payload.businessId,
         provider: payload.provider,
-        errorMessage: cause instanceof Error ? cause.message : "unknown",
+        errorMessage,
       });
       return { redirectUrl: this.errUrl("internal_error") };
     }
