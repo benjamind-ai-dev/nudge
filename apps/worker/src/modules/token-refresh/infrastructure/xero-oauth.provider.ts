@@ -86,6 +86,21 @@ export class XeroOAuthProvider implements OAuthProvider {
         expires_in?: number;
       };
 
+      // Hollow-token guard: Xero keeps rotating refresh tokens for 60 days
+      // even after the user disconnects the app at the organisation level.
+      // /connections is the authoritative source for "is this token actually
+      // bound to a tenant?" — empty array means the connection is dead.
+      await xero.setTokenSet({
+        access_token: tokenSet.access_token,
+        refresh_token: tokenSet.refresh_token,
+        expires_at: tokenSet.expires_at,
+        token_type: "Bearer",
+      });
+      await xero.updateTenants(false);
+      if (!xero.tenants || xero.tenants.length === 0) {
+        throw new TokenRevokedError();
+      }
+
       const expiresAt = tokenSet.expires_at
         ? new Date(tokenSet.expires_at * 1000)
         : new Date(Date.now() + (tokenSet.expires_in ?? 1800) * 1000);
@@ -130,6 +145,15 @@ export class XeroOAuthProvider implements OAuthProvider {
 }
 
 function classifyXeroRefreshError(err: unknown): Error {
+  // Already-classified errors (e.g. hollow-token TokenRevokedError thrown
+  // from the /connections check) pass through unchanged.
+  if (
+    err instanceof TokenRevokedError ||
+    err instanceof RefreshFailedError
+  ) {
+    return err;
+  }
+
   const response = (
     err as { response?: { statusCode?: number; body?: { error?: string } } }
   )?.response;
