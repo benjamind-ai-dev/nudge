@@ -2,7 +2,7 @@ import { encrypt, decrypt } from "@nudge/shared";
 import { EncryptionError } from "./connection.errors";
 import { ProviderName } from "./oauth-provider";
 
-export type ConnectionStatus = "connected" | "error" | "disconnected";
+export type ConnectionStatus = "connected" | "revoked" | "expired" | "error";
 
 export interface ConnectionProps {
   businessId: string;
