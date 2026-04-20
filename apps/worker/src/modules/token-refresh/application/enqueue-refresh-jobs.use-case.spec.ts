@@ -38,8 +38,8 @@ describe("EnqueueRefreshJobsUseCase", () => {
 
   it("enqueues one job per due connection with correct options", async () => {
     repo.findDueForRefresh.mockResolvedValue([
-      { id: "c-1" } as any,
-      { id: "c-2" } as any,
+      { id: "c-1", businessId: "b-1" } as any,
+      { id: "c-2", businessId: "b-2" } as any,
     ]);
     const useCase = await build();
     await useCase.execute();
@@ -52,7 +52,7 @@ describe("EnqueueRefreshJobsUseCase", () => {
     expect(mockQueue.add).toHaveBeenCalledTimes(2);
     expect(mockQueue.add).toHaveBeenCalledWith(
       "refresh-connection",
-      { connectionId: "c-1" },
+      { connectionId: "c-1", businessId: "b-1" },
       expect.objectContaining({
         jobId: "refresh-c-1",
         attempts: 5,
@@ -61,7 +61,7 @@ describe("EnqueueRefreshJobsUseCase", () => {
     );
     expect(mockQueue.add).toHaveBeenCalledWith(
       "refresh-connection",
-      { connectionId: "c-2" },
+      { connectionId: "c-2", businessId: "b-2" },
       expect.objectContaining({
         jobId: "refresh-c-2",
         attempts: 5,

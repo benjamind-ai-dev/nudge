@@ -45,7 +45,7 @@ describe("TokenRefreshProcessor", () => {
       const proc = await build();
       await proc.process({
         name: "refresh-connection",
-        data: { connectionId: "c-1" },
+        data: { connectionId: "c-1", businessId: "b-1" },
       } as any);
       expect(refreshUseCase.execute).toHaveBeenCalledWith("c-1");
       expect(tickUseCase.execute).not.toHaveBeenCalled();

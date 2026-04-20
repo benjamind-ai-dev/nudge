@@ -62,4 +62,5 @@ export interface SmsSendJobData {
 
 export interface RefreshConnectionJobData {
   connectionId: string;
+  businessId: string;
 }

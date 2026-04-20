@@ -112,4 +112,26 @@ describe("Worker PrismaConnectionRepository (integration)", () => {
     expect(row?.status).toEqual("revoked");
     expect(row?.errorMessage).toEqual("User revoked access");
   });
+
+  it("refreshConnection returns skipped=lock_held when the advisory lock is already held", async () => {
+    let releaseGate: () => void = () => {};
+    const gate = new Promise<void>((r) => (releaseGate = r));
+
+    const holder = prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        SELECT pg_advisory_xact_lock(hashtextextended(${connectionId}, 0))
+      `;
+      await gate;
+    });
+
+    await new Promise((r) => setTimeout(r, 100));
+
+    const callback = jest.fn();
+    const outcome = await repo.refreshConnection(connectionId, callback);
+    expect(outcome).toEqual({ kind: "skipped", reason: "lock_held" });
+    expect(callback).not.toHaveBeenCalled();
+
+    releaseGate();
+    await holder;
+  });
 });

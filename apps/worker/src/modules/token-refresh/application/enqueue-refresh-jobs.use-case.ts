@@ -28,7 +28,7 @@ export class EnqueueRefreshJobsUseCase {
       if (!conn.id) continue;
       await this.queue.add(
         "refresh-connection",
-        { connectionId: conn.id },
+        { connectionId: conn.id, businessId: conn.businessId },
         {
           jobId: `refresh-${conn.id}`,
           attempts: 5,

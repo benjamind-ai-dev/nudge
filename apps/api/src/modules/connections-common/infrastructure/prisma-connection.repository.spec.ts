@@ -394,24 +394,22 @@ describe("PrismaConnectionRepository (integration)", () => {
       let releaseGate: () => void = () => {};
       const gate = new Promise<void>((r) => (releaseGate = r));
 
-      const first = repo.refreshConnection(saved.id!, async () => {
+      const holder = prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`
+          SELECT pg_advisory_xact_lock(hashtextextended(${saved.id!}, 0))
+        `;
         await gate;
-        return {
-          accessToken: "a",
-          refreshToken: "b",
-          expiresAt: new Date("2031-01-01"),
-        };
       });
 
-      await new Promise((r) => setImmediate(r));
+      await new Promise((r) => setTimeout(r, 100));
 
-      const secondCallback = jest.fn();
-      const second = await repo.refreshConnection(saved.id!, secondCallback);
-      expect(second).toEqual({ kind: "skipped", reason: "lock_held" });
-      expect(secondCallback).not.toHaveBeenCalled();
+      const callback = jest.fn();
+      const outcome = await repo.refreshConnection(saved.id!, callback);
+      expect(outcome).toEqual({ kind: "skipped", reason: "lock_held" });
+      expect(callback).not.toHaveBeenCalled();
 
       releaseGate();
-      await first;
+      await holder;
     });
   });
 });
