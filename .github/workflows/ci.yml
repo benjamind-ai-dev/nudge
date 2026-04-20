@@ -89,6 +89,19 @@ jobs:
       TWILIO_ACCOUNT_SID: ACdummy12345678901234567890123456
       TWILIO_AUTH_TOKEN: dummy_auth_token
       TWILIO_PHONE_NUMBER: "+15551234567"
+      # QuickBooks + Xero OAuth env vars (pass Zod validation)
+      QUICKBOOKS_CLIENT_ID: dummy_qb_client_id
+      QUICKBOOKS_CLIENT_SECRET: dummy_qb_client_secret
+      QUICKBOOKS_REDIRECT_URI: http://localhost:3000/v1/connections/quickbooks/callback
+      QUICKBOOKS_ENVIRONMENT: sandbox
+      QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN: dummy_qb_webhook_verifier
+      XERO_CLIENT_ID: dummy_xero_client_id
+      XERO_CLIENT_SECRET: dummy_xero_client_secret
+      XERO_REDIRECT_URI: http://localhost:3000/v1/connections/xero/callback
+      XERO_WEBHOOK_KEY: dummy_xero_webhook_key
+      # Token encryption + redirect
+      ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      FRONTEND_URL: http://localhost:5173
     steps:
       - uses: actions/checkout@v4
 
