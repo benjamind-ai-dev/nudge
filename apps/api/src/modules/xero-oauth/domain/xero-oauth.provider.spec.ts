@@ -170,12 +170,22 @@ describe("XeroOAuthProvider", () => {
   });
 
   describe("refreshTokens", () => {
-    it("returns new ProviderTokens on success", async () => {
+    function mockTenants(tenants: Array<{ tenantId: string; tenantName: string }>) {
+      mockUpdateTenants.mockImplementation(async function (this: {
+        tenants: Array<{ tenantId: string; tenantName: string }>;
+      }) {
+        this.tenants = tenants;
+        return this.tenants;
+      });
+    }
+
+    it("returns new ProviderTokens on success when tenants are bound", async () => {
       mockRefreshWithRefreshToken.mockResolvedValue({
         access_token: "new-access",
         refresh_token: "new-refresh",
         expires_at: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000),
       });
+      mockTenants([{ tenantId: "t-1", tenantName: "Org A" }]);
 
       const result = await provider.refreshTokens("old-refresh");
 
@@ -184,9 +194,24 @@ describe("XeroOAuthProvider", () => {
         expect.any(String), // clientSecret
         "old-refresh",
       );
+      expect(mockSetTokenSet).toHaveBeenCalled();
+      expect(mockUpdateTenants).toHaveBeenCalledWith(false);
       expect(result.accessToken).toEqual("new-access");
       expect(result.refreshToken).toEqual("new-refresh");
       expect(result.expiresAt.toISOString()).toEqual("2030-01-01T00:00:00.000Z");
+    });
+
+    it("throws TokenRevokedError when /connections returns zero tenants (hollow token)", async () => {
+      mockRefreshWithRefreshToken.mockResolvedValue({
+        access_token: "new-access",
+        refresh_token: "new-refresh",
+        expires_at: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000),
+      });
+      mockTenants([]);
+
+      await expect(provider.refreshTokens("old-refresh")).rejects.toBeInstanceOf(
+        TokenRevokedError,
+      );
     });
 
     it("throws TokenRevokedError on invalid_grant (user disconnect or expiry)", async () => {
