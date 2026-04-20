@@ -8,7 +8,6 @@ import {
   type ProviderName,
   type ProviderTokens,
   RefreshFailedError,
-  RefreshTokenExpiredError,
   TokenRevokedError,
 } from "@nudge/connections-domain";
 
