@@ -53,6 +53,8 @@ describe("Connection entity", () => {
           externalTenantId: created.externalTenantId,
           scopes: created.scopes,
           status: created.status,
+          lastRefreshAt: null,
+          errorMessage: null,
         },
         KEY,
       );
@@ -78,10 +80,72 @@ describe("Connection entity", () => {
             externalTenantId: created.externalTenantId,
             scopes: created.scopes,
             status: created.status,
+            lastRefreshAt: null,
+            errorMessage: null,
           },
           KEY,
         ),
       ).toThrow(EncryptionError);
+    });
+  });
+
+  describe("rotateTokens", () => {
+    it("returns a new Connection with new encrypted tokens and bumped lastRefreshAt", () => {
+      const before = Connection.create(baseProps, KEY);
+      const persisted = Connection.fromPersistence(
+        {
+          id: "c-1",
+          businessId: before.businessId,
+          provider: before.provider,
+          encryptedAccessToken: before.encryptedAccessToken,
+          encryptedRefreshToken: before.encryptedRefreshToken,
+          tokenExpiresAt: before.tokenExpiresAt,
+          externalTenantId: before.externalTenantId,
+          scopes: before.scopes,
+          status: before.status,
+          lastRefreshAt: null,
+          errorMessage: "prior error",
+        },
+        KEY,
+      );
+
+      const rotated = persisted.rotateTokens(
+        "new-access",
+        "new-refresh",
+        new Date("2031-01-01T00:00:00Z"),
+      );
+
+      expect(rotated.accessToken).toEqual("new-access");
+      expect(rotated.refreshToken).toEqual("new-refresh");
+      expect(rotated.tokenExpiresAt.toISOString()).toEqual("2031-01-01T00:00:00.000Z");
+      expect(rotated.lastRefreshAt).not.toBeNull();
+      expect(rotated.errorMessage).toBeNull();
+      expect(rotated.status).toEqual("connected");
+      expect(rotated.id).toEqual("c-1");
+    });
+  });
+
+  describe("markRevoked / markExpired / markError", () => {
+    it("markRevoked sets status and errorMessage, returns new instance", () => {
+      const conn = Connection.create(baseProps, KEY);
+      const revoked = conn.markRevoked("User revoked access");
+      expect(revoked.status).toEqual("revoked");
+      expect(revoked.errorMessage).toEqual("User revoked access");
+      expect(conn.status).toEqual("connected"); // original unchanged
+    });
+
+    it("markExpired sets status to expired", () => {
+      const conn = Connection.create(baseProps, KEY);
+      const expired = conn.markExpired("Refresh token expired");
+      expect(expired.status).toEqual("expired");
+      expect(expired.errorMessage).toEqual("Refresh token expired");
+    });
+
+    it("markError sets status to error", () => {
+      const conn = Connection.create(baseProps, KEY);
+      const errored = conn.markError("Transient failure exhausted retries");
+      expect(errored.status).toEqual("error");
+      expect(errored.errorMessage).toEqual("Transient failure exhausted retries");
     });
   });
 });

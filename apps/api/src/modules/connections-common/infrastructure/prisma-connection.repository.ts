@@ -61,6 +61,8 @@ export class PrismaConnectionRepository implements ConnectionRepository {
         externalTenantId: row.realmId,
         scopes: row.scopes,
         status: row.status,
+        lastRefreshAt: row.lastRefreshAt,
+        errorMessage: row.errorMessage,
       },
       this.key(),
     );
@@ -85,6 +87,8 @@ export class PrismaConnectionRepository implements ConnectionRepository {
         externalTenantId: row.realmId,
         scopes: row.scopes,
         status: row.status,
+        lastRefreshAt: row.lastRefreshAt,
+        errorMessage: row.errorMessage,
       },
       this.key(),
     );
