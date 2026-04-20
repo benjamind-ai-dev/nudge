@@ -7,6 +7,9 @@ import {
   type ProviderMetadata,
   type ProviderName,
   type ProviderTokens,
+  RefreshFailedError,
+  RefreshTokenExpiredError,
+  TokenRevokedError,
 } from "@nudge/connections-domain";
 
 const SCOPES = [
@@ -70,8 +73,32 @@ export class XeroOAuthProvider implements OAuthProvider {
     };
   }
 
-  async refreshTokens(_refreshToken: string): Promise<ProviderTokens> {
-    throw new Error("XeroOAuthProvider.refreshTokens not yet implemented");
+  async refreshTokens(refreshToken: string): Promise<ProviderTokens> {
+    try {
+      const xero = await this.client("");
+      const tokenSet = (await xero.refreshWithRefreshToken(
+        this.config.get("XERO_CLIENT_ID", { infer: true }),
+        this.config.get("XERO_CLIENT_SECRET", { infer: true }),
+        refreshToken,
+      )) as {
+        access_token: string;
+        refresh_token: string;
+        expires_at?: number;
+        expires_in?: number;
+      };
+
+      const expiresAt = tokenSet.expires_at
+        ? new Date(tokenSet.expires_at * 1000)
+        : new Date(Date.now() + (tokenSet.expires_in ?? 1800) * 1000);
+
+      return {
+        accessToken: tokenSet.access_token,
+        refreshToken: tokenSet.refresh_token,
+        expiresAt,
+      };
+    } catch (err) {
+      throw classifyXeroRefreshError(err);
+    }
   }
 
   async resolveTenantId(
@@ -101,4 +128,20 @@ export class XeroOAuthProvider implements OAuthProvider {
     }
     return list[0].tenantId;
   }
+}
+
+function classifyXeroRefreshError(err: unknown): Error {
+  const response = (
+    err as { response?: { statusCode?: number; body?: { error?: string } } }
+  )?.response;
+  const status = response?.statusCode;
+  const body = response?.body;
+
+  if (body?.error === "invalid_grant") {
+    return new RefreshTokenExpiredError();
+  }
+  if (status === 401) {
+    return new TokenRevokedError();
+  }
+  return new RefreshFailedError(err);
 }
