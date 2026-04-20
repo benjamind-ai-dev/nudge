@@ -7,6 +7,7 @@ export {
 export {
   CONNECTION_REPOSITORY,
   type ConnectionRepository,
+  type RefreshOutcome,
 } from "./connection.repository";
 export {
   OAUTH_PROVIDERS,
