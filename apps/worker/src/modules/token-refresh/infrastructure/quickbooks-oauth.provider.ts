@@ -28,7 +28,7 @@ export class QuickbooksOAuthProvider implements OAuthProvider {
         infer: true,
       }),
       environment: this.config.get("QUICKBOOKS_ENVIRONMENT", { infer: true }),
-      redirectUri: this.config.get("QUICKBOOKS_REDIRECT_URI", { infer: true }),
+      redirectUri: this.config.get("QUICKBOOKS_REDIRECT_URI", { infer: true }) ?? "",
     });
   }
 

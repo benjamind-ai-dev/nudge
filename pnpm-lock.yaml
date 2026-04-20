@@ -35,6 +35,9 @@ importers:
       '@nestjs/platform-express':
         specifier: ^11.0.0
         version: 11.1.18(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.18)
+      '@nudge/connections-domain':
+        specifier: workspace:*
+        version: link:../../packages/connections-domain
       '@nudge/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -193,6 +196,9 @@ importers:
       '@nestjs/core':
         specifier: ^11.0.0
         version: 11.1.18(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.18)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nudge/connections-domain':
+        specifier: workspace:*
+        version: link:../../packages/connections-domain
       '@nudge/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -202,6 +208,9 @@ importers:
       bullmq:
         specifier: ^5.31.0
         version: 5.73.4
+      intuit-oauth:
+        specifier: ^4.2.3
+        version: 4.2.3
       ioredis:
         specifier: ^5.4.0
         version: 5.10.1
@@ -220,6 +229,9 @@ importers:
       twilio:
         specifier: ^5.13.1
         version: 5.13.1
+      xero-node:
+        specifier: ^15.0.0
+        version: 15.0.0
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -254,6 +266,25 @@ importers:
       typescript:
         specifier: ~5.7.0
         version: 5.7.3
+
+  packages/connections-domain:
+    dependencies:
+      '@nudge/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@nudge/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.17
+      typescript:
+        specifier: ~5.7.0
+        version: 5.7.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.17)(jiti@2.6.1)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)
 
   packages/database:
     dependencies:

@@ -59,3 +59,8 @@ export interface SmsSendJobData {
   invoiceId?: string;
   sequenceStepId?: string;
 }
+
+export interface RefreshConnectionJobData {
+  connectionId: string;
+  businessId: string;
+}

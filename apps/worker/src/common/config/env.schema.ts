@@ -19,8 +19,10 @@ export const envSchema = z.object({
   QUICKBOOKS_CLIENT_ID: z.string().min(1),
   QUICKBOOKS_CLIENT_SECRET: z.string().min(1),
   QUICKBOOKS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
+  QUICKBOOKS_REDIRECT_URI: z.string().url().optional(),
   XERO_CLIENT_ID: z.string().min(1),
   XERO_CLIENT_SECRET: z.string().min(1),
+  XERO_REDIRECT_URI: z.string().url().optional(),
   ENCRYPTION_KEY: z.string().length(64),
 });
 

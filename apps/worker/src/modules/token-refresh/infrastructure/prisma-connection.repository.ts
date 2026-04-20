@@ -54,36 +54,9 @@ export class PrismaConnectionRepository implements ConnectionRepository {
   }
 
   async upsertByBusinessAndProvider(
-    connection: Connection,
+    _connection: Connection,
   ): Promise<Connection> {
-    const row = await this.prisma.connection.upsert({
-      where: {
-        businessId_provider: {
-          businessId: connection.businessId,
-          provider: connection.provider,
-        },
-      },
-      create: {
-        businessId: connection.businessId,
-        provider: connection.provider,
-        accessToken: connection.encryptedAccessToken,
-        refreshToken: connection.encryptedRefreshToken,
-        tokenExpiresAt: connection.tokenExpiresAt,
-        realmId: connection.externalTenantId,
-        scopes: connection.scopes,
-        status: connection.status,
-      },
-      update: {
-        accessToken: connection.encryptedAccessToken,
-        refreshToken: connection.encryptedRefreshToken,
-        tokenExpiresAt: connection.tokenExpiresAt,
-        realmId: connection.externalTenantId,
-        scopes: connection.scopes,
-        status: connection.status,
-        errorMessage: null,
-      },
-    });
-    return this.toDomain(row);
+    throw new Error("upsertByBusinessAndProvider is API-only");
   }
 
   async findByBusinessAndProvider(

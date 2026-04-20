@@ -1,16 +1,23 @@
 const mockCreateToken = jest.fn();
 const mockAuthorizeUri = jest.fn();
+const mockRefresh = jest.fn();
 
 jest.mock("intuit-oauth", () => {
   const MockOAuthClient = jest.fn().mockImplementation(() => ({
     createToken: mockCreateToken,
     authorizeUri: mockAuthorizeUri,
+    refreshUsingToken: mockRefresh,
   })) as jest.Mock & { scopes: Record<string, string> };
   MockOAuthClient.scopes = { Accounting: "com.intuit.quickbooks.accounting" };
   return MockOAuthClient;
 });
 
 import { QuickbooksOAuthProvider } from "./quickbooks-oauth.provider";
+import {
+  RefreshFailedError,
+  RefreshTokenExpiredError,
+  TokenRevokedError,
+} from "@nudge/connections-domain";
 
 describe("QuickbooksOAuthProvider", () => {
   let provider: QuickbooksOAuthProvider;
@@ -30,6 +37,7 @@ describe("QuickbooksOAuthProvider", () => {
   beforeEach(() => {
     mockCreateToken.mockReset();
     mockAuthorizeUri.mockReset();
+    mockRefresh.mockReset();
     provider = new QuickbooksOAuthProvider(config as never);
   });
 
@@ -85,6 +93,81 @@ describe("QuickbooksOAuthProvider", () => {
           {},
         ),
       ).rejects.toThrow(/realmId/);
+    });
+  });
+
+  describe("refreshTokens", () => {
+    it("returns new ProviderTokens on success", async () => {
+      mockRefresh.mockResolvedValue({
+        getJson: () => ({
+          access_token: "new-access",
+          refresh_token: "new-refresh",
+          expires_in: 3600,
+        }),
+      });
+
+      const result = await provider.refreshTokens("old-refresh");
+
+      expect(mockRefresh).toHaveBeenCalledWith("old-refresh");
+      expect(result.accessToken).toEqual("new-access");
+      expect(result.refreshToken).toEqual("new-refresh");
+      expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    it("throws RefreshTokenExpiredError on invalid_grant", async () => {
+      mockRefresh.mockRejectedValue(
+        Object.assign(new Error("refresh failed"), {
+          authResponse: { json: { error: "invalid_grant" }, response: { status: 401 } },
+        }),
+      );
+
+      await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
+        RefreshTokenExpiredError,
+      );
+    });
+
+    it("throws TokenRevokedError on non-invalid_grant 401", async () => {
+      mockRefresh.mockRejectedValue(
+        Object.assign(new Error("unauthorized"), {
+          authResponse: { json: { error: "invalid_token" }, response: { status: 401 } },
+        }),
+      );
+
+      await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
+        TokenRevokedError,
+      );
+    });
+
+    it("throws RefreshFailedError on 5xx", async () => {
+      mockRefresh.mockRejectedValue(
+        Object.assign(new Error("server error"), {
+          authResponse: { response: { status: 503 } },
+        }),
+      );
+
+      await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
+        RefreshFailedError,
+      );
+    });
+
+    it("throws RefreshFailedError on 429", async () => {
+      mockRefresh.mockRejectedValue(
+        Object.assign(new Error("rate limited"), {
+          authResponse: { response: { status: 429 } },
+        }),
+      );
+
+      await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
+        RefreshFailedError,
+      );
+    });
+
+    it("throws RefreshFailedError on network error (no authResponse)", async () => {
+      mockRefresh.mockRejectedValue(new Error("ECONNREFUSED"));
+
+      await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
+        RefreshFailedError,
+      );
     });
   });
 });

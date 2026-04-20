@@ -34,7 +34,7 @@ export class XeroOAuthProvider implements OAuthProvider {
     const xero = new XeroClient({
       clientId: this.config.get("XERO_CLIENT_ID", { infer: true }),
       clientSecret: this.config.get("XERO_CLIENT_SECRET", { infer: true }),
-      redirectUris: [this.config.get("XERO_REDIRECT_URI", { infer: true })],
+      redirectUris: [this.config.get("XERO_REDIRECT_URI", { infer: true }) ?? ""],
       scopes: SCOPES,
       state,
     });

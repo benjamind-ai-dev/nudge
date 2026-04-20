@@ -3,7 +3,7 @@ import {
   StartConnectionInput,
 } from "./start-connection.use-case";
 import { BusinessNotFoundError } from "../domain/connection.errors";
-import { OAuthProvider } from "../domain/oauth-provider";
+import { type OAuthProvider } from "@nudge/connections-domain";
 
 describe("StartConnectionUseCase", () => {
   const businessId = "b-1";

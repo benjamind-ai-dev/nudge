@@ -4,17 +4,15 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { QUEUE_NAMES, InvoiceSyncJobData } from "@nudge/shared";
 import { Env } from "../../../common/config/env.schema";
-import { Connection } from "../domain/connection.entity";
 import {
+  Connection,
   CONNECTION_REPOSITORY,
-  ConnectionRepository,
-} from "../domain/connection.repository";
-import {
+  type ConnectionRepository,
   OAUTH_PROVIDERS,
-  OAuthProviderMap,
-  ProviderMetadata,
-  ProviderName,
-} from "../domain/oauth-provider";
+  type OAuthProviderMap,
+  type ProviderMetadata,
+  type ProviderName,
+} from "@nudge/connections-domain";
 import { OAuthStateService } from "../domain/oauth-state.service";
 
 function describeCause(cause: unknown): string {

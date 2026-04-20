@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import Redis from "ioredis";
 import { REDIS_CLIENT } from "../../../common/redis/redis.module";
-import { ProviderName } from "./oauth-provider";
+import { type ProviderName } from "@nudge/connections-domain";
 
 export interface StatePayload {
   businessId: string;

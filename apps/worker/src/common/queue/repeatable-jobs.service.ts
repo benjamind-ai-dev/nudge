@@ -44,10 +44,10 @@ export class RepeatableJobsService implements OnModuleInit {
 
     await this.tokenRefreshQueue.upsertJobScheduler(
       "token-refresh-scheduler",
-      { every: 1_800_000 },
+      { every: 600_000 },
       { name: "token-refresh-tick" },
     );
-    this.logger.log("Registered token-refresh: every 30 minutes");
+    this.logger.log("Registered token-refresh: every 10 minutes");
 
     await this.daysRecalcQueue.upsertJobScheduler(
       "days-recalc-scheduler",
