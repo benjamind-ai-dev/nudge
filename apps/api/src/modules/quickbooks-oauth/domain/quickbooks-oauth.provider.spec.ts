@@ -15,7 +15,6 @@ jest.mock("intuit-oauth", () => {
 import { QuickbooksOAuthProvider } from "./quickbooks-oauth.provider";
 import {
   RefreshFailedError,
-  RefreshTokenExpiredError,
   TokenRevokedError,
 } from "@nudge/connections-domain";
 
@@ -114,7 +113,19 @@ describe("QuickbooksOAuthProvider", () => {
       expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
     });
 
-    it("throws RefreshTokenExpiredError on invalid_grant", async () => {
+    it("throws TokenRevokedError on invalid_grant with status 400 (Intuit's disconnect response)", async () => {
+      mockRefresh.mockRejectedValue(
+        Object.assign(new Error("refresh failed"), {
+          authResponse: { json: { error: "invalid_grant" }, response: { status: 400 } },
+        }),
+      );
+
+      await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
+        TokenRevokedError,
+      );
+    });
+
+    it("throws TokenRevokedError on invalid_grant with status 401", async () => {
       mockRefresh.mockRejectedValue(
         Object.assign(new Error("refresh failed"), {
           authResponse: { json: { error: "invalid_grant" }, response: { status: 401 } },
@@ -122,7 +133,7 @@ describe("QuickbooksOAuthProvider", () => {
       );
 
       await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
-        RefreshTokenExpiredError,
+        TokenRevokedError,
       );
     });
 
