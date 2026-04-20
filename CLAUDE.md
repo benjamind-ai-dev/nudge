@@ -11,7 +11,7 @@ Nudge is a B2B accounts receivable follow-up automation tool. Customers connect 
 | Frontend | React 19, Vite, Tailwind CSS 4, shadcn/ui |
 | Database | PostgreSQL 18, Prisma ORM |
 | Auth | Clerk |
-| Email | SendGrid |
+| Email | Resend |
 | SMS | Twilio |
 | AI | Claude API (Anthropic SDK) |
 | State management | Zustand (client), TanStack Query (server) |

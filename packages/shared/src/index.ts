@@ -11,7 +11,7 @@ export type {
   WeeklySummaryJobData,
   PaymentScoreJobData,
   AiDraftJobData,
-  SendgridEventsJobData,
+  ResendEventsJobData,
   StripeEventsJobData,
   QuickbooksWebhooksJobData,
   DeadLetterJobData,

@@ -7,7 +7,7 @@ export const QUEUE_NAMES = {
   WEEKLY_SUMMARY: "weekly-summary",
   PAYMENT_SCORE: "payment-score",
   AI_DRAFT: "ai-draft",
-  SENDGRID_EVENTS: "sendgrid-events",
+  RESEND_EVENTS: "resend-events",
   STRIPE_EVENTS: "stripe-events",
   QUICKBOOKS_WEBHOOKS: "quickbooks-webhooks",
   SMS_SEND: "sms-send",

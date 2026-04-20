@@ -30,7 +30,7 @@ export interface AiDraftJobData {
   businessId: string;
 }
 
-export interface SendgridEventsJobData {
+export interface ResendEventsJobData {
   payload: unknown[];
 }
 
