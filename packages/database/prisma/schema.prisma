@@ -65,7 +65,7 @@ model Business {
   updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   account           Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  connection        Connection?
+  connections       Connection[]
   customers         Customer[]
   invoices          Invoice[]
   relationshipTiers RelationshipTier[]
@@ -80,7 +80,7 @@ model Business {
 // ---------------------------------------------------------------------------
 model Connection {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  businessId     String    @unique @map("business_id") @db.Uuid
+  businessId     String    @map("business_id") @db.Uuid
   provider       String    @db.VarChar(50)
   accessToken    String    @map("access_token") @db.Text
   refreshToken   String    @map("refresh_token") @db.Text
@@ -96,6 +96,7 @@ model Connection {
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
+  @@unique([businessId, provider], map: "idx_connections_business_provider")
   @@index([status, tokenExpiresAt], map: "idx_connections_refresh")
   @@map("connections")
 }

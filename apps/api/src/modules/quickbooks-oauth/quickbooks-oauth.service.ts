@@ -123,7 +123,7 @@ export class QuickbooksOAuthService {
 
     // 5. Upsert connection record
     const connection = await this.prisma.connection.upsert({
-      where: { businessId },
+      where: { businessId_provider: { businessId, provider: "quickbooks" } },
       create: {
         businessId,
         provider: "quickbooks",
