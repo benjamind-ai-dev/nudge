@@ -24,6 +24,7 @@ export interface OAuthProvider {
     tokens: ProviderTokens,
     metadata: ProviderMetadata,
   ): Promise<string>;
+  refreshTokens(refreshToken: string): Promise<ProviderTokens>;
 }
 
 export const OAUTH_PROVIDERS = Symbol("OAUTH_PROVIDERS");

@@ -70,6 +70,10 @@ export class XeroOAuthProvider implements OAuthProvider {
     };
   }
 
+  async refreshTokens(_refreshToken: string): Promise<ProviderTokens> {
+    throw new Error("XeroOAuthProvider.refreshTokens not yet implemented");
+  }
+
   async resolveTenantId(
     tokens: ProviderTokens,
     _metadata: ProviderMetadata,

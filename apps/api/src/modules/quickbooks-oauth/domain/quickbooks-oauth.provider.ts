@@ -7,6 +7,9 @@ import {
   type ProviderMetadata,
   type ProviderName,
   type ProviderTokens,
+  RefreshFailedError,
+  RefreshTokenExpiredError,
+  TokenRevokedError,
 } from "@nudge/connections-domain";
 
 const SCOPE = "com.intuit.quickbooks.accounting";
@@ -69,4 +72,43 @@ export class QuickbooksOAuthProvider implements OAuthProvider {
     }
     return metadata.realmId;
   }
+
+  async refreshTokens(refreshToken: string): Promise<ProviderTokens> {
+    try {
+      const authResponse = await this.client().refreshUsingToken(refreshToken);
+      const json = authResponse.getJson() as {
+        access_token: string;
+        refresh_token: string;
+        expires_in: number;
+      };
+      return {
+        accessToken: json.access_token,
+        refreshToken: json.refresh_token,
+        expiresAt: new Date(Date.now() + json.expires_in * 1000),
+      };
+    } catch (err) {
+      throw classifyQuickBooksRefreshError(err);
+    }
+  }
+}
+
+function classifyQuickBooksRefreshError(err: unknown): Error {
+  const response = (
+    err as {
+      authResponse?: {
+        response?: { status?: number };
+        json?: { error?: string };
+      };
+    }
+  )?.authResponse;
+  const status = response?.response?.status;
+  const body = response?.json;
+
+  if (status === 401) {
+    if (body?.error === "invalid_grant") {
+      return new RefreshTokenExpiredError();
+    }
+    return new TokenRevokedError();
+  }
+  return new RefreshFailedError(err);
 }
