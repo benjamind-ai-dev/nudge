@@ -54,7 +54,6 @@ describe("EnqueueRefreshJobsUseCase", () => {
       "refresh-connection",
       { connectionId: "c-1", businessId: "b-1" },
       expect.objectContaining({
-        jobId: "refresh-c-1",
         attempts: 5,
         backoff: { type: "exponential", delay: 5000 },
       }),
@@ -63,10 +62,12 @@ describe("EnqueueRefreshJobsUseCase", () => {
       "refresh-connection",
       { connectionId: "c-2", businessId: "b-2" },
       expect.objectContaining({
-        jobId: "refresh-c-2",
         attempts: 5,
       }),
     );
+    const addCalls = mockQueue.add.mock.calls;
+    expect(addCalls[0][2]).not.toHaveProperty("jobId");
+    expect(addCalls[1][2]).not.toHaveProperty("jobId");
   });
 
   it("enqueues nothing when no connections are due", async () => {
