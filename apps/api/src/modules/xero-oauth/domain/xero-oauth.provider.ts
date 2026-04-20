@@ -81,7 +81,10 @@ export class XeroOAuthProvider implements OAuthProvider {
       expires_at: Math.floor(tokens.expiresAt.getTime() / 1000),
       token_type: "Bearer",
     });
-    await xero.updateTenants();
+    // `false` skips the /api.xro/2.0/Organisation call xero-node otherwise
+    // makes per tenant — that endpoint needs the accounting.settings scope,
+    // which we don't request. /connections alone gives us tenantId.
+    await xero.updateTenants(false);
     const list = xero.tenants;
     if (!list || list.length === 0) {
       throw new Error("Xero returned no tenants");
