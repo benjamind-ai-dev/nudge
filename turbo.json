@@ -17,7 +17,39 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "env": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "REDIS_HOST",
+        "REDIS_PORT",
+        "REDIS_FAMILY",
+        "NODE_ENV",
+        "PORT",
+        "LOG_LEVEL",
+        "CORS_ALLOWED_ORIGINS",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "RESEND_API_KEY",
+        "RESEND_WEBHOOK_SECRET",
+        "CLERK_SECRET_KEY",
+        "CLERK_WEBHOOK_SECRET",
+        "TWILIO_ACCOUNT_SID",
+        "TWILIO_AUTH_TOKEN",
+        "TWILIO_PHONE_NUMBER",
+        "TWILIO_WEBHOOK_SECRET",
+        "QUICKBOOKS_CLIENT_ID",
+        "QUICKBOOKS_CLIENT_SECRET",
+        "QUICKBOOKS_REDIRECT_URI",
+        "QUICKBOOKS_ENVIRONMENT",
+        "QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN",
+        "XERO_CLIENT_ID",
+        "XERO_CLIENT_SECRET",
+        "XERO_REDIRECT_URI",
+        "XERO_WEBHOOK_KEY",
+        "ENCRYPTION_KEY",
+        "FRONTEND_URL"
+      ]
     }
   }
 }
