@@ -21,7 +21,6 @@ import { Logger } from "@nestjs/common";
 import { XeroClient } from "xero-node";
 import {
   RefreshFailedError,
-  RefreshTokenExpiredError,
   TokenRevokedError,
 } from "@nudge/connections-domain";
 import { XeroOAuthProvider } from "./xero-oauth.provider";
@@ -190,7 +189,7 @@ describe("XeroOAuthProvider", () => {
       expect(result.expiresAt.toISOString()).toEqual("2030-01-01T00:00:00.000Z");
     });
 
-    it("throws RefreshTokenExpiredError on invalid_grant", async () => {
+    it("throws TokenRevokedError on invalid_grant (user disconnect or expiry)", async () => {
       mockRefreshWithRefreshToken.mockRejectedValue(
         Object.assign(new Error("invalid_grant"), {
           response: { statusCode: 400, body: { error: "invalid_grant" } },
@@ -198,7 +197,7 @@ describe("XeroOAuthProvider", () => {
       );
 
       await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
-        RefreshTokenExpiredError,
+        TokenRevokedError,
       );
     });
 

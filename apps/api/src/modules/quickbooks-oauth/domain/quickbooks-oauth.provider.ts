@@ -104,10 +104,14 @@ function classifyQuickBooksRefreshError(err: unknown): Error {
   const status = response?.response?.status;
   const body = response?.json;
 
+  // Intuit returns HTTP 400 (not 401) with error="invalid_grant" when the
+  // refresh token is no longer valid — covers both user-disconnect and
+  // the 101-day natural expiry. Treat as revoked either way; both require
+  // the user to reconnect and we can't distinguish them from the response.
+  if (body?.error === "invalid_grant") {
+    return new TokenRevokedError();
+  }
   if (status === 401) {
-    if (body?.error === "invalid_grant") {
-      return new RefreshTokenExpiredError();
-    }
     return new TokenRevokedError();
   }
   return new RefreshFailedError(err);

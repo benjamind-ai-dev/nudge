@@ -137,8 +137,12 @@ function classifyXeroRefreshError(err: unknown): Error {
   const status = response?.statusCode;
   const body = response?.body;
 
+  // invalid_grant covers both user-disconnect and refresh-token expiry —
+  // Xero doesn't distinguish in the response. Treat as revoked since both
+  // require the user to reconnect and "revoked" is the more common cause
+  // at MVP scale (the 60-day natural expiry is rare in active use).
   if (body?.error === "invalid_grant") {
-    return new RefreshTokenExpiredError();
+    return new TokenRevokedError();
   }
   if (status === 401) {
     return new TokenRevokedError();
