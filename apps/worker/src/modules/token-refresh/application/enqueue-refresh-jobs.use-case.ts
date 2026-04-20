@@ -30,7 +30,6 @@ export class EnqueueRefreshJobsUseCase {
         "refresh-connection",
         { connectionId: conn.id, businessId: conn.businessId },
         {
-          jobId: `refresh-${conn.id}`,
           attempts: 5,
           backoff: { type: "exponential", delay: 5000 },
           removeOnComplete: 100,
