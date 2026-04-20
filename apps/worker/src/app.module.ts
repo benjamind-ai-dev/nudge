@@ -7,6 +7,7 @@ import { RedisModule } from "./common/redis/redis.module";
 import { QueueModule } from "./common/queue/queue.module";
 import { DebugModule } from "./debug/debug.module";
 import { SmsModule } from "./modules/sms/sms.module";
+import { TokenRefreshModule } from "./modules/token-refresh/token-refresh.module";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SmsModule } from "./modules/sms/sms.module";
     QueueModule,
     DebugModule,
     SmsModule,
+    TokenRefreshModule,
   ],
 })
 export class AppModule {}
