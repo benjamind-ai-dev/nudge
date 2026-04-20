@@ -239,8 +239,9 @@ describe("PrismaConnectionRepository (integration)", () => {
 
       const cutoff = new Date(Date.now() + 15 * 60_000);
       const due = await repo.findDueForRefresh(cutoff);
-      expect(due).toHaveLength(1);
-      expect(due[0].provider).toEqual("quickbooks");
+      const mine = due.filter((c) => c.businessId === businessId);
+      expect(mine).toHaveLength(1);
+      expect(mine[0].provider).toEqual("quickbooks");
     });
 
     it("skips connections with non-connected status", async () => {
@@ -261,7 +262,8 @@ describe("PrismaConnectionRepository (integration)", () => {
       await repo.updateStatus(saved.id!, "revoked", "User revoked");
 
       const due = await repo.findDueForRefresh(new Date(Date.now() + 15 * 60_000));
-      expect(due).toHaveLength(0);
+      const mine = due.filter((c) => c.businessId === businessId);
+      expect(mine).toHaveLength(0);
     });
   });
 
