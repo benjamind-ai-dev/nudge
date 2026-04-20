@@ -10,6 +10,9 @@ import { DebugModule } from "./debug/debug.module";
 import { TwilioWebhookModule } from "./modules/twilio-webhook/twilio-webhook.module";
 import { XeroWebhookModule } from "./modules/xero-webhook/xero-webhook.module";
 import { QuickbooksOAuthModule } from "./modules/quickbooks-oauth/quickbooks-oauth.module";
+import { XeroOAuthModule } from "./modules/xero-oauth/xero-oauth.module";
+import { ConnectionsCommonModule } from "./modules/connections-common/connections-common.module";
+import { ConnectionsModule } from "./modules/connections/connections.module";
 
 @Module({
   imports: [
@@ -54,6 +57,9 @@ import { QuickbooksOAuthModule } from "./modules/quickbooks-oauth/quickbooks-oau
     TwilioWebhookModule,
     XeroWebhookModule,
     QuickbooksOAuthModule,
+    XeroOAuthModule,
+    ConnectionsCommonModule,
+    ConnectionsModule,
   ],
 })
 export class AppModule {}
