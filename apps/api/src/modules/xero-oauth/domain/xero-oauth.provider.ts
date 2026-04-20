@@ -13,7 +13,7 @@ const SCOPES = [
   "openid",
   "profile",
   "email",
-  "accounting.transactions",
+  "accounting.invoices",
   "accounting.contacts",
   "offline_access",
 ];
