@@ -16,4 +16,9 @@ export {
   type ProviderName,
   type ProviderTokens,
 } from "./oauth-provider";
-export { EncryptionError } from "./connection.errors";
+export {
+  EncryptionError,
+  RefreshFailedError,
+  TokenRevokedError,
+  RefreshTokenExpiredError,
+} from "./connection.errors";
