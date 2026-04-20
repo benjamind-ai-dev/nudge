@@ -17,6 +17,22 @@ import {
 } from "../domain/oauth-provider";
 import { OAuthStateService } from "../domain/oauth-state.service";
 
+function describeCause(cause: unknown): string {
+  if (cause instanceof Error) return cause.message;
+  if (typeof cause === "string") return cause;
+  if (cause && typeof cause === "object") {
+    const c = cause as Record<string, unknown>;
+    const message = c.message ?? c.error_description ?? c.error;
+    if (typeof message === "string") return message;
+    try {
+      return JSON.stringify(cause);
+    } catch {
+      return String(cause);
+    }
+  }
+  return String(cause);
+}
+
 export interface CompleteConnectionInput {
   code: string;
   state: string;
@@ -74,12 +90,14 @@ export class CompleteConnectionUseCase {
         input.providerMetadata,
       );
     } catch (cause) {
-      const errorMessage = cause instanceof Error ? cause.message : "unknown";
+      const errorMessage = describeCause(cause);
       this.logger.error({
         msg: `Token exchange failed: ${errorMessage}`,
         businessId: payload.businessId,
         provider: payload.provider,
         errorMessage,
+        causeType: typeof cause,
+        causeConstructor: cause?.constructor?.name,
       });
       return { redirectUrl: this.errUrl("token_exchange_failed") };
     }
@@ -88,12 +106,14 @@ export class CompleteConnectionUseCase {
     try {
       tenantId = await provider.resolveTenantId(tokens, input.providerMetadata);
     } catch (cause) {
-      const errorMessage = cause instanceof Error ? cause.message : "unknown";
+      const errorMessage = describeCause(cause);
       this.logger.error({
         msg: `Tenant fetch failed: ${errorMessage}`,
         businessId: payload.businessId,
         provider: payload.provider,
         errorMessage,
+        causeType: typeof cause,
+        causeConstructor: cause?.constructor?.name,
       });
       return { redirectUrl: this.errUrl("tenant_fetch_failed") };
     }
@@ -125,12 +145,14 @@ export class CompleteConnectionUseCase {
       });
       return { redirectUrl: this.successUrl() };
     } catch (cause) {
-      const errorMessage = cause instanceof Error ? cause.message : "unknown";
+      const errorMessage = describeCause(cause);
       this.logger.error({
         msg: `Connection persist failed: ${errorMessage}`,
         businessId: payload.businessId,
         provider: payload.provider,
         errorMessage,
+        causeType: typeof cause,
+        causeConstructor: cause?.constructor?.name,
       });
       return { redirectUrl: this.errUrl("internal_error") };
     }
