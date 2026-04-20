@@ -59,12 +59,12 @@ describe("RepeatableJobsService", () => {
     );
   });
 
-  it("should register token-refresh every 30 minutes", async () => {
+  it("should register token-refresh every 10 minutes", async () => {
     await service.onModuleInit();
 
     expect(mockTokenRefreshQueue.upsertJobScheduler).toHaveBeenCalledWith(
       "token-refresh-scheduler",
-      { every: 1_800_000 },
+      { every: 600_000 },
       { name: "token-refresh-tick" },
     );
   });
