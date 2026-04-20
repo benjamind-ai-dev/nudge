@@ -27,6 +27,7 @@ These will be rejected in code review. Do not use them.
 - **Raw `fetch()`** in components or view models — use `api/*.api.ts` functions
 - **`useState`/`useEffect`** in components for data logic — belongs in the view model
 - **`HttpException`** in domain layer — throw plain `Error` subclasses
+- **Injecting `PRISMA_CLIENT` in `modules/*/application/` or `modules/*/domain/`** — use a repository interface. Prisma access lives only in `modules/*/infrastructure/` or `common/`.
 
 ## Code Style
 
