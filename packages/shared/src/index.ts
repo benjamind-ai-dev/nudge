@@ -16,5 +16,6 @@ export type {
   QuickbooksWebhooksJobData,
   DeadLetterJobData,
   SmsSendJobData,
+  RefreshConnectionJobData,
 } from "./types/index";
 export { encrypt, decrypt } from "./crypto/encrypt";

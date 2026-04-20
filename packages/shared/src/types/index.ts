@@ -26,4 +26,5 @@ export type {
   QuickbooksWebhooksJobData,
   DeadLetterJobData,
   SmsSendJobData,
+  RefreshConnectionJobData,
 } from "./jobs";
