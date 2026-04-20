@@ -1,18 +1,20 @@
 import { Test } from "@nestjs/testing";
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { XeroOAuthController } from "./xero-oauth.controller";
+import { QuickbooksCallbackController } from "./quickbooks-callback.controller";
 import { CompleteConnectionUseCase } from "../connections-common/application/complete-connection.use-case";
 
-describe("XeroOAuthController", () => {
+describe("QuickbooksCallbackController", () => {
   let app: INestApplication;
   let useCase: { execute: jest.Mock };
 
   beforeEach(async () => {
     useCase = { execute: jest.fn() };
     const module = await Test.createTestingModule({
-      controllers: [XeroOAuthController],
-      providers: [{ provide: CompleteConnectionUseCase, useValue: useCase }],
+      controllers: [QuickbooksCallbackController],
+      providers: [
+        { provide: CompleteConnectionUseCase, useValue: useCase },
+      ],
     }).compile();
     app = module.createNestApplication();
     await app.init();
@@ -22,14 +24,14 @@ describe("XeroOAuthController", () => {
     await app.close();
   });
 
-  it("redirects to the URL returned by the use case", async () => {
+  it("redirects to success URL", async () => {
     useCase.execute.mockResolvedValue({
       redirectUrl: "http://localhost:5173/onboarding/complete?status=success",
     });
 
     await request(app.getHttpServer())
-      .get("/v1/connections/xero/callback")
-      .query({ code: "c", state: "s" })
+      .get("/v1/connections/quickbooks/callback")
+      .query({ code: "c", state: "s", realmId: "r" })
       .expect(302)
       .expect(
         "Location",
@@ -37,19 +39,19 @@ describe("XeroOAuthController", () => {
       );
   });
 
-  it("delegates to CompleteConnectionUseCase with provider hint xero and empty metadata", async () => {
+  it("delegates to CompleteConnectionUseCase with realmId metadata", async () => {
     useCase.execute.mockResolvedValue({ redirectUrl: "http://x" });
 
     await request(app.getHttpServer())
-      .get("/v1/connections/xero/callback")
-      .query({ code: "c", state: "s" })
+      .get("/v1/connections/quickbooks/callback")
+      .query({ code: "c", state: "s", realmId: "r" })
       .expect(302);
 
     expect(useCase.execute).toHaveBeenCalledWith({
       code: "c",
       state: "s",
-      providerHint: "xero",
-      providerMetadata: {},
+      providerHint: "quickbooks",
+      providerMetadata: { realmId: "r" },
     });
   });
 });

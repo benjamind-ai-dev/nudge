@@ -1,4 +1,4 @@
-import { Module, forwardRef } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 import { BullModule } from "@nestjs/bullmq";
 import { QUEUE_NAMES } from "@nudge/shared";
 import { QuickbooksOAuthProvider } from "../quickbooks-oauth/domain/quickbooks-oauth.provider";
@@ -19,8 +19,8 @@ import { PrismaConnectionRepository } from "./infrastructure/prisma-connection.r
 
 @Module({
   imports: [
-    forwardRef(() => QuickbooksOAuthModule),
-    forwardRef(() => XeroOAuthModule),
+    QuickbooksOAuthModule,
+    XeroOAuthModule,
     BullModule.registerQueue({ name: QUEUE_NAMES.INVOICE_SYNC }),
   ],
   providers: [

@@ -3,7 +3,7 @@ import { Response } from "express";
 import { CompleteConnectionUseCase } from "../connections-common/application/complete-connection.use-case";
 
 @Controller("v1/connections/xero")
-export class XeroOAuthController {
+export class XeroCallbackController {
   constructor(private readonly useCase: CompleteConnectionUseCase) {}
 
   @Get("callback")

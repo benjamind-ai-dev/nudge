@@ -3,7 +3,7 @@ import { Response } from "express";
 import { CompleteConnectionUseCase } from "../connections-common/application/complete-connection.use-case";
 
 @Controller("v1/connections/quickbooks")
-export class QuickbooksOAuthController {
+export class QuickbooksCallbackController {
   constructor(private readonly useCase: CompleteConnectionUseCase) {}
 
   @Get("callback")
