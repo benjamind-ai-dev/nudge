@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaClient } from "@nudge/database";
+import type { ProviderName } from "@nudge/connections-domain";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type { CanonicalCustomer, InvoiceStatus } from "../domain/canonical-invoice";
 import type { CustomerRepository } from "../domain/repositories";
@@ -18,6 +19,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
 
   async upsertMany(
     businessId: string,
+    provider: ProviderName,
     customers: CanonicalCustomer[],
   ): Promise<void> {
     if (customers.length === 0) return;
@@ -34,6 +36,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
           create: {
             businessId,
             externalId: c.externalId,
+            provider,
             companyName: c.companyName,
             contactName: c.contactName,
             contactEmail: c.contactEmail,
@@ -41,6 +44,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
             lastSyncedAt: now,
           },
           update: {
+            provider,
             companyName: c.companyName,
             contactName: c.contactName,
             contactEmail: c.contactEmail,

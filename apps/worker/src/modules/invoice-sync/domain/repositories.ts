@@ -16,6 +16,7 @@ export interface InvoiceUpsertRow {
   issuedDate: Date | null;
   dueDate: Date;
   status: InvoiceStatus;
+  provider: ProviderName;
   /** Set to `now` only on open/overdue → paid transitions; otherwise undefined. */
   paidAtIfNewlyPaid: Date | undefined;
   lastSyncedAt: Date;
@@ -36,7 +37,11 @@ export interface InvoiceRepository {
 }
 
 export interface CustomerRepository {
-  upsertMany(businessId: string, customers: CanonicalCustomer[]): Promise<void>;
+  upsertMany(
+    businessId: string,
+    provider: ProviderName,
+    customers: CanonicalCustomer[],
+  ): Promise<void>;
 
   /**
    * Recomputes `customers.total_outstanding` as the sum of balance_due_cents

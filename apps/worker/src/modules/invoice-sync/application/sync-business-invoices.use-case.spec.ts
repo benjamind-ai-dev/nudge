@@ -123,8 +123,10 @@ describe("SyncBusinessInvoicesUseCase", () => {
 
     await useCase.execute("biz-1");
 
-    expect(customerRepo.upsertMany).toHaveBeenCalledWith("biz-1", [mkCustomer()]);
+    expect(customerRepo.upsertMany).toHaveBeenCalledWith("biz-1", "quickbooks", [mkCustomer()]);
     expect(invoiceRepo.upsertMany).toHaveBeenCalledTimes(1);
+    const rows = invoiceRepo.upsertMany.mock.calls[0][1];
+    expect(rows[0].provider).toBe("quickbooks");
     expect(customerRepo.recalculateTotalOutstanding).toHaveBeenCalledWith(
       "biz-1",
       ["C1"],

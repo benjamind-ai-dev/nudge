@@ -64,6 +64,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
           issuedDate: r.issuedDate,
           dueDate: r.dueDate,
           status: r.status,
+          provider: r.provider,
           paidAt: r.paidAtIfNewlyPaid ?? null,
           lastSyncedAt: r.lastSyncedAt,
         };
@@ -77,6 +78,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
           issuedDate: r.issuedDate,
           dueDate: r.dueDate,
           status: r.status,
+          provider: r.provider,
           lastSyncedAt: r.lastSyncedAt,
         };
         // paidAt is only stamped on the open/overdue → paid transition; omitting it
