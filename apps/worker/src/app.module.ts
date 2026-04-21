@@ -8,6 +8,7 @@ import { QueueModule } from "./common/queue/queue.module";
 import { DebugModule } from "./debug/debug.module";
 import { SmsModule } from "./modules/sms/sms.module";
 import { TokenRefreshModule } from "./modules/token-refresh/token-refresh.module";
+import { InvoiceSyncModule } from "./modules/invoice-sync/invoice-sync.module";
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TokenRefreshModule } from "./modules/token-refresh/token-refresh.module
     DebugModule,
     SmsModule,
     TokenRefreshModule,
+    InvoiceSyncModule,
   ],
 })
 export class AppModule {}

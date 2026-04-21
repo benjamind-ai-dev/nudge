@@ -31,5 +31,6 @@ import { XeroOAuthProvider } from "./infrastructure/xero-oauth.provider";
       inject: [QuickbooksOAuthProvider, XeroOAuthProvider],
     },
   ],
+  exports: [RefreshTokenUseCase],
 })
 export class TokenRefreshModule {}
