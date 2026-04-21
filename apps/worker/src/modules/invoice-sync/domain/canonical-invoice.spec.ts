@@ -9,6 +9,7 @@ const baseInvoice = (overrides: Partial<CanonicalInvoice> = {}): CanonicalInvoic
   amountPaidCents: 0,
   balanceDueCents: 10_000,
   currency: "USD",
+  paymentLinkUrl: null,
   issuedDate: new Date("2026-01-01"),
   dueDate: new Date("2026-02-01"),
   lifecycle: "active",

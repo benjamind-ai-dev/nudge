@@ -17,6 +17,10 @@ export interface CanonicalCustomer {
  * - `dueDate` is non-null; mappers coerce to `issuedDate` (or, as a last
  *   resort, `now`) when the provider omits it — e.g., QuickBooks draft
  *   invoices that have no DueDate set yet.
+ *
+ * `paymentLinkUrl` is populated by providers that expose a customer-facing
+ * payment/invoice URL (Xero's OnlineInvoiceUrl); `null` when the provider
+ * doesn't have one (e.g., QuickBooks today).
  */
 export interface CanonicalInvoice {
   externalId: string;
@@ -26,6 +30,7 @@ export interface CanonicalInvoice {
   amountPaidCents: number;
   balanceDueCents: number;
   currency: string;
+  paymentLinkUrl: string | null;
   issuedDate: Date | null;
   dueDate: Date;
   lifecycle: CanonicalInvoiceLifecycle;

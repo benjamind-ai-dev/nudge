@@ -13,6 +13,7 @@ export interface InvoiceUpsertRow {
   amountPaidCents: number;
   balanceDueCents: number;
   currency: string;
+  paymentLinkUrl: string | null;
   issuedDate: Date | null;
   dueDate: Date;
   status: InvoiceStatus;

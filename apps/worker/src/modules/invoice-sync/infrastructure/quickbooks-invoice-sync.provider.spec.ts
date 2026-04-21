@@ -107,6 +107,7 @@ describe("QuickbooksInvoiceSyncProvider", () => {
         amountPaidCents: 30000,
         balanceDueCents: 20025,
         currency: "USD",
+        paymentLinkUrl: null,
         issuedDate: new Date("2026-01-01"),
         dueDate: new Date("2026-02-01"),
         lifecycle: "active",

@@ -54,6 +54,7 @@ const mkInvoice = (over: Partial<CanonicalInvoice> = {}): CanonicalInvoice => ({
   amountPaidCents: 0,
   balanceDueCents: 10_000,
   currency: "USD",
+  paymentLinkUrl: null,
   issuedDate: new Date("2026-01-01"),
   dueDate: new Date("2026-02-01"),
   lifecycle: "active",
@@ -127,6 +128,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
     expect(invoiceRepo.upsertMany).toHaveBeenCalledTimes(1);
     const rows = invoiceRepo.upsertMany.mock.calls[0][1];
     expect(rows[0].provider).toBe("quickbooks");
+    expect(rows[0].paymentLinkUrl).toBeNull();
     expect(customerRepo.recalculateTotalOutstanding).toHaveBeenCalledWith(
       "biz-1",
       ["C1"],
