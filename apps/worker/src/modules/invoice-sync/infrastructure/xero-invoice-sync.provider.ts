@@ -240,11 +240,39 @@ export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
 
   private async fetchInvoices(args: InvoiceSyncFetchArgs): Promise<XeroInvoice[]> {
     const url = this.buildInvoiceUrl(args);
+
+    // TODO: Remove after debugging Xero sync
+    this.logger.log({
+      msg: "Xero fetchInvoices request",
+      event: "xero_fetch_invoices_debug",
+      url,
+      tenantId: args.tenantId,
+      cursor: args.cursor.toISOString(),
+      offset: args.offset,
+    });
+
     const body = await this.get<{ Invoices?: XeroInvoice[] }>(
       url,
       this.commonHeaders(args),
       "Invoices",
     );
+
+    // TODO: Remove after debugging Xero sync
+    this.logger.log({
+      msg: "Xero fetchInvoices response",
+      event: "xero_fetch_invoices_debug_response",
+      invoiceCount: body.Invoices?.length ?? 0,
+      firstInvoice: body.Invoices?.[0]
+        ? {
+            InvoiceID: body.Invoices[0].InvoiceID,
+            InvoiceNumber: body.Invoices[0].InvoiceNumber,
+            Type: body.Invoices[0].Type,
+            Status: body.Invoices[0].Status,
+            UpdatedDateUTC: body.Invoices[0].UpdatedDateUTC,
+          }
+        : null,
+    });
+
     return body.Invoices ?? [];
   }
 
