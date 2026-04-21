@@ -58,8 +58,8 @@ const mkInvoice = (over: Partial<CanonicalInvoice> = {}): CanonicalInvoice => ({
   issuedDate: new Date("2026-04-01"),
   dueDate: new Date("2026-05-01"),
   lifecycle: "active",
-  // Must be after the 30-day null-cursor fallback (NOW minus 30 days =
-  // 2026-03-22) so cursor-advance tests actually advance.
+  // Must be after the 90-day null-cursor fallback (NOW minus 90 days =
+  // 2026-01-21) so cursor-advance tests actually advance.
   lastUpdatedAt: new Date("2026-04-05"),
   ...over,
 });
@@ -170,7 +170,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
     );
   });
 
-  it("uses 'now - 30 days' when syncCursor is null (first sync)", async () => {
+  it("uses 'now - 90 days' when syncCursor is null (first sync)", async () => {
     reader.findById.mockResolvedValue(mkConnection({ syncCursor: null }));
     provider.fetchPage.mockResolvedValueOnce({
       invoices: [],
@@ -180,7 +180,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
 
     await useCase.execute("conn-1");
 
-    const expected = new Date(NOW.getTime() - 30 * 24 * 60 * 60_000);
+    const expected = new Date(NOW.getTime() - 90 * 24 * 60 * 60_000);
     expect(provider.fetchPage.mock.calls[0][0].cursor.toISOString()).toBe(
       expected.toISOString(),
     );
