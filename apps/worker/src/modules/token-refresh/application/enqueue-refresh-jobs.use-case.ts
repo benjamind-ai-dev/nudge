@@ -32,7 +32,10 @@ export class EnqueueRefreshJobsUseCase {
         {
           attempts: 5,
           backoff: { type: "exponential", delay: 5000 },
-          removeOnComplete: 100,
+          // Must be `true` (not a retention count). BullMQ's jobId dedupe
+          // applies to completed jobs too — retaining the record permanently
+          // blocks re-enqueues with the same jobId. Release on success.
+          removeOnComplete: true,
           removeOnFail: 500,
         },
       );

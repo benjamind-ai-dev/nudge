@@ -43,7 +43,11 @@ export class EnqueueBusinessSyncsUseCase {
           jobId: `sync-${conn.businessId}`,
           attempts: 3,
           backoff: { type: "exponential", delay: 10_000 },
-          removeOnComplete: 100,
+          // Must be `true` (not a retention count). BullMQ's jobId dedupe
+          // applies to completed jobs too — if we retain the record, the
+          // next tick silently no-ops. Release the ID on success so future
+          // ticks can re-enqueue.
+          removeOnComplete: true,
           removeOnFail: 500,
         },
       );
