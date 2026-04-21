@@ -18,6 +18,7 @@ import { PrismaCustomerRepository } from "./infrastructure/prisma-customer.repos
 import { PrismaInvoiceRepository } from "./infrastructure/prisma-invoice.repository";
 import { PrismaSyncConnectionReader } from "./infrastructure/prisma-sync-connection.reader";
 import { QuickbooksInvoiceSyncProvider } from "./infrastructure/quickbooks-invoice-sync.provider";
+import { XeroInvoiceSyncProvider } from "./infrastructure/xero-invoice-sync.provider";
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { QuickbooksInvoiceSyncProvider } from "./infrastructure/quickbooks-invoi
   ],
   providers: [
     QuickbooksInvoiceSyncProvider,
+    XeroInvoiceSyncProvider,
     EnqueueBusinessSyncsUseCase,
     SyncBusinessInvoicesUseCase,
     InvoiceSyncProcessor,
@@ -34,10 +36,14 @@ import { QuickbooksInvoiceSyncProvider } from "./infrastructure/quickbooks-invoi
     { provide: SYNC_CONNECTION_READER, useClass: PrismaSyncConnectionReader },
     {
       provide: INVOICE_SYNC_PROVIDERS,
-      useFactory: (qb: QuickbooksInvoiceSyncProvider): InvoiceSyncProviderMap => ({
+      useFactory: (
+        qb: QuickbooksInvoiceSyncProvider,
+        xero: XeroInvoiceSyncProvider,
+      ): InvoiceSyncProviderMap => ({
         quickbooks: qb,
+        xero,
       }),
-      inject: [QuickbooksInvoiceSyncProvider],
+      inject: [QuickbooksInvoiceSyncProvider, XeroInvoiceSyncProvider],
     },
   ],
 })
