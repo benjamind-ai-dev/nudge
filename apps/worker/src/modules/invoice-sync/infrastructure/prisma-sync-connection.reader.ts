@@ -23,6 +23,7 @@ type ConnectionRow = {
   status: string;
   lastRefreshAt: Date | null;
   errorMessage: string | null;
+  syncCursor: string | null;
 };
 
 @Injectable()
@@ -50,7 +51,13 @@ export class PrismaSyncConnectionReader implements SyncConnectionReader {
       lastRefreshAt: row.lastRefreshAt,
       errorMessage: row.errorMessage,
     };
-    return Connection.fromPersistence(persisted, this.key());
+    const conn = Connection.fromPersistence(persisted, this.key());
+    // syncCursor is not part of the shared Connection entity — attach it
+    // here so the invoice-sync use case can read it. Readonly on the class
+    // is compile-time only; at runtime these are plain properties.
+    (conn as Connection & { syncCursor: string | null }).syncCursor =
+      row.syncCursor;
+    return conn;
   }
 
   async findAllSyncable(
