@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import type { ProviderName } from "@nudge/connections-domain";
+import { Injectable, Logger } from "@nestjs/common";
+import type { ProviderName, ProviderTokens } from "@nudge/connections-domain";
 import type {
   CanonicalCustomer,
   CanonicalInvoice,
@@ -90,6 +90,7 @@ export function mapXeroInvoice(raw: XeroInvoice): CanonicalInvoice {
     amountPaidCents,
     balanceDueCents,
     currency: raw.CurrencyCode ?? DEFAULT_CURRENCY,
+    paymentLinkUrl: null,
     issuedDate,
     dueDate,
     lifecycle,
@@ -135,6 +136,8 @@ export function mapXeroCustomer(raw: XeroContact): CanonicalCustomer {
 export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
   readonly name: ProviderName = "xero";
 
+  private readonly logger = new Logger(XeroInvoiceSyncProvider.name);
+
   async fetchPage(args: InvoiceSyncFetchArgs): Promise<InvoiceSyncPage> {
     const invoiceRows = await this.fetchInvoices(args);
 
@@ -149,6 +152,17 @@ export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
 
     const invoices: CanonicalInvoice[] = invoiceRows.map(mapXeroInvoice);
     const customers: CanonicalCustomer[] = contactRows.map(mapXeroCustomer);
+
+    // Fetch OnlineInvoiceUrl for each AUTHORISED invoice (sequential to respect rate limits)
+    for (let i = 0; i < invoiceRows.length; i++) {
+      if (invoiceRows[i].Status === "AUTHORISED") {
+        invoices[i].paymentLinkUrl = await this.fetchOnlineInvoiceUrl(
+          args.tokens,
+          args.tenantId,
+          invoiceRows[i].InvoiceID,
+        );
+      }
+    }
 
     return {
       invoices,
@@ -243,5 +257,49 @@ export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
       "Contacts",
     );
     return body.Contacts ?? [];
+  }
+
+  private async fetchOnlineInvoiceUrl(
+    tokens: ProviderTokens,
+    tenantId: string,
+    invoiceId: string,
+  ): Promise<string | null> {
+    const url = `${XERO_BASE}/Invoices/${encodeURIComponent(invoiceId)}/OnlineInvoice`;
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${tokens.accessToken}`,
+      "xero-tenant-id": tenantId,
+      Accept: "application/json",
+    };
+
+    let res: Response;
+    try {
+      res = await fetch(url, { method: "GET", headers });
+    } catch (cause) {
+      this.logger.warn({
+        msg: "OnlineInvoice fetch failed (network error); leaving paymentLinkUrl null",
+        event: "xero_online_invoice_fetch_network_error",
+        invoiceId,
+        cause: cause instanceof Error ? cause.message : String(cause),
+      });
+      return null;
+    }
+
+    // 401 propagates to trigger the use-case refresh flow
+    if (res.status === 401) throw new AuthError();
+
+    if (!res.ok) {
+      this.logger.warn({
+        msg: "OnlineInvoice fetch returned non-OK status; leaving paymentLinkUrl null",
+        event: "xero_online_invoice_fetch_error",
+        invoiceId,
+        status: res.status,
+      });
+      return null;
+    }
+
+    const body = (await res.json()) as {
+      OnlineInvoices?: { OnlineInvoiceUrl?: string }[];
+    };
+    return body.OnlineInvoices?.[0]?.OnlineInvoiceUrl ?? null;
   }
 }

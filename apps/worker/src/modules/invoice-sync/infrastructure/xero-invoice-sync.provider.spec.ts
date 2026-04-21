@@ -70,6 +70,7 @@ describe("mapXeroInvoice", () => {
     expect(result.balanceDueCents).toBe(20025);
     expect(result.amountPaidCents).toBe(30000);
     expect(result.currency).toBe("USD");
+    expect(result.paymentLinkUrl).toBeNull();
     expect(result.issuedDate).toEqual(new Date("2026-01-01"));
     expect(result.dueDate).toEqual(new Date("2026-02-01"));
     expect(result.lifecycle).toBe("active");
@@ -266,10 +267,15 @@ describe("XeroInvoiceSyncProvider", () => {
       headers: { "content-type": "application/json" },
     });
 
+  const onlineInvoiceResponse = (url: string) => ({
+    OnlineInvoices: [{ OnlineInvoiceUrl: url }],
+  });
+
   it("happy path: fetches invoices + contacts and returns correct CanonicalInvoice and CanonicalCustomer", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
-      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/abc")));
 
     const page = await provider.fetchPage(BASE_ARGS);
 
@@ -284,7 +290,8 @@ describe("XeroInvoiceSyncProvider", () => {
   it("invoice URL includes encoded 'where' filter with cursor date components", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
-      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/abc")));
 
     await provider.fetchPage(BASE_ARGS);
 
@@ -300,7 +307,8 @@ describe("XeroInvoiceSyncProvider", () => {
   it("sends xero-tenant-id header on invoice request", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
-      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/abc")));
 
     await provider.fetchPage(BASE_ARGS);
 
@@ -312,7 +320,8 @@ describe("XeroInvoiceSyncProvider", () => {
   it("offset=0 → page=1 in URL", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
-      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/abc")));
 
     await provider.fetchPage({ ...BASE_ARGS, offset: 0 });
 
@@ -323,7 +332,8 @@ describe("XeroInvoiceSyncProvider", () => {
   it("offset=100 → page=2 in URL", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
-      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/abc")));
 
     await provider.fetchPage({ ...BASE_ARGS, offset: 100 });
 
@@ -337,9 +347,14 @@ describe("XeroInvoiceSyncProvider", () => {
       InvoiceID: `inv-${i}`,
       Contact: { ContactID: "contact-1" },
     }));
+    // Each AUTHORISED invoice triggers an OnlineInvoice fetch
     fetchMock
       .mockResolvedValueOnce(ok(invoicePageResponse(hundred)))
       .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+    // 100 OnlineInvoice fetches
+    for (let i = 0; i < 100; i++) {
+      fetchMock.mockResolvedValueOnce(ok(onlineInvoiceResponse(`https://in.xero.com/view/inv-${i}`)));
+    }
 
     const page = await provider.fetchPage(BASE_ARGS);
     expect(page.hasMore).toBe(true);
@@ -348,7 +363,8 @@ describe("XeroInvoiceSyncProvider", () => {
   it("hasMore is false when returned invoice array length < 100", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
-      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/abc")));
 
     const page = await provider.fetchPage(BASE_ARGS);
     expect(page.hasMore).toBe(false);
@@ -363,6 +379,10 @@ describe("XeroInvoiceSyncProvider", () => {
     fetchMock
       .mockResolvedValueOnce(ok(invoicePageResponse(ninetyNine)))
       .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+    // 99 OnlineInvoice fetches
+    for (let i = 0; i < 99; i++) {
+      fetchMock.mockResolvedValueOnce(ok(onlineInvoiceResponse(`https://in.xero.com/view/inv-${i + 1}`)));
+    }
 
     const page = await provider.fetchPage({
       tokens,
@@ -390,11 +410,16 @@ describe("XeroInvoiceSyncProvider", () => {
             { ...sampleXeroContact, ContactID: "contact-B" },
           ]),
         ),
-      );
+      )
+      // 3 AUTHORISED invoices → 3 OnlineInvoice fetches
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/i1")))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/i2")))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/i3")));
 
     await provider.fetchPage(BASE_ARGS);
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // calls: invoices + contacts + 3 online invoice fetches = 5
+    expect(fetchMock).toHaveBeenCalledTimes(5);
     const contactUrl = fetchMock.mock.calls[1][0] as string;
     const decoded = decodeURIComponent(contactUrl);
     expect(decoded).toContain("contact-A");
@@ -458,7 +483,8 @@ describe("XeroInvoiceSyncProvider", () => {
   it("URL includes Statuses filter excluding DRAFT and SUBMITTED", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
-      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/abc")));
 
     await provider.fetchPage({
       tokens,
@@ -472,5 +498,71 @@ describe("XeroInvoiceSyncProvider", () => {
     expect(invoiceUrl).toContain("Statuses=AUTHORISED,PAID,VOIDED,DELETED");
     expect(invoiceUrl).not.toContain("DRAFT");
     expect(invoiceUrl).not.toContain("SUBMITTED");
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // OnlineInvoiceUrl tests
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it("OnlineInvoiceUrl is fetched for AUTHORISED invoice and attached to canonical", async () => {
+    fetchMock
+      .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(ok(onlineInvoiceResponse("https://in.xero.com/view/abc")));
+
+    const page = await provider.fetchPage(BASE_ARGS);
+
+    expect(page.invoices[0].paymentLinkUrl).toBe("https://in.xero.com/view/abc");
+    const onlineInvoiceUrl = fetchMock.mock.calls[2][0] as string;
+    expect(onlineInvoiceUrl).toContain("/OnlineInvoice");
+    expect(onlineInvoiceUrl).toContain("inv-aaa");
+  });
+
+  it("OnlineInvoiceUrl is NOT fetched for non-AUTHORISED invoices (PAID)", async () => {
+    const paidInvoice = { ...sampleXeroInvoice, Status: "PAID" };
+    fetchMock
+      .mockResolvedValueOnce(ok(invoicePageResponse([paidInvoice])))
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+
+    const page = await provider.fetchPage(BASE_ARGS);
+
+    // Only 2 calls: invoices + contacts — no OnlineInvoice fetch
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(page.invoices[0].paymentLinkUrl).toBeNull();
+    const allUrls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(allUrls.every((u) => !u.includes("OnlineInvoice"))).toBe(true);
+  });
+
+  it("OnlineInvoice fetch failure (500) is swallowed — paymentLinkUrl is null, sync continues", async () => {
+    fetchMock
+      .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(new Response("", { status: 500 }));
+
+    const page = await provider.fetchPage(BASE_ARGS);
+
+    expect(page.invoices[0].paymentLinkUrl).toBeNull();
+    expect(page.invoices).toHaveLength(1);
+  });
+
+  it("OnlineInvoice fetch failure (network error) is swallowed — paymentLinkUrl is null, sync continues", async () => {
+    fetchMock
+      .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockRejectedValueOnce(new Error("network down"));
+
+    const page = await provider.fetchPage(BASE_ARGS);
+
+    expect(page.invoices[0].paymentLinkUrl).toBeNull();
+    expect(page.invoices).toHaveLength(1);
+  });
+
+  it("OnlineInvoice 401 propagates as AuthError (triggers refresh flow)", async () => {
+    fetchMock
+      .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
+      .mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])))
+      .mockResolvedValueOnce(new Response("", { status: 401 }));
+
+    await expect(provider.fetchPage(BASE_ARGS)).rejects.toBeInstanceOf(AuthError);
   });
 });

@@ -278,6 +278,7 @@ export class SyncBusinessInvoicesUseCase {
         amountPaidCents: ci.amountPaidCents,
         balanceDueCents: ci.balanceDueCents,
         currency: ci.currency,
+        paymentLinkUrl: ci.paymentLinkUrl,
         issuedDate: ci.issuedDate,
         dueDate: ci.dueDate,
         status: newStatus,

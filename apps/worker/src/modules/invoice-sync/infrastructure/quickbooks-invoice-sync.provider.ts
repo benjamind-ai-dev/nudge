@@ -164,6 +164,7 @@ export class QuickbooksInvoiceSyncProvider implements InvoiceSyncProvider {
       amountPaidCents,
       balanceDueCents,
       currency: r.CurrencyRef?.value ?? "USD",
+      paymentLinkUrl: null,
       issuedDate: r.TxnDate ? new Date(r.TxnDate) : null,
       dueDate: new Date(r.DueDate ?? r.TxnDate ?? new Date()),
       lifecycle,
