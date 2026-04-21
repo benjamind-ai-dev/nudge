@@ -299,7 +299,7 @@ describe("XeroInvoiceSyncProvider", () => {
     const decoded = decodeURIComponent(invoiceUrl);
 
     expect(decoded).toContain('Type=="ACCREC"');
-    expect(decoded).toContain("UpdatedDateUTC>DateTime(2026,01,05,10,00,00)");
+    expect(decoded).toContain("UpdatedDateUTC>DateTime(2026,1,5,10,0,0)");
     expect(decoded).toContain("page=1");
     expect(invoiceUrl).toContain("Statuses=AUTHORISED,PAID,VOIDED,DELETED");
   });
