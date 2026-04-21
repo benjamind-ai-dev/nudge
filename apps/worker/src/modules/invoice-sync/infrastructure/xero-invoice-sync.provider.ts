@@ -242,14 +242,36 @@ export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
     const url = this.buildInvoiceUrl(args);
 
     // TODO: Remove after debugging Xero sync
-    this.logger.log({
-      msg: "Xero fetchInvoices request",
-      event: "xero_fetch_invoices_debug",
-      url,
-      tenantId: args.tenantId,
-      cursor: args.cursor.toISOString(),
-      offset: args.offset,
-    });
+    if (process.env.XERO_DEBUG === "true") {
+      this.logger.log({
+        msg: "Xero fetchInvoices request",
+        event: "xero_fetch_invoices_debug",
+        url,
+        tenantId: args.tenantId,
+        cursor: args.cursor.toISOString(),
+        offset: args.offset,
+      });
+
+      // Fetch ALL invoices without date filter to compare
+      const debugUrl = `${XERO_BASE}/Invoices?where=${encodeURIComponent('Type=="ACCREC"')}&Statuses=AUTHORISED,PAID,VOIDED,DELETED&page=1`;
+      const debugBody = await this.get<{ Invoices?: XeroInvoice[] }>(
+        debugUrl,
+        this.commonHeaders(args),
+        "Invoices-debug",
+      );
+      this.logger.log({
+        msg: "Xero DEBUG - ALL invoices (no date filter)",
+        event: "xero_fetch_all_invoices_debug",
+        invoiceCount: debugBody.Invoices?.length ?? 0,
+        invoices: debugBody.Invoices?.slice(0, 5).map((inv) => ({
+          InvoiceID: inv.InvoiceID,
+          InvoiceNumber: inv.InvoiceNumber,
+          Type: inv.Type,
+          Status: inv.Status,
+          UpdatedDateUTC: inv.UpdatedDateUTC,
+        })),
+      });
+    }
 
     const body = await this.get<{ Invoices?: XeroInvoice[] }>(
       url,
@@ -258,20 +280,22 @@ export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
     );
 
     // TODO: Remove after debugging Xero sync
-    this.logger.log({
-      msg: "Xero fetchInvoices response",
-      event: "xero_fetch_invoices_debug_response",
-      invoiceCount: body.Invoices?.length ?? 0,
-      firstInvoice: body.Invoices?.[0]
-        ? {
-            InvoiceID: body.Invoices[0].InvoiceID,
-            InvoiceNumber: body.Invoices[0].InvoiceNumber,
-            Type: body.Invoices[0].Type,
-            Status: body.Invoices[0].Status,
-            UpdatedDateUTC: body.Invoices[0].UpdatedDateUTC,
-          }
-        : null,
-    });
+    if (process.env.XERO_DEBUG === "true") {
+      this.logger.log({
+        msg: "Xero fetchInvoices response",
+        event: "xero_fetch_invoices_debug_response",
+        invoiceCount: body.Invoices?.length ?? 0,
+        firstInvoice: body.Invoices?.[0]
+          ? {
+              InvoiceID: body.Invoices[0].InvoiceID,
+              InvoiceNumber: body.Invoices[0].InvoiceNumber,
+              Type: body.Invoices[0].Type,
+              Status: body.Invoices[0].Status,
+              UpdatedDateUTC: body.Invoices[0].UpdatedDateUTC,
+            }
+          : null,
+      });
+    }
 
     return body.Invoices ?? [];
   }
