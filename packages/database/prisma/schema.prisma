@@ -108,6 +108,7 @@ model Customer {
   id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   businessId         String    @map("business_id") @db.Uuid
   externalId         String    @map("external_id") @db.VarChar(255)
+  provider           String    @db.VarChar(50)
   companyName        String    @map("company_name") @db.VarChar(255)
   contactName        String?   @map("contact_name") @db.VarChar(255)
   contactEmail       String?   @map("contact_email") @db.VarChar(255)
@@ -138,6 +139,7 @@ model Invoice {
   businessId      String    @map("business_id") @db.Uuid
   customerId      String    @map("customer_id") @db.Uuid
   externalId      String    @map("external_id") @db.VarChar(255)
+  provider        String    @db.VarChar(50)
   invoiceNumber   String?   @map("invoice_number") @db.VarChar(100)
   amountCents     Int       @map("amount_cents")
   amountPaidCents Int       @default(0) @map("amount_paid_cents")

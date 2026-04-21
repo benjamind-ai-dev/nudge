@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { UnrecoverableError } from "bullmq";
 import type {
   Connection,
+  ProviderName,
   ProviderTokens,
 } from "@nudge/connections-domain";
 import type { CanonicalInvoice } from "../domain/canonical-invoice";
@@ -111,11 +112,11 @@ export class SyncBusinessInvoicesUseCase {
         connection = connectionAfter;
 
         if (page.customers.length) {
-          await this.customers.upsertMany(businessId, page.customers);
+          await this.customers.upsertMany(businessId, provider.name, page.customers);
         }
 
         if (page.invoices.length) {
-          const rows = await this.buildInvoiceRows(businessId, page.invoices, now);
+          const rows = await this.buildInvoiceRows(businessId, provider.name, page.invoices, now);
           await this.invoices.upsertMany(businessId, rows);
           for (const inv of page.invoices) {
             touchedCustomerExtIds.add(inv.customerExternalId);
@@ -245,6 +246,7 @@ export class SyncBusinessInvoicesUseCase {
 
   private async buildInvoiceRows(
     businessId: string,
+    providerName: ProviderName,
     invoices: CanonicalInvoice[],
     now: Date,
   ): Promise<InvoiceUpsertRow[]> {
@@ -279,6 +281,7 @@ export class SyncBusinessInvoicesUseCase {
         issuedDate: ci.issuedDate,
         dueDate: ci.dueDate,
         status: newStatus,
+        provider: providerName,
         paidAtIfNewlyPaid: isPaymentTransition ? now : undefined,
         lastSyncedAt: now,
       } satisfies InvoiceUpsertRow;
