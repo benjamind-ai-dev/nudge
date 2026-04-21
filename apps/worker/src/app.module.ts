@@ -5,7 +5,6 @@ import { envSchema } from "./common/config/env.schema";
 import { DatabaseModule } from "./common/database/database.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { QueueModule } from "./common/queue/queue.module";
-import { DebugModule } from "./debug/debug.module";
 import { SmsModule } from "./modules/sms/sms.module";
 import { TokenRefreshModule } from "./modules/token-refresh/token-refresh.module";
 import { InvoiceSyncModule } from "./modules/invoice-sync/invoice-sync.module";
@@ -22,7 +21,6 @@ import { InvoiceSyncModule } from "./modules/invoice-sync/invoice-sync.module";
     DatabaseModule,
     RedisModule,
     QueueModule,
-    DebugModule,
     SmsModule,
     TokenRefreshModule,
     InvoiceSyncModule,
