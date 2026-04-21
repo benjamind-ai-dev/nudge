@@ -267,4 +267,19 @@ describe("SyncBusinessInvoicesUseCase", () => {
     const rows = invoiceRepo.upsertMany.mock.calls[0][1];
     expect(rows[0].paidAtIfNewlyPaid).toBeUndefined();
   });
+
+  it("breaks the loop when provider returns empty page with hasMore=true (defensive guard)", async () => {
+    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection());
+    provider.fetchPage.mockResolvedValueOnce({
+      invoices: [],
+      customers: [],
+      hasMore: true,
+    });
+
+    await useCase.execute("biz-1");
+
+    expect(provider.fetchPage).toHaveBeenCalledTimes(1);
+    expect(invoiceRepo.upsertMany).not.toHaveBeenCalled();
+    expect(reader.updateSyncCursor).not.toHaveBeenCalled();
+  });
 });

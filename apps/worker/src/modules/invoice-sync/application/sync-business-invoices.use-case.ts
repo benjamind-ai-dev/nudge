@@ -87,51 +87,65 @@ export class SyncBusinessInvoicesUseCase {
       cursor: cursor.toISOString(),
     });
 
-    // Pagination loop
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const { page, connectionAfter } = await this.fetchPageWithRecovery(
-        provider,
-        connection,
-        cursor,
-        offset,
-        (ms) => {
-          rateLimitBudgetUsedMs += ms;
-          if (rateLimitBudgetUsedMs > TOTAL_RATE_LIMIT_BUDGET_MS) {
-            throw new Error("Rate limit budget exceeded for this job");
-          }
-        },
-      );
-      connection = connectionAfter;
+    try {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { page, connectionAfter } = await this.fetchPageWithRecovery(
+          provider,
+          connection,
+          cursor,
+          offset,
+          (ms) => {
+            rateLimitBudgetUsedMs += ms;
+            if (rateLimitBudgetUsedMs > TOTAL_RATE_LIMIT_BUDGET_MS) {
+              throw new Error("Rate limit budget exceeded for this job");
+            }
+          },
+        );
+        connection = connectionAfter;
 
-      if (page.customers.length) {
-        await this.customers.upsertMany(businessId, page.customers);
-      }
+        if (page.customers.length) {
+          await this.customers.upsertMany(businessId, page.customers);
+        }
 
-      if (page.invoices.length) {
-        const rows = await this.buildInvoiceRows(businessId, page.invoices, now);
-        await this.invoices.upsertMany(businessId, rows);
-        for (const inv of page.invoices) {
-          touchedCustomerExtIds.add(inv.customerExternalId);
-          if (inv.lastUpdatedAt > lastSeenUpdatedAt) {
-            lastSeenUpdatedAt = inv.lastUpdatedAt;
+        if (page.invoices.length) {
+          const rows = await this.buildInvoiceRows(businessId, page.invoices, now);
+          await this.invoices.upsertMany(businessId, rows);
+          for (const inv of page.invoices) {
+            touchedCustomerExtIds.add(inv.customerExternalId);
+            if (inv.lastUpdatedAt > lastSeenUpdatedAt) {
+              lastSeenUpdatedAt = inv.lastUpdatedAt;
+            }
           }
         }
+
+        offset += page.invoices.length;
+        if (!page.hasMore) break;
+        if (page.invoices.length === 0) {
+          // Provider signalled hasMore but returned no records — treat as terminal
+          // to avoid an infinite loop. QB can emit this for sparse page windows.
+          this.logger.warn({
+            msg: "Provider returned empty page with hasMore=true; treating as terminal",
+            event: "invoice_sync_empty_hasmore",
+            businessId,
+            offset,
+          });
+          break;
+        }
       }
-
-      offset += page.invoices.length;
-      if (!page.hasMore) break;
-    }
-
-    if (touchedCustomerExtIds.size) {
-      await this.customers.recalculateTotalOutstanding(
-        businessId,
-        Array.from(touchedCustomerExtIds),
-      );
-    }
-
-    if (connection.id) {
-      await this.reader.updateSyncCursor(connection.id, lastSeenUpdatedAt);
+    } finally {
+      // Advance cursor and recalculate totals even on partial failure, so that
+      // already-committed pages aren't reprocessed next tick (avoids feedback
+      // loops when e.g. a rate-limit budget exhausts mid-job).
+      if (touchedCustomerExtIds.size) {
+        await this.customers.recalculateTotalOutstanding(
+          businessId,
+          Array.from(touchedCustomerExtIds),
+        );
+      }
+      if (connection.id && lastSeenUpdatedAt > cursor) {
+        await this.reader.updateSyncCursor(connection.id, lastSeenUpdatedAt);
+      }
     }
 
     this.logger.log({
