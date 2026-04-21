@@ -55,10 +55,12 @@ const mkInvoice = (over: Partial<CanonicalInvoice> = {}): CanonicalInvoice => ({
   balanceDueCents: 10_000,
   currency: "USD",
   paymentLinkUrl: null,
-  issuedDate: new Date("2026-01-01"),
-  dueDate: new Date("2026-02-01"),
+  issuedDate: new Date("2026-04-01"),
+  dueDate: new Date("2026-05-01"),
   lifecycle: "active",
-  lastUpdatedAt: new Date("2026-01-05"),
+  // Must be after the 30-day null-cursor fallback (NOW minus 30 days =
+  // 2026-03-22) so cursor-advance tests actually advance.
+  lastUpdatedAt: new Date("2026-04-05"),
   ...over,
 });
 
@@ -134,7 +136,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
     );
     expect(reader.updateSyncCursor).toHaveBeenCalledWith(
       "conn-1",
-      new Date("2026-01-05"),
+      new Date("2026-04-05"),
     );
   });
 
@@ -150,7 +152,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
         invoices: [
           mkInvoice({
             externalId: "b",
-            lastUpdatedAt: new Date("2026-01-06"),
+            lastUpdatedAt: new Date("2026-04-06"),
           }),
         ],
         customers: [mkCustomer()],
@@ -164,11 +166,11 @@ describe("SyncBusinessInvoicesUseCase", () => {
     expect(provider.fetchPage.mock.calls[1][0].offset).toBe(1);
     expect(reader.updateSyncCursor).toHaveBeenCalledWith(
       "conn-1",
-      new Date("2026-01-06"),
+      new Date("2026-04-06"),
     );
   });
 
-  it("uses 'now - 1 year' when syncCursor is null (first sync)", async () => {
+  it("uses 'now - 30 days' when syncCursor is null (first sync)", async () => {
     reader.findById.mockResolvedValue(mkConnection({ syncCursor: null }));
     provider.fetchPage.mockResolvedValueOnce({
       invoices: [],
@@ -178,8 +180,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
 
     await useCase.execute("conn-1");
 
-    const expected = new Date(NOW);
-    expected.setUTCFullYear(expected.getUTCFullYear() - 1);
+    const expected = new Date(NOW.getTime() - 30 * 24 * 60 * 60_000);
     expect(provider.fetchPage.mock.calls[0][0].cursor.toISOString()).toBe(
       expected.toISOString(),
     );

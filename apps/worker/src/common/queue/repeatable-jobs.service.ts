@@ -21,12 +21,15 @@ export class RepeatableJobsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    // MVP testing cadence. Revert to 900_000 (15 min) before production —
+    // 3-min intervals are too aggressive against provider rate limits at
+    // scale (Xero: 60 req/min, QB: 500 req/min).
     await this.invoiceSyncQueue.upsertJobScheduler(
       "invoice-sync-scheduler",
-      { every: 900_000 },
+      { every: 180_000 },
       { name: "invoice-sync-tick" },
     );
-    this.logger.log("Registered invoice-sync: every 15 minutes");
+    this.logger.log("Registered invoice-sync: every 3 minutes (MVP testing)");
 
     await this.sequenceTriggerQueue.upsertJobScheduler(
       "sequence-trigger-scheduler",
