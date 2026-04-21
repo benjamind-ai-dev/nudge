@@ -88,7 +88,6 @@ export class SyncBusinessInvoicesUseCase {
     });
 
     try {
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const { page, connectionAfter } = await this.fetchPageWithRecovery(
           provider,
@@ -98,6 +97,13 @@ export class SyncBusinessInvoicesUseCase {
           (ms) => {
             rateLimitBudgetUsedMs += ms;
             if (rateLimitBudgetUsedMs > TOTAL_RATE_LIMIT_BUDGET_MS) {
+              this.logger.warn({
+                msg: "Rate limit budget exhausted — bailing to let BullMQ retry",
+                event: "invoice_sync_rate_limit_budget_exhausted",
+                businessId,
+                connectionId: connection.id,
+                rateLimitBudgetUsedMs,
+              });
               throw new Error("Rate limit budget exceeded for this job");
             }
           },
