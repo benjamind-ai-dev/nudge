@@ -29,11 +29,9 @@ import { RefreshTokenUseCase } from "../../token-refresh/application/refresh-tok
 
 const PAGE_SIZE = 1000;
 const PRE_FLIGHT_REFRESH_WINDOW_MS = 5 * 60_000;
-// MVP: pull 30 days of history on first sync (null cursor). Revisit before
-// production — longer lookback loads more historical data for reporting,
-// shorter reduces initial sync time. Keep in mind that once the cursor is
-// set, subsequent syncs only pull the delta regardless of this value.
-const DEFAULT_CURSOR_LOOKBACK_MS = 30 * 24 * 60 * 60_000;
+// Pull 90 days (3 months) of history on first sync (null cursor). Once the
+// cursor is set, subsequent syncs only pull the delta regardless of this value.
+const DEFAULT_CURSOR_LOOKBACK_MS = 90 * 24 * 60 * 60_000;
 const RATE_LIMIT_PAUSE_CAP_MS = 60_000;
 const TOTAL_RATE_LIMIT_BUDGET_MS = 5 * 60_000;
 
