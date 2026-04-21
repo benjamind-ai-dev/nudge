@@ -251,6 +251,26 @@ export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
       offset: args.offset,
     });
 
+    // TODO: Remove after debugging - fetch ALL invoices without date filter
+    const debugUrl = `${XERO_BASE}/Invoices?where=${encodeURIComponent('Type=="ACCREC"')}&Statuses=AUTHORISED,PAID,VOIDED,DELETED&page=1`;
+    const debugBody = await this.get<{ Invoices?: XeroInvoice[] }>(
+      debugUrl,
+      this.commonHeaders(args),
+      "Invoices-debug",
+    );
+    this.logger.log({
+      msg: "Xero DEBUG - ALL invoices (no date filter)",
+      event: "xero_fetch_all_invoices_debug",
+      invoiceCount: debugBody.Invoices?.length ?? 0,
+      invoices: debugBody.Invoices?.slice(0, 5).map((inv) => ({
+        InvoiceID: inv.InvoiceID,
+        InvoiceNumber: inv.InvoiceNumber,
+        Type: inv.Type,
+        Status: inv.Status,
+        UpdatedDateUTC: inv.UpdatedDateUTC,
+      })),
+    });
+
     const body = await this.get<{ Invoices?: XeroInvoice[] }>(
       url,
       this.commonHeaders(args),
