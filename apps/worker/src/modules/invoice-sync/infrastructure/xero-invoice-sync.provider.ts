@@ -173,14 +173,16 @@ export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
 
   private buildInvoiceUrl(args: InvoiceSyncFetchArgs): string {
     const c = args.cursor;
-    const pad = (n: number) => String(n).padStart(2, "0");
+    // Xero's `where` parser expects unpadded integer components.
+    // `DateTime(2026,03,22,...)` silently returns 0 invoices;
+    // `DateTime(2026,3,22,...)` works. Known Xero API footgun.
     const dateTime =
       `DateTime(${c.getUTCFullYear()},` +
-      `${pad(c.getUTCMonth() + 1)},` +
-      `${pad(c.getUTCDate())},` +
-      `${pad(c.getUTCHours())},` +
-      `${pad(c.getUTCMinutes())},` +
-      `${pad(c.getUTCSeconds())})`;
+      `${c.getUTCMonth() + 1},` +
+      `${c.getUTCDate()},` +
+      `${c.getUTCHours()},` +
+      `${c.getUTCMinutes()},` +
+      `${c.getUTCSeconds()})`;
 
     const where = `Type=="ACCREC" AND UpdatedDateUTC>${dateTime}`;
     const page = Math.floor(args.offset / 100) + 1;
