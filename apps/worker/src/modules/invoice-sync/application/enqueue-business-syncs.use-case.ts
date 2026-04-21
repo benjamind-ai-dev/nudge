@@ -38,9 +38,9 @@ export class EnqueueBusinessSyncsUseCase {
       if (!conn.id) continue;
       await this.queue.add(
         PER_BUSINESS_JOB_NAME,
-        { businessId: conn.businessId },
+        { connectionId: conn.id },
         {
-          jobId: `sync-${conn.businessId}`,
+          jobId: `sync-${conn.id}`,
           attempts: 3,
           backoff: { type: "exponential", delay: 10_000 },
           // Must be `true` (not a retention count). BullMQ's jobId dedupe

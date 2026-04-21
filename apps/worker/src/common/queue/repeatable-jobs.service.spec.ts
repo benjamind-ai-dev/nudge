@@ -29,12 +29,12 @@ describe("RepeatableJobsService", () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  it("should register invoice-sync every 15 minutes", async () => {
+  it("should register invoice-sync every 3 minutes (MVP testing cadence)", async () => {
     await service.onModuleInit();
 
     expect(mockInvoiceSyncQueue.upsertJobScheduler).toHaveBeenCalledWith(
       "invoice-sync-scheduler",
-      { every: 900_000 },
+      { every: 180_000 },
       { name: "invoice-sync-tick" },
     );
   });

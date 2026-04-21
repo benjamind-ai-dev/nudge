@@ -25,7 +25,11 @@ describe("CompleteConnectionUseCase", () => {
     connectionRepo = {
       upsertByBusinessAndProvider: jest
         .fn()
-        .mockImplementation(async (c: Connection) => c),
+        .mockImplementation(async (c: Connection) => {
+          // Simulate database assign of a persisted id
+          Object.defineProperty(c, "id", { value: "saved-conn-id", writable: false, configurable: true });
+          return c;
+        }),
     };
     invoiceSyncQueue = { add: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<Queue>;
     config = {
@@ -120,7 +124,7 @@ describe("CompleteConnectionUseCase", () => {
     expect(conn.accessToken).toEqual("at");
     expect(conn.refreshToken).toEqual("rt");
     expect(invoiceSyncQueue.add).toHaveBeenCalledWith("invoice-sync", {
-      businessId: "b",
+      connectionId: "saved-conn-id",
     });
   });
 
