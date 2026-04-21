@@ -61,9 +61,6 @@ export interface SyncConnectionReader {
   /** Look up a connection by id (used after refresh to get rotated tokens). */
   findById(id: string): Promise<Connection | null>;
 
-  /** Latest connected connection for a specific business (entry point for per-business sync). */
-  findLatestConnectedByBusiness(businessId: string): Promise<Connection | null>;
-
   /** Persist the advanced sync cursor on connections.sync_cursor. */
   updateSyncCursor(id: string, cursor: Date): Promise<void>;
 }

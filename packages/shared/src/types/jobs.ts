@@ -1,5 +1,5 @@
 export interface InvoiceSyncJobData {
-  businessId: string;
+  connectionId: string;
 }
 
 export type SequenceTriggerJobData = Record<string, never>;

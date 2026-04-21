@@ -90,7 +90,6 @@ describe("SyncBusinessInvoicesUseCase", () => {
     reader = {
       findAllSyncable: jest.fn(),
       findById: jest.fn(),
-      findLatestConnectedByBusiness: jest.fn(),
       updateSyncCursor: jest.fn(),
     } as unknown as jest.Mocked<SyncConnectionReader>;
     invoiceRepo = {
@@ -115,14 +114,14 @@ describe("SyncBusinessInvoicesUseCase", () => {
   afterEach(() => jest.useRealTimers());
 
   it("syncs a single page happy path: upserts customers → invoices → recalc → cursor", async () => {
-    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection());
+    reader.findById.mockResolvedValue(mkConnection());
     provider.fetchPage.mockResolvedValueOnce({
       invoices: [mkInvoice()],
       customers: [mkCustomer()],
       hasMore: false,
     });
 
-    await useCase.execute("biz-1");
+    await useCase.execute("conn-1");
 
     expect(customerRepo.upsertMany).toHaveBeenCalledWith("biz-1", "quickbooks", [mkCustomer()]);
     expect(invoiceRepo.upsertMany).toHaveBeenCalledTimes(1);
@@ -140,7 +139,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
   });
 
   it("paginates: continues with offset += page.invoices.length while hasMore", async () => {
-    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection());
+    reader.findById.mockResolvedValue(mkConnection());
     provider.fetchPage
       .mockResolvedValueOnce({
         invoices: [mkInvoice({ externalId: "a" })],
@@ -158,7 +157,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
         hasMore: false,
       });
 
-    await useCase.execute("biz-1");
+    await useCase.execute("conn-1");
 
     expect(provider.fetchPage).toHaveBeenCalledTimes(2);
     expect(provider.fetchPage.mock.calls[0][0].offset).toBe(0);
@@ -170,14 +169,14 @@ describe("SyncBusinessInvoicesUseCase", () => {
   });
 
   it("uses 'now - 1 year' when syncCursor is null (first sync)", async () => {
-    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection({ syncCursor: null }));
+    reader.findById.mockResolvedValue(mkConnection({ syncCursor: null }));
     provider.fetchPage.mockResolvedValueOnce({
       invoices: [],
       customers: [],
       hasMore: false,
     });
 
-    await useCase.execute("biz-1");
+    await useCase.execute("conn-1");
 
     const expected = new Date(NOW);
     expected.setUTCFullYear(expected.getUTCFullYear() - 1);
@@ -188,18 +187,18 @@ describe("SyncBusinessInvoicesUseCase", () => {
 
   it("pre-flight refreshes when tokenExpiresAt is within 5 min of now", async () => {
     const soon = new Date(NOW.getTime() + 2 * 60_000);
-    reader.findLatestConnectedByBusiness.mockResolvedValueOnce(mkConnection({ tokenExpiresAt: soon }));
-    reader.findById.mockResolvedValueOnce(mkConnection({ tokenExpiresAt: new Date(NOW.getTime() + 60 * 60_000) }));
+    reader.findById
+      .mockResolvedValueOnce(mkConnection({ tokenExpiresAt: soon }))
+      .mockResolvedValueOnce(mkConnection({ tokenExpiresAt: new Date(NOW.getTime() + 60 * 60_000) }));
     provider.fetchPage.mockResolvedValueOnce({ invoices: [], customers: [], hasMore: false });
 
-    await useCase.execute("biz-1");
+    await useCase.execute("conn-1");
 
     expect(refresh.execute).toHaveBeenCalledWith("conn-1");
   });
 
   it("on AuthError: refreshes, reloads, retries page once → succeeds", async () => {
-    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection());
-    reader.findById.mockResolvedValue(mkConnection()); // after refresh
+    reader.findById.mockResolvedValue(mkConnection()); // initial load + after refresh
     provider.fetchPage
       .mockRejectedValueOnce(new AuthError())
       .mockResolvedValueOnce({
@@ -208,28 +207,29 @@ describe("SyncBusinessInvoicesUseCase", () => {
         hasMore: false,
       });
 
-    await useCase.execute("biz-1");
+    await useCase.execute("conn-1");
     expect(refresh.execute).toHaveBeenCalledTimes(1);
     expect(provider.fetchPage).toHaveBeenCalledTimes(2);
   });
 
   it("on AuthError + refresh leaves connection status != 'connected': throws UnrecoverableError", async () => {
-    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection());
-    reader.findById.mockResolvedValue(mkConnection({ status: "revoked" }));
+    reader.findById
+      .mockResolvedValueOnce(mkConnection())
+      .mockResolvedValueOnce(mkConnection({ status: "revoked" }));
     provider.fetchPage.mockRejectedValueOnce(new AuthError());
 
-    await expect(useCase.execute("biz-1")).rejects.toBeInstanceOf(
+    await expect(useCase.execute("conn-1")).rejects.toBeInstanceOf(
       UnrecoverableError,
     );
   });
 
   it("on RateLimitError: sleeps then retries same page with same offset", async () => {
-    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection());
+    reader.findById.mockResolvedValue(mkConnection());
     provider.fetchPage
       .mockRejectedValueOnce(new RateLimitError(1_000))
       .mockResolvedValueOnce({ invoices: [], customers: [], hasMore: false });
 
-    const p = useCase.execute("biz-1");
+    const p = useCase.execute("conn-1");
     await jest.advanceTimersByTimeAsync(1_000);
     await p;
 
@@ -238,7 +238,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
   });
 
   it("payment transition: prior 'overdue' + new 'paid' → upsert row carries paidAtIfNewlyPaid", async () => {
-    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection());
+    reader.findById.mockResolvedValue(mkConnection());
     invoiceRepo.findStatusesByExternalIds.mockResolvedValue(
       new Map<string, InvoiceStatus>([["inv_1", "overdue"]]),
     );
@@ -248,7 +248,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
       hasMore: false,
     });
 
-    await useCase.execute("biz-1");
+    await useCase.execute("conn-1");
 
     const rows = invoiceRepo.upsertMany.mock.calls[0][1];
     expect(rows[0].status).toBe("paid");
@@ -256,7 +256,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
   });
 
   it("no payment transition: prior 'paid' + new 'paid' → paidAtIfNewlyPaid is undefined", async () => {
-    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection());
+    reader.findById.mockResolvedValue(mkConnection());
     invoiceRepo.findStatusesByExternalIds.mockResolvedValue(
       new Map<string, InvoiceStatus>([["inv_1", "paid"]]),
     );
@@ -266,21 +266,21 @@ describe("SyncBusinessInvoicesUseCase", () => {
       hasMore: false,
     });
 
-    await useCase.execute("biz-1");
+    await useCase.execute("conn-1");
 
     const rows = invoiceRepo.upsertMany.mock.calls[0][1];
     expect(rows[0].paidAtIfNewlyPaid).toBeUndefined();
   });
 
   it("breaks the loop when provider returns empty page with hasMore=true (defensive guard)", async () => {
-    reader.findLatestConnectedByBusiness.mockResolvedValue(mkConnection());
+    reader.findById.mockResolvedValue(mkConnection());
     provider.fetchPage.mockResolvedValueOnce({
       invoices: [],
       customers: [],
       hasMore: true,
     });
 
-    await useCase.execute("biz-1");
+    await useCase.execute("conn-1");
 
     expect(provider.fetchPage).toHaveBeenCalledTimes(1);
     expect(invoiceRepo.upsertMany).not.toHaveBeenCalled();

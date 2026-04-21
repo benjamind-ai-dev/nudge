@@ -28,8 +28,8 @@ export class InvoiceSyncProcessor extends WorkerHost {
       return;
     }
     if (job.name === PER_BUSINESS_JOB_NAME) {
-      const { businessId } = job.data as InvoiceSyncJobData;
-      await this.sync.execute(businessId);
+      const { connectionId } = job.data as InvoiceSyncJobData;
+      await this.sync.execute(connectionId);
       return;
     }
     this.logger.warn({

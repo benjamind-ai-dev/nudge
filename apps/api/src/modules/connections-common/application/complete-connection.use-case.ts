@@ -133,7 +133,7 @@ export class CompleteConnectionUseCase {
         connection,
       );
       await this.invoiceSync.add(QUEUE_NAMES.INVOICE_SYNC, {
-        businessId: payload.businessId,
+        connectionId: saved.id!,
       });
       this.logger.log({
         msg: "Connection completed",

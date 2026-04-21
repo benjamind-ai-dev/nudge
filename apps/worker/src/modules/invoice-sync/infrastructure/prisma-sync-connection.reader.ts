@@ -78,19 +78,6 @@ export class PrismaSyncConnectionReader implements SyncConnectionReader {
     return row ? this.toDomain(row) : null;
   }
 
-  async findLatestConnectedByBusiness(
-    businessId: string,
-  ): Promise<Connection | null> {
-    const row = await this.prisma.connection.findFirst({
-      where: {
-        businessId,
-        status: "connected" satisfies ConnectionStatus,
-      },
-      orderBy: { updatedAt: "desc" },
-    });
-    return row ? this.toDomain(row) : null;
-  }
-
   async updateSyncCursor(id: string, cursor: Date): Promise<void> {
     await this.prisma.connection.update({
       where: { id },

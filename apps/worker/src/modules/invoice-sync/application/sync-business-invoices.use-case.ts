@@ -49,17 +49,19 @@ export class SyncBusinessInvoicesUseCase {
     private readonly refreshTokens: RefreshTokenUseCase,
   ) {}
 
-  async execute(businessId: string): Promise<void> {
-    const initial = await this.reader.findLatestConnectedByBusiness(businessId);
-    if (!initial) {
+  async execute(connectionId: string): Promise<void> {
+    const initial = await this.reader.findById(connectionId);
+    if (!initial || initial.status !== "connected") {
       this.logger.warn({
-        msg: "No connected connection found",
+        msg: "Connection not found or not connected — skipping sync",
         event: "invoice_sync_skipped",
-        businessId,
+        connectionId,
+        status: initial?.status ?? "not_found",
       });
       return;
     }
 
+    const businessId = initial.businessId;
     let connection = await this.preflightRefresh(initial);
     const provider = this.providers[connection.provider];
     if (!provider) {
