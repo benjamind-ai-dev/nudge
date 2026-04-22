@@ -1,5 +1,6 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { PrismaClient } from "@nudge/database";
+import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   OverdueInvoiceRow,
   SequenceTriggerRepository,
@@ -8,7 +9,9 @@ import type {
 
 @Injectable()
 export class PrismaSequenceTriggerRepository implements SequenceTriggerRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    @Inject(PRISMA_CLIENT) private readonly prisma: PrismaClient,
+  ) {}
 
   async findOverdueInvoicesWithoutRun(
     limit: number,
