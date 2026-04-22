@@ -73,10 +73,11 @@ describe("SendMessageUseCase", () => {
     repo.findRunById.mockResolvedValue(run);
     repo.findNextStep.mockResolvedValue({ id: "step-2", stepOrder: 2, delayDays: 5 });
 
-    const result = await useCase.execute({ runId: "run-1" });
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(result.sent).toBe(true);
     expect(result.messagesSent).toBe(1);
+    expect(repo.findRunById).toHaveBeenCalledWith("run-1", "biz-1");
     expect(emailService.send).toHaveBeenCalledWith(
       expect.objectContaining({
         to: "sarah@acme.com",
@@ -102,7 +103,7 @@ describe("SendMessageUseCase", () => {
     repo.findRunById.mockResolvedValue(run);
     repo.findNextStep.mockResolvedValue(null);
 
-    const result = await useCase.execute({ runId: "run-1" });
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(result.sent).toBe(true);
     expect(smsService.send).toHaveBeenCalledWith(
@@ -119,7 +120,7 @@ describe("SendMessageUseCase", () => {
     repo.findRunById.mockResolvedValue(run);
     repo.findNextStep.mockResolvedValue(null);
 
-    const result = await useCase.execute({ runId: "run-1" });
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(result.messagesSent).toBe(2);
     expect(emailService.send).toHaveBeenCalled();
@@ -130,7 +131,7 @@ describe("SendMessageUseCase", () => {
   it("skips when run is not found", async () => {
     repo.findRunById.mockResolvedValue(null);
 
-    const result = await useCase.execute({ runId: "run-1" });
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(result.sent).toBe(false);
     expect(result.skippedReason).toBe("run_not_found");
@@ -140,23 +141,26 @@ describe("SendMessageUseCase", () => {
     const run = createMockRun({ runStatus: "completed" });
     repo.findRunById.mockResolvedValue(run);
 
-    const result = await useCase.execute({ runId: "run-1" });
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(result.sent).toBe(false);
     expect(result.skippedReason).toBe("run_not_active");
   });
 
-  it("skips duplicate message for same run/step/channel", async () => {
+  it("skips duplicate message and does not advance when all channels are duplicates", async () => {
     const run = createMockRun();
     repo.findRunById.mockResolvedValue(run);
     repo.messageExistsForRunStep.mockResolvedValue(true);
     repo.findNextStep.mockResolvedValue(null);
 
-    const result = await useCase.execute({ runId: "run-1" });
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
-    expect(result.sent).toBe(true);
+    expect(result.sent).toBe(false);
+    expect(result.skippedReason).toBe("all_duplicates");
     expect(result.messagesSent).toBe(0);
     expect(emailService.send).not.toHaveBeenCalled();
+    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+    expect(repo.completeRun).not.toHaveBeenCalled();
   });
 
   it("skips email when no recipient email", async () => {
@@ -164,7 +168,7 @@ describe("SendMessageUseCase", () => {
     repo.findRunById.mockResolvedValue(run);
     repo.findNextStep.mockResolvedValue(null);
 
-    const result = await useCase.execute({ runId: "run-1" });
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(result.sent).toBe(true);
     expect(result.messagesSent).toBe(0);
@@ -176,7 +180,7 @@ describe("SendMessageUseCase", () => {
     repo.findRunById.mockResolvedValue(run);
     repo.findNextStep.mockResolvedValue(null);
 
-    await useCase.execute({ runId: "run-1" });
+    await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(emailService.send).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -190,7 +194,7 @@ describe("SendMessageUseCase", () => {
     repo.findRunById.mockResolvedValue(run);
     repo.findNextStep.mockResolvedValue(null);
 
-    await useCase.execute({ runId: "run-1" });
+    await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(repo.completeRun).toHaveBeenCalledWith("run-1");
     expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();

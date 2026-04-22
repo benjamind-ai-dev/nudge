@@ -26,7 +26,6 @@ export class ResendEmailService implements EmailService {
         msg: "Resend API error",
         event: "resend_send_error",
         error: response.error,
-        to: params.to,
       });
       throw new Error(`Resend error: ${response.error.message}`);
     }
@@ -34,7 +33,6 @@ export class ResendEmailService implements EmailService {
     this.logger.log({
       msg: "Email sent via Resend",
       event: "email_sent",
-      to: params.to,
       externalMessageId: response.data?.id,
     });
 

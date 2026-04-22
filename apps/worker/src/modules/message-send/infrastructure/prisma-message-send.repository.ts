@@ -105,9 +105,12 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
     }));
   }
 
-  async findRunById(id: string): Promise<RunReadyToSend | null> {
-    const run = await this.prisma.sequenceRun.findUnique({
-      where: { id },
+  async findRunById(id: string, businessId: string): Promise<RunReadyToSend | null> {
+    const run = await this.prisma.sequenceRun.findFirst({
+      where: {
+        id,
+        invoice: { businessId },
+      },
       select: {
         id: true,
         status: true,

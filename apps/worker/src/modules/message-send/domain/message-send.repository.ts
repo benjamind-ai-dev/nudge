@@ -53,7 +53,7 @@ export interface CreateMessageData {
 
 export interface MessageSendRepository {
   findRunsReadyToSend(): Promise<RunReadyToSend[]>;
-  findRunById(id: string): Promise<RunReadyToSend | null>;
+  findRunById(id: string, businessId: string): Promise<RunReadyToSend | null>;
   findNextStep(sequenceId: string, currentStepOrder: number): Promise<NextStep | null>;
   messageExistsForRunStep(runId: string, stepId: string, channel: string): Promise<boolean>;
   createMessage(data: CreateMessageData): Promise<void>;

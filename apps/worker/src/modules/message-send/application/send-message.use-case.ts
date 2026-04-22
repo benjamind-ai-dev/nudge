@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
-import { differenceInDays, format } from "date-fns";
+import { addDays, differenceInDays, format } from "date-fns";
 import {
   MESSAGE_SEND_REPOSITORY,
   type MessageSendRepository,
@@ -10,10 +10,10 @@ import { TEMPLATE_SERVICE, type TemplateService, type TemplateData } from "../do
 import { EMAIL_SERVICE, type EmailService } from "../domain/email.service";
 import { SMS_SERVICE, type SmsService } from "../domain/sms.service";
 import { nextBusinessHour } from "../../../common/utils/business-hours";
-import { addDays } from "date-fns";
 
 export interface SendMessageInput {
-  runId: string;
+  sequenceRunId: string;
+  businessId: string;
 }
 
 export interface SendMessageResult {
@@ -38,13 +38,14 @@ export class SendMessageUseCase {
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
-    const run = await this.repo.findRunById(input.runId);
+    const run = await this.repo.findRunById(input.sequenceRunId, input.businessId);
 
     if (!run) {
       this.logger.warn({
         msg: "Run not found",
         event: "send_message_run_not_found",
-        runId: input.runId,
+        sequenceRunId: input.sequenceRunId,
+        businessId: input.businessId,
       });
       return { sent: false, skippedReason: "run_not_found", messagesSent: 0 };
     }
@@ -53,7 +54,7 @@ export class SendMessageUseCase {
       this.logger.debug({
         msg: "Run no longer active, skipping",
         event: "send_message_run_inactive",
-        runId: input.runId,
+        sequenceRunId: input.sequenceRunId,
         status: run.runStatus,
       });
       return { sent: false, skippedReason: "run_not_active", messagesSent: 0 };
@@ -61,6 +62,7 @@ export class SendMessageUseCase {
 
     const templateData = this.buildTemplateData(run);
     let messagesSent = 0;
+    let duplicatesSkipped = 0;
 
     const channels = this.getChannels(run.stepChannel);
 
@@ -79,6 +81,7 @@ export class SendMessageUseCase {
           stepId: run.stepId,
           channel,
         });
+        duplicatesSkipped++;
         continue;
       }
 
@@ -97,6 +100,18 @@ export class SendMessageUseCase {
         });
         throw error;
       }
+    }
+
+    const allChannelsWereDuplicates = duplicatesSkipped === channels.length;
+
+    if (allChannelsWereDuplicates) {
+      this.logger.warn({
+        msg: "All channels were duplicates, skipping step advancement",
+        event: "send_message_all_duplicates",
+        runId: run.runId,
+        stepId: run.stepId,
+      });
+      return { sent: false, skippedReason: "all_duplicates", messagesSent: 0 };
     }
 
     await this.advanceOrCompleteRun(run);

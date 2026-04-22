@@ -9,6 +9,8 @@ export class TwilioSmsService implements SmsService {
   private readonly logger = new Logger(TwilioSmsService.name);
   private readonly client: ReturnType<typeof Twilio>;
   private readonly fromNumber: string;
+  private readonly baseUrl: string;
+  private readonly webhookSecret: string;
 
   constructor(private readonly config: ConfigService<Env, true>) {
     this.client = Twilio(
@@ -16,6 +18,8 @@ export class TwilioSmsService implements SmsService {
       this.config.get("TWILIO_AUTH_TOKEN", { infer: true }),
     );
     this.fromNumber = this.config.get("TWILIO_PHONE_NUMBER", { infer: true });
+    this.baseUrl = this.config.get("APP_BASE_URL", { infer: true });
+    this.webhookSecret = this.config.get("TWILIO_WEBHOOK_SECRET", { infer: true });
   }
 
   async send(params: SendSmsParams): Promise<SendSmsResult> {
@@ -43,12 +47,12 @@ export class TwilioSmsService implements SmsService {
 
   private buildStatusCallbackUrl(params: SendSmsParams): string {
     const queryParams = new URLSearchParams({
-      secret: "placeholder",
+      secret: this.webhookSecret,
       businessId: params.businessId,
       invoiceId: params.invoiceId,
       sequenceStepId: params.sequenceStepId,
     });
 
-    return `https://api.paynudge.net/v1/webhooks/twilio/status?${queryParams.toString()}`;
+    return `${this.baseUrl}/v1/webhooks/twilio/status?${queryParams.toString()}`;
   }
 }

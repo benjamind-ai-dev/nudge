@@ -66,6 +66,18 @@ describe("HandlebarsTemplateService", () => {
     expect(result1).toBe("Test Acme Corp");
   });
 
+  it("invalidates cache when template content changes", () => {
+    const cacheKey = "editable-step";
+    const templateV1 = "Version 1: {{customer.company_name}}";
+    const templateV2 = "Version 2: {{customer.company_name}}";
+
+    const result1 = service.render(cacheKey, templateV1, templateData);
+    expect(result1).toBe("Version 1: Acme Corp");
+
+    const result2 = service.render(cacheKey, templateV2, templateData);
+    expect(result2).toBe("Version 2: Acme Corp");
+  });
+
   it("handles null values gracefully", () => {
     const dataWithNulls: TemplateData = {
       ...templateData,

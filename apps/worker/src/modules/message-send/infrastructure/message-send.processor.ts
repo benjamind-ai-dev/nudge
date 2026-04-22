@@ -1,13 +1,10 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Logger } from "@nestjs/common";
 import { Job } from "bullmq";
-import { QUEUE_NAMES } from "@nudge/shared";
+import { QUEUE_NAMES, type MessageSendJobData } from "@nudge/shared";
 import { EnqueueReadyRunsUseCase } from "../application/enqueue-ready-runs.use-case";
 import { SendMessageUseCase } from "../application/send-message.use-case";
-
-interface SendMessageJobData {
-  runId: string;
-}
+import { JOB_NAMES } from "../constants";
 
 @Processor(QUEUE_NAMES.MESSAGE_SEND, {
   concurrency: 10,
@@ -22,11 +19,11 @@ export class MessageSendProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<SendMessageJobData | Record<string, never>>): Promise<void> {
-    if (job.name === "message-send-tick") {
+  async process(job: Job<MessageSendJobData | Record<string, never>>): Promise<void> {
+    if (job.name === JOB_NAMES.MESSAGE_SEND_TICK) {
       await this.handleTick(job);
-    } else if (job.name === "send-message") {
-      await this.handleSendMessage(job as Job<SendMessageJobData>);
+    } else if (job.name === JOB_NAMES.SEND_MESSAGE) {
+      await this.handleSendMessage(job as Job<MessageSendJobData>);
     }
   }
 
@@ -47,22 +44,26 @@ export class MessageSendProcessor extends WorkerHost {
     });
   }
 
-  private async handleSendMessage(job: Job<SendMessageJobData>): Promise<void> {
+  private async handleSendMessage(job: Job<MessageSendJobData>): Promise<void> {
     this.logger.debug({
       msg: "Processing send-message job",
       event: "send_message_job_started",
       jobId: job.id,
-      runId: job.data.runId,
+      sequenceRunId: job.data.sequenceRunId,
+      businessId: job.data.businessId,
       attempt: job.attemptsMade + 1,
     });
 
-    const result = await this.sendMessage.execute({ runId: job.data.runId });
+    const result = await this.sendMessage.execute({
+      sequenceRunId: job.data.sequenceRunId,
+      businessId: job.data.businessId,
+    });
 
     this.logger.debug({
       msg: "Send-message job completed",
       event: "send_message_job_completed",
       jobId: job.id,
-      runId: job.data.runId,
+      sequenceRunId: job.data.sequenceRunId,
       sent: result.sent,
       skippedReason: result.skippedReason,
       messagesSent: result.messagesSent,

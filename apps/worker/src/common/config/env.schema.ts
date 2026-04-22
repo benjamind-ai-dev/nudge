@@ -12,10 +12,12 @@ export const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .optional(),
+  APP_BASE_URL: z.string().url(),
   RESEND_API_KEY: z.string().min(1),
   TWILIO_ACCOUNT_SID: z.string().startsWith("AC"),
   TWILIO_AUTH_TOKEN: z.string().min(1),
   TWILIO_PHONE_NUMBER: z.string().startsWith("+"),
+  TWILIO_WEBHOOK_SECRET: z.string().min(1),
   QUICKBOOKS_CLIENT_ID: z.string().min(1),
   QUICKBOOKS_CLIENT_SECRET: z.string().min(1),
   QUICKBOOKS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
