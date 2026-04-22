@@ -30,6 +30,7 @@ const createMockRun = (overrides: Partial<RunReadyToSend> = {}): RunReadyToSend 
   stepChannel: "email",
   stepSubjectTemplate: "Reminder: Invoice {{invoice.invoice_number}}",
   stepBodyTemplate: "Hi {{customer.contact_name}}, your invoice is overdue.",
+  stepSmsBodyTemplate: null,
   stepIsOwnerAlert: false,
   stepDelayDays: 3,
   ...overrides,
@@ -48,7 +49,7 @@ describe("SendMessageUseCase", () => {
       findRunById: jest.fn(),
       findNextStep: jest.fn(),
       messageExistsForRunStep: jest.fn().mockResolvedValue(false),
-      createMessage: jest.fn(),
+      createMessage: jest.fn().mockResolvedValue({ created: true }),
       advanceRunToNextStep: jest.fn(),
       completeRun: jest.fn(),
     };
@@ -93,6 +94,7 @@ describe("SendMessageUseCase", () => {
     );
     expect(repo.advanceRunToNextStep).toHaveBeenCalledWith(
       "run-1",
+      "biz-1",
       "step-2",
       expect.any(Date),
     );
@@ -112,7 +114,7 @@ describe("SendMessageUseCase", () => {
         businessId: "biz-1",
       }),
     );
-    expect(repo.completeRun).toHaveBeenCalledWith("run-1");
+    expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
   });
 
   it("sends both email and SMS for email_and_sms channel", async () => {
@@ -196,7 +198,7 @@ describe("SendMessageUseCase", () => {
 
     await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
-    expect(repo.completeRun).toHaveBeenCalledWith("run-1");
+    expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
     expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
   });
 });

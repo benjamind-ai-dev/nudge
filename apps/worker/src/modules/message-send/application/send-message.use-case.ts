@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { addDays, differenceInDays, format } from "date-fns";
+import { formatCents } from "@nudge/shared";
 import {
   MESSAGE_SEND_REPOSITORY,
   type MessageSendRepository,
@@ -144,8 +145,8 @@ export class SendMessageUseCase {
       },
       invoice: {
         invoice_number: run.invoiceNumber,
-        amount: this.formatCurrency(run.amountCents),
-        balance_due: this.formatCurrency(run.balanceDueCents),
+        amount: formatCents(run.amountCents),
+        balance_due: formatCents(run.balanceDueCents),
         due_date: format(run.dueDate, "MMM d, yyyy"),
         days_overdue: Math.max(0, daysOverdue),
         payment_link: run.paymentLinkUrl,
@@ -154,13 +155,6 @@ export class SendMessageUseCase {
         sender_name: run.businessSenderName,
       },
     };
-  }
-
-  private formatCurrency(cents: number): string {
-    return (cents / 100).toLocaleString("en-US", {
-      style: "currency",
-      currency: "USD",
-    });
   }
 
   private async sendByChannel(
@@ -242,7 +236,8 @@ export class SendMessageUseCase {
       return false;
     }
 
-    const body = this.templateService.render(`${run.stepId}-sms`, run.stepBodyTemplate, templateData);
+    const smsTemplate = run.stepSmsBodyTemplate ?? run.stepBodyTemplate;
+    const body = this.templateService.render(`${run.stepId}-sms`, smsTemplate, templateData);
     const messageId = randomUUID();
 
     const result = await this.smsService.send({
@@ -279,7 +274,7 @@ export class SendMessageUseCase {
     if (nextStep) {
       const nextSendAt = this.calculateNextSendAt(nextStep.delayDays, run.businessTimezone);
 
-      await this.repo.advanceRunToNextStep(run.runId, nextStep.id, nextSendAt);
+      await this.repo.advanceRunToNextStep(run.runId, run.businessId, nextStep.id, nextSendAt);
 
       this.logger.debug({
         msg: "Advanced to next step",
@@ -289,7 +284,7 @@ export class SendMessageUseCase {
         nextSendAt,
       });
     } else {
-      await this.repo.completeRun(run.runId);
+      await this.repo.completeRun(run.runId, run.businessId);
 
       this.logger.log({
         msg: "Sequence run completed",

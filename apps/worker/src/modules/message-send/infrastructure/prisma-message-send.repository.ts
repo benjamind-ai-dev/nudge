@@ -1,20 +1,24 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { PrismaClient } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
-import type {
-  MessageSendRepository,
-  RunReadyToSend,
-  NextStep,
-  CreateMessageData,
+import {
+  isValidChannel,
+  type MessageSendRepository,
+  type RunReadyToSend,
+  type NextStep,
+  type CreateMessageData,
+  type MessageChannel,
 } from "../domain/message-send.repository";
 
 @Injectable()
 export class PrismaMessageSendRepository implements MessageSendRepository {
+  private readonly logger = new Logger(PrismaMessageSendRepository.name);
+
   constructor(
     @Inject(PRISMA_CLIENT) private readonly prisma: PrismaClient,
   ) {}
 
-  async findRunsReadyToSend(): Promise<RunReadyToSend[]> {
+  async findRunsReadyToSend(limit = 500): Promise<RunReadyToSend[]> {
     const now = new Date();
 
     const runs = await this.prisma.sequenceRun.findMany({
@@ -23,6 +27,8 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
         nextSendAt: { lte: now },
         currentStepId: { not: null },
       },
+      orderBy: { nextSendAt: "asc" },
+      take: limit,
       select: {
         id: true,
         status: true,
@@ -67,6 +73,7 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
             channel: true,
             subjectTemplate: true,
             bodyTemplate: true,
+            smsBodyTemplate: true,
             isOwnerAlert: true,
             delayDays: true,
           },
@@ -74,35 +81,51 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       },
     });
 
-    return runs.map((run) => ({
-      runId: run.id,
-      runStatus: run.status,
-      invoiceId: run.invoice.id,
-      invoiceNumber: run.invoice.invoiceNumber,
-      amountCents: run.invoice.amountCents,
-      balanceDueCents: run.invoice.balanceDueCents,
-      dueDate: run.invoice.dueDate,
-      paymentLinkUrl: run.invoice.paymentLinkUrl,
-      customerId: run.invoice.customer.id,
-      customerCompanyName: run.invoice.customer.companyName,
-      customerContactName: run.invoice.customer.contactName,
-      customerContactEmail: run.invoice.customer.contactEmail,
-      customerContactPhone: run.invoice.customer.contactPhone,
-      businessId: run.invoice.business.id,
-      businessName: run.invoice.business.name,
-      businessSenderName: run.invoice.business.senderName,
-      businessSenderEmail: run.invoice.business.senderEmail,
-      businessEmailSignature: run.invoice.business.emailSignature,
-      businessTimezone: run.invoice.business.timezone,
-      sequenceId: run.sequence.id,
-      stepId: run.currentStep!.id,
-      stepOrder: run.currentStep!.stepOrder,
-      stepChannel: run.currentStep!.channel,
-      stepSubjectTemplate: run.currentStep!.subjectTemplate,
-      stepBodyTemplate: run.currentStep!.bodyTemplate,
-      stepIsOwnerAlert: run.currentStep!.isOwnerAlert,
-      stepDelayDays: run.currentStep!.delayDays,
-    }));
+    return runs
+      .filter((run) => {
+        const channel = run.currentStep!.channel;
+        if (!isValidChannel(channel)) {
+          this.logger.error({
+            msg: "Invalid channel in sequence step",
+            event: "invalid_channel",
+            runId: run.id,
+            stepId: run.currentStep!.id,
+            channel,
+          });
+          return false;
+        }
+        return true;
+      })
+      .map((run) => ({
+        runId: run.id,
+        runStatus: run.status,
+        invoiceId: run.invoice.id,
+        invoiceNumber: run.invoice.invoiceNumber,
+        amountCents: run.invoice.amountCents,
+        balanceDueCents: run.invoice.balanceDueCents,
+        dueDate: run.invoice.dueDate,
+        paymentLinkUrl: run.invoice.paymentLinkUrl,
+        customerId: run.invoice.customer.id,
+        customerCompanyName: run.invoice.customer.companyName,
+        customerContactName: run.invoice.customer.contactName,
+        customerContactEmail: run.invoice.customer.contactEmail,
+        customerContactPhone: run.invoice.customer.contactPhone,
+        businessId: run.invoice.business.id,
+        businessName: run.invoice.business.name,
+        businessSenderName: run.invoice.business.senderName,
+        businessSenderEmail: run.invoice.business.senderEmail,
+        businessEmailSignature: run.invoice.business.emailSignature,
+        businessTimezone: run.invoice.business.timezone,
+        sequenceId: run.sequence.id,
+        stepId: run.currentStep!.id,
+        stepOrder: run.currentStep!.stepOrder,
+        stepChannel: run.currentStep!.channel as MessageChannel,
+        stepSubjectTemplate: run.currentStep!.subjectTemplate,
+        stepBodyTemplate: run.currentStep!.bodyTemplate,
+        stepSmsBodyTemplate: run.currentStep!.smsBodyTemplate,
+        stepIsOwnerAlert: run.currentStep!.isOwnerAlert,
+        stepDelayDays: run.currentStep!.delayDays,
+      }));
   }
 
   async findRunById(id: string, businessId: string): Promise<RunReadyToSend | null> {
@@ -155,6 +178,7 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
             channel: true,
             subjectTemplate: true,
             bodyTemplate: true,
+            smsBodyTemplate: true,
             isOwnerAlert: true,
             delayDays: true,
           },
@@ -163,6 +187,18 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
     });
 
     if (!run || !run.currentStep) {
+      return null;
+    }
+
+    const channel = run.currentStep.channel;
+    if (!isValidChannel(channel)) {
+      this.logger.error({
+        msg: "Invalid channel in sequence step",
+        event: "invalid_channel",
+        runId: run.id,
+        stepId: run.currentStep.id,
+        channel,
+      });
       return null;
     }
 
@@ -189,9 +225,10 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       sequenceId: run.sequence.id,
       stepId: run.currentStep.id,
       stepOrder: run.currentStep.stepOrder,
-      stepChannel: run.currentStep.channel,
+      stepChannel: channel,
       stepSubjectTemplate: run.currentStep.subjectTemplate,
       stepBodyTemplate: run.currentStep.bodyTemplate,
+      stepSmsBodyTemplate: run.currentStep.smsBodyTemplate,
       stepIsOwnerAlert: run.currentStep.isOwnerAlert,
       stepDelayDays: run.currentStep.delayDays,
     };
@@ -225,30 +262,49 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
     return count > 0;
   }
 
-  async createMessage(data: CreateMessageData): Promise<void> {
-    await this.prisma.message.create({
-      data: {
-        id: data.id,
-        sequenceRunId: data.sequenceRunId,
-        sequenceStepId: data.sequenceStepId,
-        invoiceId: data.invoiceId,
-        customerId: data.customerId,
-        businessId: data.businessId,
-        channel: data.channel,
-        recipientEmail: data.recipientEmail,
-        recipientPhone: data.recipientPhone,
-        subject: data.subject,
-        body: data.body,
-        status: data.status,
-        externalMessageId: data.externalMessageId,
-        sentAt: data.sentAt,
-      },
-    });
+  async createMessage(data: CreateMessageData): Promise<{ created: boolean }> {
+    try {
+      await this.prisma.message.create({
+        data: {
+          id: data.id,
+          sequenceRunId: data.sequenceRunId,
+          sequenceStepId: data.sequenceStepId,
+          invoiceId: data.invoiceId,
+          customerId: data.customerId,
+          businessId: data.businessId,
+          channel: data.channel,
+          recipientEmail: data.recipientEmail,
+          recipientPhone: data.recipientPhone,
+          subject: data.subject,
+          body: data.body,
+          status: data.status,
+          externalMessageId: data.externalMessageId,
+          sentAt: data.sentAt,
+        },
+      });
+      return { created: true };
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("Unique constraint failed")
+      ) {
+        return { created: false };
+      }
+      throw error;
+    }
   }
 
-  async advanceRunToNextStep(runId: string, nextStepId: string, nextSendAt: Date): Promise<void> {
-    await this.prisma.sequenceRun.update({
-      where: { id: runId },
+  async advanceRunToNextStep(
+    runId: string,
+    businessId: string,
+    nextStepId: string,
+    nextSendAt: Date,
+  ): Promise<void> {
+    await this.prisma.sequenceRun.updateMany({
+      where: {
+        id: runId,
+        invoice: { businessId },
+      },
       data: {
         currentStepId: nextStepId,
         nextSendAt,
@@ -256,9 +312,12 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
     });
   }
 
-  async completeRun(runId: string): Promise<void> {
-    await this.prisma.sequenceRun.update({
-      where: { id: runId },
+  async completeRun(runId: string, businessId: string): Promise<void> {
+    await this.prisma.sequenceRun.updateMany({
+      where: {
+        id: runId,
+        invoice: { businessId },
+      },
       data: {
         status: "completed",
         completedAt: new Date(),

@@ -219,6 +219,7 @@ model SequenceStep {
   channel         String   @db.VarChar(20)
   subjectTemplate String?  @map("subject_template") @db.Text
   bodyTemplate    String   @map("body_template") @db.Text
+  smsBodyTemplate String?  @map("sms_body_template") @db.Text
   isOwnerAlert    Boolean  @default(false) @map("is_owner_alert")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
@@ -289,6 +290,7 @@ model Message {
   customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
   business     Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
+  @@unique([sequenceRunId, sequenceStepId, channel], map: "idx_messages_run_step_channel")
   @@index([businessId, sentAt], map: "idx_messages_business_sent")
   @@index([externalMessageId], map: "idx_messages_external")
   @@map("messages")

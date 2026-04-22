@@ -1,7 +1,6 @@
 import { EnqueueReadyRunsUseCase } from "./enqueue-ready-runs.use-case";
 import type { MessageSendRepository, RunReadyToSend } from "../domain/message-send.repository";
-import { JOB_NAMES } from "../constants";
-import { Queue } from "bullmq";
+import type { MessageQueueService } from "../domain/message-queue.service";
 
 const createMockRun = (id: string, businessId = "biz-1"): RunReadyToSend => ({
   runId: id,
@@ -29,6 +28,7 @@ const createMockRun = (id: string, businessId = "biz-1"): RunReadyToSend => ({
   stepChannel: "email",
   stepSubjectTemplate: "Reminder",
   stepBodyTemplate: "Body",
+  stepSmsBodyTemplate: null,
   stepIsOwnerAlert: false,
   stepDelayDays: 3,
 });
@@ -36,7 +36,7 @@ const createMockRun = (id: string, businessId = "biz-1"): RunReadyToSend => ({
 describe("EnqueueReadyRunsUseCase", () => {
   let useCase: EnqueueReadyRunsUseCase;
   let repo: jest.Mocked<MessageSendRepository>;
-  let queue: jest.Mocked<Queue>;
+  let queueService: jest.Mocked<MessageQueueService>;
 
   beforeEach(() => {
     repo = {
@@ -49,11 +49,11 @@ describe("EnqueueReadyRunsUseCase", () => {
       completeRun: jest.fn(),
     };
 
-    queue = {
-      add: jest.fn().mockResolvedValue({ id: "job-1" }),
-    } as unknown as jest.Mocked<Queue>;
+    queueService = {
+      enqueueSendMessage: jest.fn().mockResolvedValue(undefined),
+    };
 
-    useCase = new EnqueueReadyRunsUseCase(repo, queue);
+    useCase = new EnqueueReadyRunsUseCase(repo, queueService);
   });
 
   it("enqueues jobs for each run ready to send with businessId", async () => {
@@ -66,17 +66,15 @@ describe("EnqueueReadyRunsUseCase", () => {
     const result = await useCase.execute();
 
     expect(result.runsEnqueued).toBe(3);
-    expect(queue.add).toHaveBeenCalledTimes(3);
-    expect(queue.add).toHaveBeenCalledWith(
-      JOB_NAMES.SEND_MESSAGE,
+    expect(queueService.enqueueSendMessage).toHaveBeenCalledTimes(3);
+    expect(queueService.enqueueSendMessage).toHaveBeenCalledWith(
       { sequenceRunId: "run-1", businessId: "biz-1" },
       expect.objectContaining({
         attempts: 3,
         backoff: expect.objectContaining({ type: "exponential" }),
       }),
     );
-    expect(queue.add).toHaveBeenCalledWith(
-      JOB_NAMES.SEND_MESSAGE,
+    expect(queueService.enqueueSendMessage).toHaveBeenCalledWith(
       { sequenceRunId: "run-2", businessId: "biz-2" },
       expect.objectContaining({ attempts: 3 }),
     );
@@ -88,6 +86,6 @@ describe("EnqueueReadyRunsUseCase", () => {
     const result = await useCase.execute();
 
     expect(result.runsEnqueued).toBe(0);
-    expect(queue.add).not.toHaveBeenCalled();
+    expect(queueService.enqueueSendMessage).not.toHaveBeenCalled();
   });
 });

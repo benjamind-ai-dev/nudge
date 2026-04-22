@@ -30,14 +30,21 @@ export class ResendEmailService implements EmailService {
       throw new Error(`Resend error: ${response.error.message}`);
     }
 
+    const externalMessageId = response.data?.id;
+    if (!externalMessageId) {
+      this.logger.error({
+        msg: "Resend returned success but no message ID",
+        event: "resend_missing_id",
+      });
+      throw new Error("Resend returned success but no message ID");
+    }
+
     this.logger.log({
       msg: "Email sent via Resend",
       event: "email_sent",
-      externalMessageId: response.data?.id,
+      externalMessageId,
     });
 
-    return {
-      externalMessageId: response.data?.id ?? "",
-    };
+    return { externalMessageId };
   }
 }
