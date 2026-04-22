@@ -9,6 +9,7 @@ import { SmsModule } from "./modules/sms/sms.module";
 import { TokenRefreshModule } from "./modules/token-refresh/token-refresh.module";
 import { InvoiceSyncModule } from "./modules/invoice-sync/invoice-sync.module";
 import { SequenceTriggerModule } from "./modules/sequence-trigger/sequence-trigger.module";
+import { MessageSendModule } from "./modules/message-send/message-send.module";
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { SequenceTriggerModule } from "./modules/sequence-trigger/sequence-trigg
     TokenRefreshModule,
     InvoiceSyncModule,
     SequenceTriggerModule,
+    MessageSendModule,
   ],
 })
 export class AppModule {}
