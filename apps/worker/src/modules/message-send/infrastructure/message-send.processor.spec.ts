@@ -1,8 +1,7 @@
 import { Test } from "@nestjs/testing";
 import { Job } from "bullmq";
-import type { MessageSendJobData } from "@nudge/shared";
+import { JOB_NAMES, type MessageSendJobData } from "@nudge/shared";
 import { MessageSendProcessor } from "./message-send.processor";
-import { JOB_NAMES } from "../constants";
 import { EnqueueReadyRunsUseCase } from "../application/enqueue-ready-runs.use-case";
 import { SendMessageUseCase } from "../application/send-message.use-case";
 
@@ -59,5 +58,25 @@ describe("MessageSendProcessor", () => {
       businessId: "biz-456",
     });
     expect(enqueueReadyRuns.execute).not.toHaveBeenCalled();
+  });
+
+  it("logs warning and does nothing for unknown job names", async () => {
+    const loggerWarnSpy = jest.spyOn(processor["logger"], "warn");
+    const job = {
+      name: "unknown-job-type",
+      id: "job-3",
+      data: {},
+    } as Job;
+
+    await processor.process(job);
+
+    expect(enqueueReadyRuns.execute).not.toHaveBeenCalled();
+    expect(sendMessage.execute).not.toHaveBeenCalled();
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "unknown_job_name",
+        jobName: "unknown-job-type",
+      }),
+    );
   });
 });

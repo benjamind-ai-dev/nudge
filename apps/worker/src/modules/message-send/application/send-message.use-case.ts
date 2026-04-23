@@ -7,6 +7,7 @@ import {
   type MessageSendRepository,
   type RunReadyToSend,
   type MessageChannel,
+  type SingleChannel,
 } from "../domain/message-send.repository";
 import { TEMPLATE_SERVICE, type TemplateService, type TemplateData } from "../domain/template.service";
 import { EMAIL_SERVICE, type EmailService } from "../domain/email.service";
@@ -150,7 +151,7 @@ export class SendMessageUseCase {
     return { sent: true, messagesSent };
   }
 
-  private getChannels(stepChannel: MessageChannel): MessageChannel[] {
+  private getChannels(stepChannel: MessageChannel): SingleChannel[] {
     if (stepChannel === "email_and_sms") {
       return ["email", "sms"];
     }
@@ -180,7 +181,7 @@ export class SendMessageUseCase {
   }
 
   private async sendByChannel(
-    channel: MessageChannel,
+    channel: SingleChannel,
     run: RunReadyToSend,
     templateData: TemplateData,
   ): Promise<ChannelSendResult> {
@@ -189,8 +190,6 @@ export class SendMessageUseCase {
         return this.sendEmail(run, templateData);
       case "sms":
         return this.sendSms(run, templateData);
-      case "email_and_sms":
-        throw new Error("email_and_sms should be split into individual channels");
       default: {
         const exhaustiveCheck: never = channel;
         throw new Error(`Unknown channel: ${exhaustiveCheck}`);

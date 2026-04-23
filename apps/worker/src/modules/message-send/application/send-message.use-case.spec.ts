@@ -55,7 +55,7 @@ describe("SendMessageUseCase", () => {
     };
 
     templateService = {
-      render: jest.fn((_, __, data) => `Rendered: ${data.customer.company_name}`),
+      render: jest.fn((_cacheKey, _template, data) => `Rendered: ${data.customer.company_name}`),
     };
 
     emailService = {
@@ -217,5 +217,43 @@ describe("SendMessageUseCase", () => {
 
     expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
     expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+  });
+
+  it("does not advance when email_and_sms has no email recipient and SMS is duplicate", async () => {
+    const run = createMockRun({
+      stepChannel: "email_and_sms",
+      customerContactEmail: null,
+    });
+    repo.findRunById.mockResolvedValue(run);
+    repo.messageExistsForRunStep
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+    repo.findNextStep.mockResolvedValue({ id: "step-2", stepOrder: 2, delayDays: 5 });
+
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(result.sent).toBe(false);
+    expect(result.skippedReason).toBe("no_recipients");
+    expect(result.messagesSent).toBe(0);
+    expect(emailService.send).not.toHaveBeenCalled();
+    expect(smsService.send).not.toHaveBeenCalled();
+    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+  });
+
+  it("sends SMS but not email when email_and_sms has no email recipient", async () => {
+    const run = createMockRun({
+      stepChannel: "email_and_sms",
+      customerContactEmail: null,
+    });
+    repo.findRunById.mockResolvedValue(run);
+    repo.findNextStep.mockResolvedValue(null);
+
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(result.sent).toBe(true);
+    expect(result.messagesSent).toBe(1);
+    expect(emailService.send).not.toHaveBeenCalled();
+    expect(smsService.send).toHaveBeenCalled();
+    expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
   });
 });

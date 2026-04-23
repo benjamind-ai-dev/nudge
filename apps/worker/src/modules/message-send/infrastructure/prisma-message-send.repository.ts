@@ -8,6 +8,7 @@ import {
   type NextStep,
   type CreateMessageData,
   type MessageChannel,
+  type RunStatus,
 } from "../domain/message-send.repository";
 
 @Injectable()
@@ -18,6 +19,16 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
     @Inject(PRISMA_CLIENT) private readonly prisma: PrismaClient,
   ) {}
 
+  /**
+   * Fetches runs ready to send across ALL tenants.
+   *
+   * This cross-tenant scan is intentional for the background tick job—individual
+   * send jobs then scope by businessId via findRunById, advanceRunToNextStep,
+   * and completeRun to ensure tenant isolation on mutations.
+   *
+   * The 500-row limit caps memory usage per tick. At 1-minute tick intervals,
+   * this handles up to 30k runs/hour which exceeds expected volume.
+   */
   async findRunsReadyToSend(limit = 500): Promise<RunReadyToSend[]> {
     const now = new Date();
 
@@ -98,7 +109,7 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       })
       .map((run) => ({
         runId: run.id,
-        runStatus: run.status,
+        runStatus: run.status as RunStatus,
         invoiceId: run.invoice.id,
         invoiceNumber: run.invoice.invoiceNumber,
         amountCents: run.invoice.amountCents,
@@ -204,7 +215,7 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
 
     return {
       runId: run.id,
-      runStatus: run.status,
+      runStatus: run.status as RunStatus,
       invoiceId: run.invoice.id,
       invoiceNumber: run.invoice.invoiceNumber,
       amountCents: run.invoice.amountCents,

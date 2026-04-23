@@ -1,10 +1,9 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Logger } from "@nestjs/common";
 import { Job } from "bullmq";
-import { QUEUE_NAMES, type MessageSendJobData } from "@nudge/shared";
+import { QUEUE_NAMES, JOB_NAMES, type MessageSendJobData } from "@nudge/shared";
 import { EnqueueReadyRunsUseCase } from "../application/enqueue-ready-runs.use-case";
 import { SendMessageUseCase } from "../application/send-message.use-case";
-import { JOB_NAMES } from "../constants";
 
 @Processor(QUEUE_NAMES.MESSAGE_SEND, {
   concurrency: 10,
@@ -24,6 +23,13 @@ export class MessageSendProcessor extends WorkerHost {
       await this.handleTick(job);
     } else if (job.name === JOB_NAMES.SEND_MESSAGE) {
       await this.handleSendMessage(job as Job<MessageSendJobData>);
+    } else {
+      this.logger.warn({
+        msg: "Unknown job name received, ignoring",
+        event: "unknown_job_name",
+        jobId: job.id,
+        jobName: job.name,
+      });
     }
   }
 

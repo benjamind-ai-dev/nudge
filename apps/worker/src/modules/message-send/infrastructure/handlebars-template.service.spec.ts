@@ -57,36 +57,43 @@ describe("HandlebarsTemplateService", () => {
     expect(result).toBe("Pay here: https://pay.example.com/inv-1");
   });
 
-  it("caches compiled templates and only compiles once", () => {
-    const template = "Test {{customer.company_name}}";
-    const compileSpy = jest.spyOn(Handlebars, "compile");
+  describe("template caching", () => {
+    let compileSpy: jest.SpyInstance;
 
-    const result1 = service.render("cache-test", template, templateData);
-    const result2 = service.render("cache-test", template, templateData);
-    const result3 = service.render("cache-test", template, templateData);
+    beforeEach(() => {
+      compileSpy = jest.spyOn(Handlebars, "compile");
+    });
 
-    expect(result1).toBe(result2);
-    expect(result1).toBe("Test Acme Corp");
-    expect(compileSpy).toHaveBeenCalledTimes(1);
+    afterEach(() => {
+      compileSpy.mockRestore();
+    });
 
-    compileSpy.mockRestore();
-  });
+    it("caches compiled templates and only compiles once", () => {
+      const template = "Test {{customer.company_name}}";
 
-  it("invalidates cache and recompiles when template content changes", () => {
-    const cacheKey = "editable-step";
-    const templateV1 = "Version 1: {{customer.company_name}}";
-    const templateV2 = "Version 2: {{customer.company_name}}";
-    const compileSpy = jest.spyOn(Handlebars, "compile");
+      const result1 = service.render("cache-test", template, templateData);
+      const result2 = service.render("cache-test", template, templateData);
+      const result3 = service.render("cache-test", template, templateData);
 
-    const result1 = service.render(cacheKey, templateV1, templateData);
-    expect(result1).toBe("Version 1: Acme Corp");
-    expect(compileSpy).toHaveBeenCalledTimes(1);
+      expect(result1).toBe(result2);
+      expect(result1).toBe(result3);
+      expect(result1).toBe("Test Acme Corp");
+      expect(compileSpy).toHaveBeenCalledTimes(1);
+    });
 
-    const result2 = service.render(cacheKey, templateV2, templateData);
-    expect(result2).toBe("Version 2: Acme Corp");
-    expect(compileSpy).toHaveBeenCalledTimes(2);
+    it("invalidates cache and recompiles when template content changes", () => {
+      const cacheKey = "editable-step";
+      const templateV1 = "Version 1: {{customer.company_name}}";
+      const templateV2 = "Version 2: {{customer.company_name}}";
 
-    compileSpy.mockRestore();
+      const result1 = service.render(cacheKey, templateV1, templateData);
+      expect(result1).toBe("Version 1: Acme Corp");
+      expect(compileSpy).toHaveBeenCalledTimes(1);
+
+      const result2 = service.render(cacheKey, templateV2, templateData);
+      expect(result2).toBe("Version 2: Acme Corp");
+      expect(compileSpy).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("handles null values gracefully", () => {
