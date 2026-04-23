@@ -7,9 +7,9 @@ import { SendMessageUseCase } from "../application/send-message.use-case";
 import { DeadLetterService } from "../../../common/queue/dead-letter.service";
 
 @Processor(QUEUE_NAMES.MESSAGE_SEND, {
-  concurrency: 10,
+  concurrency: 3,
   limiter: {
-    max: 4,
+    max: 3,
     duration: 1000,
   },
 })
