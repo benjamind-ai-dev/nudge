@@ -71,8 +71,8 @@ describe("BullMQMessageQueueService", () => {
     await service.enqueueSendMessage(data1, options);
     await service.enqueueSendMessage(data2, options);
 
-    const call1JobId = queue.add.mock.calls[0][2].jobId;
-    const call2JobId = queue.add.mock.calls[1][2].jobId;
+    const call1JobId = (queue.add.mock.calls[0]?.[2] as { jobId?: string })?.jobId;
+    const call2JobId = (queue.add.mock.calls[1]?.[2] as { jobId?: string })?.jobId;
 
     expect(call1JobId).toBe("send-run-xyz");
     expect(call2JobId).toBe("send-run-xyz");
