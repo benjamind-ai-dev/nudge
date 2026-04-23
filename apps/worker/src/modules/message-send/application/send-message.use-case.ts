@@ -116,13 +116,11 @@ export class SendMessageUseCase {
       }
     }
 
-    const allChannelsSkipped = (duplicatesSkipped + channelsSkippedNoRecipient) === channels.length;
-
-    if (allChannelsSkipped && messagesSent === 0) {
+    if (messagesSent === 0) {
       const skippedReason =
         duplicatesSkipped > 0 && channelsSkippedNoRecipient > 0
           ? "all_skipped_mixed"
-          : duplicatesSkipped === channels.length
+          : duplicatesSkipped > 0
             ? "all_duplicates"
             : "no_recipients";
 
@@ -224,13 +222,8 @@ export class SendMessageUseCase {
 
     const messageId = randomUUID();
 
-    const sendResult = await this.emailService.send({
-      from: `${run.businessSenderName} <${run.businessSenderEmail}>`,
-      to: recipientEmail,
-      subject,
-      html: body,
-    });
-
+    // Write "queued" record first to prevent double-send on retry.
+    // If provider succeeds but DB update fails, retry will see the record and skip.
     const { created } = await this.repo.createMessage({
       id: messageId,
       sequenceRunId: run.runId,
@@ -243,9 +236,9 @@ export class SendMessageUseCase {
       recipientPhone: null,
       subject,
       body,
-      status: "sent",
-      externalMessageId: sendResult.externalMessageId,
-      sentAt: new Date(),
+      status: "queued",
+      externalMessageId: null,
+      sentAt: null,
     });
 
     if (!created) {
@@ -257,6 +250,21 @@ export class SendMessageUseCase {
       });
       return { sent: false, skippedReason: "duplicate_race" };
     }
+
+    const sendResult = await this.emailService.send({
+      from: `${run.businessSenderName} <${run.businessSenderEmail}>`,
+      to: recipientEmail,
+      subject,
+      html: body,
+    });
+
+    await this.repo.updateMessageStatus({
+      id: messageId,
+      businessId: run.businessId,
+      status: "sent",
+      externalMessageId: sendResult.externalMessageId,
+      sentAt: new Date(),
+    });
 
     return { sent: true };
   }
@@ -277,14 +285,8 @@ export class SendMessageUseCase {
     const body = this.templateService.render(`${run.stepId}-sms`, smsTemplate, templateData);
     const messageId = randomUUID();
 
-    const sendResult = await this.smsService.send({
-      to: recipientPhone,
-      body,
-      businessId: run.businessId,
-      invoiceId: run.invoiceId,
-      sequenceStepId: run.stepId,
-    });
-
+    // Write "queued" record first to prevent double-send on retry.
+    // If provider succeeds but DB update fails, retry will see the record and skip.
     const { created } = await this.repo.createMessage({
       id: messageId,
       sequenceRunId: run.runId,
@@ -297,9 +299,9 @@ export class SendMessageUseCase {
       recipientPhone,
       subject: null,
       body,
-      status: "sent",
-      externalMessageId: sendResult.externalMessageId,
-      sentAt: new Date(),
+      status: "queued",
+      externalMessageId: null,
+      sentAt: null,
     });
 
     if (!created) {
@@ -311,6 +313,22 @@ export class SendMessageUseCase {
       });
       return { sent: false, skippedReason: "duplicate_race" };
     }
+
+    const sendResult = await this.smsService.send({
+      to: recipientPhone,
+      body,
+      businessId: run.businessId,
+      invoiceId: run.invoiceId,
+      sequenceStepId: run.stepId,
+    });
+
+    await this.repo.updateMessageStatus({
+      id: messageId,
+      businessId: run.businessId,
+      status: "sent",
+      externalMessageId: sendResult.externalMessageId,
+      sentAt: new Date(),
+    });
 
     return { sent: true };
   }

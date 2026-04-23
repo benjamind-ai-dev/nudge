@@ -17,7 +17,7 @@ export interface TemplateData {
 }
 
 export interface TemplateService {
-  render(stepId: string, template: string, data: TemplateData): string;
+  render(cacheKey: string, template: string, data: TemplateData): string;
 }
 
 export const TEMPLATE_SERVICE = Symbol("TemplateService");

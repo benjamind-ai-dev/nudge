@@ -42,7 +42,6 @@ export interface RunReadyToSend {
   stepBodyTemplate: string;
   stepSmsBodyTemplate: string | null;
   stepIsOwnerAlert: boolean;
-  stepDelayDays: number;
 }
 
 export interface NextStep {
@@ -65,7 +64,15 @@ export interface CreateMessageData {
   body: string;
   status: MessageStatus;
   externalMessageId: string | null;
-  sentAt: Date;
+  sentAt: Date | null;
+}
+
+export interface UpdateMessageStatusData {
+  id: string;
+  businessId: string;
+  status: MessageStatus;
+  externalMessageId: string | null;
+  sentAt: Date | null;
 }
 
 export interface MessageSendRepository {
@@ -74,6 +81,7 @@ export interface MessageSendRepository {
   findNextStep(sequenceId: string, businessId: string, currentStepOrder: number): Promise<NextStep | null>;
   messageExistsForRunStep(runId: string, stepId: string, channel: string, businessId: string): Promise<boolean>;
   createMessage(data: CreateMessageData): Promise<{ created: boolean }>;
+  updateMessageStatus(data: UpdateMessageStatusData): Promise<void>;
   advanceRunToNextStep(runId: string, businessId: string, nextStepId: string, nextSendAt: Date): Promise<void>;
   completeRun(runId: string, businessId: string): Promise<void>;
 }

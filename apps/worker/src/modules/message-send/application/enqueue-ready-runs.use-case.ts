@@ -26,30 +26,32 @@ export class EnqueueReadyRunsUseCase {
   async execute(): Promise<EnqueueResult> {
     const runs = await this.repo.findRunsReadyToSend();
 
-    for (const run of runs) {
-      await this.queueService.enqueueSendMessage(
-        {
+    await Promise.all(
+      runs.map(async (run) => {
+        await this.queueService.enqueueSendMessage(
+          {
+            sequenceRunId: run.runId,
+            businessId: run.businessId,
+          },
+          {
+            attempts: 3,
+            backoff: {
+              type: "exponential",
+              delay: 60_000,
+            },
+          },
+        );
+
+        this.logger.debug({
+          msg: "Enqueued send-message job",
+          event: "send_message_enqueued",
           sequenceRunId: run.runId,
           businessId: run.businessId,
-        },
-        {
-          attempts: 3,
-          backoff: {
-            type: "exponential",
-            delay: 60_000,
-          },
-        },
-      );
-
-      this.logger.debug({
-        msg: "Enqueued send-message job",
-        event: "send_message_enqueued",
-        sequenceRunId: run.runId,
-        businessId: run.businessId,
-        invoiceNumber: run.invoiceNumber,
-        channel: run.stepChannel,
-      });
-    }
+          invoiceNumber: run.invoiceNumber,
+          channel: run.stepChannel,
+        });
+      }),
+    );
 
     return { runsEnqueued: runs.length };
   }

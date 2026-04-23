@@ -7,6 +7,7 @@ import {
   type RunReadyToSend,
   type NextStep,
   type CreateMessageData,
+  type UpdateMessageStatusData,
   type MessageChannel,
   type RunStatus,
 } from "../domain/message-send.repository";
@@ -135,7 +136,6 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
         stepBodyTemplate: run.currentStep!.bodyTemplate,
         stepSmsBodyTemplate: run.currentStep!.smsBodyTemplate,
         stepIsOwnerAlert: run.currentStep!.isOwnerAlert,
-        stepDelayDays: run.currentStep!.delayDays,
       }));
   }
 
@@ -241,7 +241,6 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       stepBodyTemplate: run.currentStep.bodyTemplate,
       stepSmsBodyTemplate: run.currentStep.smsBodyTemplate,
       stepIsOwnerAlert: run.currentStep.isOwnerAlert,
-      stepDelayDays: run.currentStep.delayDays,
     };
   }
 
@@ -305,6 +304,20 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       }
       throw error;
     }
+  }
+
+  async updateMessageStatus(data: UpdateMessageStatusData): Promise<void> {
+    await this.prisma.message.updateMany({
+      where: {
+        id: data.id,
+        businessId: data.businessId,
+      },
+      data: {
+        status: data.status,
+        externalMessageId: data.externalMessageId,
+        sentAt: data.sentAt,
+      },
+    });
   }
 
   async advanceRunToNextStep(

@@ -35,7 +35,6 @@ const createMockRun = (id: string, businessId = "biz-1"): RunReadyToSend => ({
   stepBodyTemplate: "Body",
   stepSmsBodyTemplate: null,
   stepIsOwnerAlert: false,
-  stepDelayDays: 3,
 });
 
 describe("EnqueueReadyRunsUseCase", () => {
@@ -50,6 +49,7 @@ describe("EnqueueReadyRunsUseCase", () => {
       findNextStep: jest.fn(),
       messageExistsForRunStep: jest.fn(),
       createMessage: jest.fn(),
+      updateMessageStatus: jest.fn(),
       advanceRunToNextStep: jest.fn(),
       completeRun: jest.fn(),
     };
@@ -120,9 +120,11 @@ describe("EnqueueReadyRunsUseCase", () => {
     const queueError = new Error("Redis unavailable");
     queueService.enqueueSendMessage
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(queueError);
+      .mockRejectedValueOnce(queueError)
+      .mockResolvedValueOnce(undefined);
 
     await expect(useCase.execute()).rejects.toThrow("Redis unavailable");
-    expect(queueService.enqueueSendMessage).toHaveBeenCalledTimes(2);
+    // With Promise.all, all enqueue calls are started concurrently
+    expect(queueService.enqueueSendMessage).toHaveBeenCalledTimes(3);
   });
 });

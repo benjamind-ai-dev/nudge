@@ -32,7 +32,6 @@ const createMockRun = (overrides: Partial<RunReadyToSend> = {}): RunReadyToSend 
   stepBodyTemplate: "Hi {{customer.contact_name}}, your invoice is overdue.",
   stepSmsBodyTemplate: null,
   stepIsOwnerAlert: false,
-  stepDelayDays: 3,
   ...overrides,
 });
 
@@ -50,6 +49,7 @@ describe("SendMessageUseCase", () => {
       findNextStep: jest.fn(),
       messageExistsForRunStep: jest.fn().mockResolvedValue(false),
       createMessage: jest.fn().mockResolvedValue({ created: true }),
+      updateMessageStatus: jest.fn(),
       advanceRunToNextStep: jest.fn(),
       completeRun: jest.fn(),
     };
@@ -89,7 +89,14 @@ describe("SendMessageUseCase", () => {
       expect.objectContaining({
         channel: "email",
         recipientEmail: "sarah@acme.com",
+        status: "queued",
+      }),
+    );
+    expect(repo.updateMessageStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessId: "biz-1",
         status: "sent",
+        externalMessageId: "resend-123",
       }),
     );
     expect(repo.advanceRunToNextStep).toHaveBeenCalledWith(
@@ -108,10 +115,24 @@ describe("SendMessageUseCase", () => {
     const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(result.sent).toBe(true);
+    expect(repo.createMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: "sms",
+        recipientPhone: "+15551234567",
+        status: "queued",
+      }),
+    );
     expect(smsService.send).toHaveBeenCalledWith(
       expect.objectContaining({
         to: "+15551234567",
         businessId: "biz-1",
+      }),
+    );
+    expect(repo.updateMessageStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessId: "biz-1",
+        status: "sent",
+        externalMessageId: "twilio-456",
       }),
     );
     expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
@@ -128,6 +149,7 @@ describe("SendMessageUseCase", () => {
     expect(emailService.send).toHaveBeenCalled();
     expect(smsService.send).toHaveBeenCalled();
     expect(repo.createMessage).toHaveBeenCalledTimes(2);
+    expect(repo.updateMessageStatus).toHaveBeenCalledTimes(2);
   });
 
   it("skips when run is not found", async () => {
