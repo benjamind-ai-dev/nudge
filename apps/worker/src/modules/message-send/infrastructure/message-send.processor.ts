@@ -1,9 +1,10 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { Processor, WorkerHost, OnWorkerEvent } from "@nestjs/bullmq";
 import { Logger } from "@nestjs/common";
 import { Job } from "bullmq";
 import { QUEUE_NAMES, JOB_NAMES, type MessageSendJobData } from "@nudge/shared";
 import { EnqueueReadyRunsUseCase } from "../application/enqueue-ready-runs.use-case";
 import { SendMessageUseCase } from "../application/send-message.use-case";
+import { DeadLetterService } from "../../../common/queue/dead-letter.service";
 
 @Processor(QUEUE_NAMES.MESSAGE_SEND, {
   concurrency: 10,
@@ -14,6 +15,7 @@ export class MessageSendProcessor extends WorkerHost {
   constructor(
     private readonly enqueueReadyRuns: EnqueueReadyRunsUseCase,
     private readonly sendMessage: SendMessageUseCase,
+    private readonly deadLetterService: DeadLetterService,
   ) {
     super();
   }
@@ -48,6 +50,14 @@ export class MessageSendProcessor extends WorkerHost {
       jobId: job.id,
       runsEnqueued: result.runsEnqueued,
     });
+  }
+
+  @OnWorkerEvent("failed")
+  async onFailed(job: Job, error: Error): Promise<void> {
+    const maxAttempts = job.opts.attempts ?? 1;
+    if (job.attemptsMade >= maxAttempts) {
+      await this.deadLetterService.moveToDeadLetter(job, error);
+    }
   }
 
   private async handleSendMessage(job: Job<MessageSendJobData>): Promise<void> {

@@ -35,7 +35,7 @@ export class TwilioSmsService implements SmsService {
     this.logger.log({
       msg: "SMS sent via Twilio",
       event: "sms_sent",
-      to: params.to,
+      to: `${params.to.slice(0, 6)}****`,
       sid: message.sid,
       businessId: params.businessId,
     });

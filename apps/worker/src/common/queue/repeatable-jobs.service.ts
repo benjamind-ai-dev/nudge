@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
-import { QUEUE_NAMES } from "@nudge/shared";
+import { QUEUE_NAMES, JOB_NAMES } from "@nudge/shared";
 
 @Injectable()
 export class RepeatableJobsService implements OnModuleInit {
@@ -31,14 +31,14 @@ export class RepeatableJobsService implements OnModuleInit {
     await this.sequenceTriggerQueue.upsertJobScheduler(
       "sequence-trigger-scheduler",
       { every: 300_000 },
-      { name: "sequence-trigger-tick" },
+      { name: JOB_NAMES.SEQUENCE_TRIGGER_TICK },
     );
     this.logger.log("Registered sequence-trigger: every 5 minutes");
 
     await this.messageSendQueue.upsertJobScheduler(
       "message-send-scheduler",
       { every: 60_000 },
-      { name: "message-send-tick" },
+      { name: JOB_NAMES.MESSAGE_SEND_TICK },
     );
     this.logger.log("Registered message-send: every 1 minute");
 

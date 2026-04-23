@@ -216,6 +216,34 @@ describe("SendMessageUseCase", () => {
     expect(repo.completeRun).not.toHaveBeenCalled();
   });
 
+  it("skips SMS for owner alert steps and does not advance when sms-only channel", async () => {
+    const run = createMockRun({ stepChannel: "sms", stepIsOwnerAlert: true });
+    repo.findRunById.mockResolvedValue(run);
+
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(result.sent).toBe(false);
+    expect(result.skippedReason).toBe("no_recipients");
+    expect(smsService.send).not.toHaveBeenCalled();
+    expect(repo.createMessage).not.toHaveBeenCalled();
+    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+    expect(repo.completeRun).not.toHaveBeenCalled();
+  });
+
+  it("sends email to owner but skips SMS for email_and_sms owner alert steps", async () => {
+    const run = createMockRun({ stepChannel: "email_and_sms", stepIsOwnerAlert: true });
+    repo.findRunById.mockResolvedValue(run);
+    repo.findNextStep.mockResolvedValue(null);
+
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(result.sent).toBe(true);
+    expect(result.messagesSent).toBe(1);
+    expect(emailService.send).toHaveBeenCalledWith(expect.objectContaining({ to: "bob@bobsplumbing.com" }));
+    expect(smsService.send).not.toHaveBeenCalled();
+    expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
+  });
+
   it("sends to owner email when isOwnerAlert is true", async () => {
     const run = createMockRun({ stepIsOwnerAlert: true });
     repo.findRunById.mockResolvedValue(run);

@@ -270,6 +270,16 @@ export class SendMessageUseCase {
   }
 
   private async sendSms(run: RunReadyToSend, templateData: TemplateData): Promise<ChannelSendResult> {
+    // SMS owner alerts are not supported — no business phone in the data pipeline.
+    if (run.stepIsOwnerAlert) {
+      this.logger.warn({
+        msg: "SMS owner alerts are not supported, skipping",
+        event: "send_sms_owner_alert_unsupported",
+        runId: run.runId,
+      });
+      return { sent: false, skippedReason: "no_recipient" };
+    }
+
     const recipientPhone = run.customerContactPhone;
 
     if (!recipientPhone) {

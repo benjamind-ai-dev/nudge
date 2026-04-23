@@ -95,13 +95,21 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
 
     return runs
       .filter((run) => {
-        const channel = run.currentStep!.channel;
+        if (!run.currentStep) {
+          this.logger.error({
+            msg: "Run has no current step despite query filter",
+            event: "run_missing_current_step",
+            runId: run.id,
+          });
+          return false;
+        }
+        const channel = run.currentStep.channel;
         if (!isValidChannel(channel)) {
           this.logger.error({
             msg: "Invalid channel in sequence step",
             event: "invalid_channel",
             runId: run.id,
-            stepId: run.currentStep!.id,
+            stepId: run.currentStep.id,
             channel,
           });
           return false;
@@ -249,8 +257,9 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       where: {
         sequenceId,
         sequence: { businessId },
-        stepOrder: currentStepOrder + 1,
+        stepOrder: { gt: currentStepOrder },
       },
+      orderBy: { stepOrder: "asc" },
       select: {
         id: true,
         stepOrder: true,
