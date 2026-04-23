@@ -94,6 +94,18 @@ describe("HandlebarsTemplateService", () => {
       expect(result2).toBe("Version 2: Acme Corp");
       expect(compileSpy).toHaveBeenCalledTimes(2);
     });
+
+    it("evicts oldest entries when cache exceeds max size", () => {
+      const maxSize = (service as unknown as { maxCacheSize: number }).maxCacheSize;
+      const template = "Hello {{customer.company_name}}";
+
+      for (let i = 0; i < maxSize + 10; i++) {
+        service.render(`step-${i}`, template, templateData);
+      }
+
+      const cacheSize = (service as unknown as { cache: Map<string, unknown> }).cache.size;
+      expect(cacheSize).toBeLessThanOrEqual(maxSize);
+    });
   });
 
   it("handles null values gracefully", () => {

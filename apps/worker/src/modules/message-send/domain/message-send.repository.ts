@@ -71,8 +71,8 @@ export interface CreateMessageData {
 export interface MessageSendRepository {
   findRunsReadyToSend(limit?: number): Promise<RunReadyToSend[]>;
   findRunById(id: string, businessId: string): Promise<RunReadyToSend | null>;
-  findNextStep(sequenceId: string, currentStepOrder: number): Promise<NextStep | null>;
-  messageExistsForRunStep(runId: string, stepId: string, channel: string): Promise<boolean>;
+  findNextStep(sequenceId: string, businessId: string, currentStepOrder: number): Promise<NextStep | null>;
+  messageExistsForRunStep(runId: string, stepId: string, channel: string, businessId: string): Promise<boolean>;
   createMessage(data: CreateMessageData): Promise<{ created: boolean }>;
   advanceRunToNextStep(runId: string, businessId: string, nextStepId: string, nextSendAt: Date): Promise<void>;
   completeRun(runId: string, businessId: string): Promise<void>;

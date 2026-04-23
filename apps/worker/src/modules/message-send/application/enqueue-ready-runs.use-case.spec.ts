@@ -1,6 +1,11 @@
+import { Test } from "@nestjs/testing";
 import { EnqueueReadyRunsUseCase } from "./enqueue-ready-runs.use-case";
-import type { MessageSendRepository, RunReadyToSend } from "../domain/message-send.repository";
-import type { MessageQueueService } from "../domain/message-queue.service";
+import {
+  MESSAGE_SEND_REPOSITORY,
+  type MessageSendRepository,
+  type RunReadyToSend,
+} from "../domain/message-send.repository";
+import { MESSAGE_QUEUE_SERVICE, type MessageQueueService } from "../domain/message-queue.service";
 
 const createMockRun = (id: string, businessId = "biz-1"): RunReadyToSend => ({
   runId: id,
@@ -38,7 +43,7 @@ describe("EnqueueReadyRunsUseCase", () => {
   let repo: jest.Mocked<MessageSendRepository>;
   let queueService: jest.Mocked<MessageQueueService>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     repo = {
       findRunsReadyToSend: jest.fn(),
       findRunById: jest.fn(),
@@ -53,7 +58,15 @@ describe("EnqueueReadyRunsUseCase", () => {
       enqueueSendMessage: jest.fn().mockResolvedValue(undefined),
     };
 
-    useCase = new EnqueueReadyRunsUseCase(repo, queueService);
+    const module = await Test.createTestingModule({
+      providers: [
+        EnqueueReadyRunsUseCase,
+        { provide: MESSAGE_SEND_REPOSITORY, useValue: repo },
+        { provide: MESSAGE_QUEUE_SERVICE, useValue: queueService },
+      ],
+    }).compile();
+
+    useCase = module.get(EnqueueReadyRunsUseCase);
   });
 
   it("enqueues jobs for each run ready to send with businessId", async () => {

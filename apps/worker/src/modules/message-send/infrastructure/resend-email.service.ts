@@ -25,7 +25,8 @@ export class ResendEmailService implements EmailService {
       this.logger.error({
         msg: "Resend API error",
         event: "resend_send_error",
-        error: response.error,
+        errorName: response.error.name,
+        errorMessage: response.error.message,
       });
       throw new Error(`Resend error: ${response.error.message}`);
     }

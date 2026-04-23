@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { PrismaClient } from "@nudge/database";
+import { PrismaClient, Prisma } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import {
   isValidChannel,
@@ -245,10 +245,11 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
     };
   }
 
-  async findNextStep(sequenceId: string, currentStepOrder: number): Promise<NextStep | null> {
+  async findNextStep(sequenceId: string, businessId: string, currentStepOrder: number): Promise<NextStep | null> {
     const step = await this.prisma.sequenceStep.findFirst({
       where: {
         sequenceId,
+        sequence: { businessId },
         stepOrder: currentStepOrder + 1,
       },
       select: {
@@ -261,12 +262,13 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
     return step;
   }
 
-  async messageExistsForRunStep(runId: string, stepId: string, channel: string): Promise<boolean> {
+  async messageExistsForRunStep(runId: string, stepId: string, channel: string, businessId: string): Promise<boolean> {
     const count = await this.prisma.message.count({
       where: {
         sequenceRunId: runId,
         sequenceStepId: stepId,
         channel,
+        businessId,
       },
     });
 
@@ -296,8 +298,8 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       return { created: true };
     } catch (error) {
       if (
-        error instanceof Error &&
-        error.message.includes("Unique constraint failed")
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
       ) {
         return { created: false };
       }

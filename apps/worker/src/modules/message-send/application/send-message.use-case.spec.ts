@@ -233,7 +233,7 @@ describe("SendMessageUseCase", () => {
     const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
     expect(result.sent).toBe(false);
-    expect(result.skippedReason).toBe("no_recipients");
+    expect(result.skippedReason).toBe("all_skipped_mixed");
     expect(result.messagesSent).toBe(0);
     expect(emailService.send).not.toHaveBeenCalled();
     expect(smsService.send).not.toHaveBeenCalled();

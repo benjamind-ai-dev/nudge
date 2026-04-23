@@ -80,6 +80,7 @@ export class SendMessageUseCase {
         run.runId,
         run.stepId,
         channel,
+        run.businessId,
       );
 
       if (alreadySent) {
@@ -115,27 +116,26 @@ export class SendMessageUseCase {
       }
     }
 
-    const allChannelsWereDuplicates = duplicatesSkipped === channels.length;
     const allChannelsSkipped = (duplicatesSkipped + channelsSkippedNoRecipient) === channels.length;
 
-    if (allChannelsWereDuplicates) {
-      this.logger.warn({
-        msg: "All channels were duplicates, skipping step advancement",
-        event: "send_message_all_duplicates",
-        runId: run.runId,
-        stepId: run.stepId,
-      });
-      return { sent: false, skippedReason: "all_duplicates", messagesSent: 0 };
-    }
-
     if (allChannelsSkipped && messagesSent === 0) {
+      const skippedReason =
+        duplicatesSkipped > 0 && channelsSkippedNoRecipient > 0
+          ? "all_skipped_mixed"
+          : duplicatesSkipped === channels.length
+            ? "all_duplicates"
+            : "no_recipients";
+
       this.logger.warn({
-        msg: "No messages sent (missing recipients), skipping step advancement",
-        event: "send_message_no_recipients",
+        msg: "No messages sent, skipping step advancement",
+        event: "send_message_all_skipped",
         runId: run.runId,
         stepId: run.stepId,
+        duplicatesSkipped,
+        channelsSkippedNoRecipient,
+        skippedReason,
       });
-      return { sent: false, skippedReason: "no_recipients", messagesSent: 0 };
+      return { sent: false, skippedReason, messagesSent: 0 };
     }
 
     await this.advanceOrCompleteRun(run);
@@ -316,7 +316,7 @@ export class SendMessageUseCase {
   }
 
   private async advanceOrCompleteRun(run: RunReadyToSend): Promise<void> {
-    const nextStep = await this.repo.findNextStep(run.sequenceId, run.stepOrder);
+    const nextStep = await this.repo.findNextStep(run.sequenceId, run.businessId, run.stepOrder);
 
     if (nextStep) {
       const nextSendAt = this.calculateNextSendAt(nextStep.delayDays, run.businessTimezone);
