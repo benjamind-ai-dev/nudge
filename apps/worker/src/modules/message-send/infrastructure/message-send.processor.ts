@@ -65,7 +65,7 @@ export class MessageSendProcessor extends WorkerHost {
   }
 
   private async handleSendMessage(job: Job<MessageSendJobData>): Promise<void> {
-    this.logger.debug({
+    this.logger.log({
       msg: "Processing send-message job",
       event: "send_message_job_started",
       jobId: job.id,
@@ -79,7 +79,7 @@ export class MessageSendProcessor extends WorkerHost {
       businessId: job.data.businessId,
     });
 
-    this.logger.debug({
+    this.logger.log({
       msg: "Send-message job completed",
       event: "send_message_job_completed",
       jobId: job.id,
