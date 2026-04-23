@@ -14,7 +14,7 @@
     "db:seed": "tsx src/seed.ts",
     "postinstall": "if [ \"$CI\" != 'true' ] && command -v prisma > /dev/null 2>&1; then prisma generate; fi",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "prisma generate && tsc --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0"

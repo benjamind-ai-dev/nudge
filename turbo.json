@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "node_modules/.prisma/**"]
+      "outputs": ["dist/**", "node_modules/.prisma/**", "node_modules/@prisma/client/**"]
     },
     "dev": {
       "dependsOn": ["^build"],
