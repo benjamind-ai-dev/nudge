@@ -14,6 +14,7 @@ export class BullMQMessageQueueService implements MessageQueueService {
 
   async enqueueSendMessage(data: MessageSendJobData, options: EnqueueOptions): Promise<void> {
     await this.queue.add(JOB_NAMES.SEND_MESSAGE, data, {
+      jobId: `send-${data.sequenceRunId}`,
       attempts: options.attempts,
       backoff: options.backoff,
     });

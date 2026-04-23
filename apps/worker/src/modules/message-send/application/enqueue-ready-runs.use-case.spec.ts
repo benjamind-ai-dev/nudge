@@ -88,4 +88,28 @@ describe("EnqueueReadyRunsUseCase", () => {
     expect(result.runsEnqueued).toBe(0);
     expect(queueService.enqueueSendMessage).not.toHaveBeenCalled();
   });
+
+  it("propagates error when findRunsReadyToSend rejects", async () => {
+    const dbError = new Error("Database connection lost");
+    repo.findRunsReadyToSend.mockRejectedValue(dbError);
+
+    await expect(useCase.execute()).rejects.toThrow("Database connection lost");
+    expect(queueService.enqueueSendMessage).not.toHaveBeenCalled();
+  });
+
+  it("propagates error when enqueueSendMessage fails mid-batch", async () => {
+    repo.findRunsReadyToSend.mockResolvedValue([
+      createMockRun("run-1", "biz-1"),
+      createMockRun("run-2", "biz-2"),
+      createMockRun("run-3", "biz-3"),
+    ]);
+
+    const queueError = new Error("Redis unavailable");
+    queueService.enqueueSendMessage
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(queueError);
+
+    await expect(useCase.execute()).rejects.toThrow("Redis unavailable");
+    expect(queueService.enqueueSendMessage).toHaveBeenCalledTimes(2);
+  });
 });

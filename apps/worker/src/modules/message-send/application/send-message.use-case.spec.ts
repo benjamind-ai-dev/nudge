@@ -165,16 +165,33 @@ describe("SendMessageUseCase", () => {
     expect(repo.completeRun).not.toHaveBeenCalled();
   });
 
-  it("skips email when no recipient email", async () => {
+  it("skips email and does not advance when no recipient email", async () => {
     const run = createMockRun({ customerContactEmail: null });
     repo.findRunById.mockResolvedValue(run);
+    repo.findNextStep.mockResolvedValue({ id: "step-2", stepOrder: 2, delayDays: 5 });
+
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(result.sent).toBe(false);
+    expect(result.skippedReason).toBe("no_recipients");
+    expect(result.messagesSent).toBe(0);
+    expect(emailService.send).not.toHaveBeenCalled();
+    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+    expect(repo.completeRun).not.toHaveBeenCalled();
+  });
+
+  it("handles duplicate race condition from createMessage", async () => {
+    const run = createMockRun();
+    repo.findRunById.mockResolvedValue(run);
+    repo.createMessage.mockResolvedValue({ created: false });
     repo.findNextStep.mockResolvedValue(null);
 
     const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
-    expect(result.sent).toBe(true);
+    expect(result.sent).toBe(false);
+    expect(result.skippedReason).toBe("all_duplicates");
     expect(result.messagesSent).toBe(0);
-    expect(emailService.send).not.toHaveBeenCalled();
+    expect(repo.completeRun).not.toHaveBeenCalled();
   });
 
   it("sends to owner email when isOwnerAlert is true", async () => {

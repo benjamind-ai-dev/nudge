@@ -1,3 +1,4 @@
+import Handlebars from "handlebars";
 import { HandlebarsTemplateService } from "./handlebars-template.service";
 import type { TemplateData } from "../domain/template.service";
 
@@ -56,26 +57,36 @@ describe("HandlebarsTemplateService", () => {
     expect(result).toBe("Pay here: https://pay.example.com/inv-1");
   });
 
-  it("caches compiled templates", () => {
+  it("caches compiled templates and only compiles once", () => {
     const template = "Test {{customer.company_name}}";
+    const compileSpy = jest.spyOn(Handlebars, "compile");
 
     const result1 = service.render("cache-test", template, templateData);
     const result2 = service.render("cache-test", template, templateData);
+    const result3 = service.render("cache-test", template, templateData);
 
     expect(result1).toBe(result2);
     expect(result1).toBe("Test Acme Corp");
+    expect(compileSpy).toHaveBeenCalledTimes(1);
+
+    compileSpy.mockRestore();
   });
 
-  it("invalidates cache when template content changes", () => {
+  it("invalidates cache and recompiles when template content changes", () => {
     const cacheKey = "editable-step";
     const templateV1 = "Version 1: {{customer.company_name}}";
     const templateV2 = "Version 2: {{customer.company_name}}";
+    const compileSpy = jest.spyOn(Handlebars, "compile");
 
     const result1 = service.render(cacheKey, templateV1, templateData);
     expect(result1).toBe("Version 1: Acme Corp");
+    expect(compileSpy).toHaveBeenCalledTimes(1);
 
     const result2 = service.render(cacheKey, templateV2, templateData);
     expect(result2).toBe("Version 2: Acme Corp");
+    expect(compileSpy).toHaveBeenCalledTimes(2);
+
+    compileSpy.mockRestore();
   });
 
   it("handles null values gracefully", () => {

@@ -6,11 +6,17 @@ import {
   MESSAGE_SEND_REPOSITORY,
   type MessageSendRepository,
   type RunReadyToSend,
+  type MessageChannel,
 } from "../domain/message-send.repository";
 import { TEMPLATE_SERVICE, type TemplateService, type TemplateData } from "../domain/template.service";
 import { EMAIL_SERVICE, type EmailService } from "../domain/email.service";
 import { SMS_SERVICE, type SmsService } from "../domain/sms.service";
 import { nextBusinessHour } from "../../../common/utils/business-hours";
+
+interface ChannelSendResult {
+  sent: boolean;
+  skippedReason?: "no_recipient" | "duplicate_race";
+}
 
 export interface SendMessageInput {
   sequenceRunId: string;
@@ -64,6 +70,7 @@ export class SendMessageUseCase {
     const templateData = this.buildTemplateData(run);
     let messagesSent = 0;
     let duplicatesSkipped = 0;
+    let channelsSkippedNoRecipient = 0;
 
     const channels = this.getChannels(run.stepChannel);
 
@@ -87,9 +94,13 @@ export class SendMessageUseCase {
       }
 
       try {
-        const sent = await this.sendByChannel(channel, run, templateData);
-        if (sent) {
+        const result = await this.sendByChannel(channel, run, templateData);
+        if (result.sent) {
           messagesSent++;
+        } else if (result.skippedReason === "no_recipient") {
+          channelsSkippedNoRecipient++;
+        } else if (result.skippedReason === "duplicate_race") {
+          duplicatesSkipped++;
         }
       } catch (error) {
         this.logger.error({
@@ -104,6 +115,7 @@ export class SendMessageUseCase {
     }
 
     const allChannelsWereDuplicates = duplicatesSkipped === channels.length;
+    const allChannelsSkipped = (duplicatesSkipped + channelsSkippedNoRecipient) === channels.length;
 
     if (allChannelsWereDuplicates) {
       this.logger.warn({
@@ -113,6 +125,16 @@ export class SendMessageUseCase {
         stepId: run.stepId,
       });
       return { sent: false, skippedReason: "all_duplicates", messagesSent: 0 };
+    }
+
+    if (allChannelsSkipped && messagesSent === 0) {
+      this.logger.warn({
+        msg: "No messages sent (missing recipients), skipping step advancement",
+        event: "send_message_no_recipients",
+        runId: run.runId,
+        stepId: run.stepId,
+      });
+      return { sent: false, skippedReason: "no_recipients", messagesSent: 0 };
     }
 
     await this.advanceOrCompleteRun(run);
@@ -128,7 +150,7 @@ export class SendMessageUseCase {
     return { sent: true, messagesSent };
   }
 
-  private getChannels(stepChannel: string): string[] {
+  private getChannels(stepChannel: MessageChannel): MessageChannel[] {
     if (stepChannel === "email_and_sms") {
       return ["email", "sms"];
     }
@@ -158,19 +180,25 @@ export class SendMessageUseCase {
   }
 
   private async sendByChannel(
-    channel: string,
+    channel: MessageChannel,
     run: RunReadyToSend,
     templateData: TemplateData,
-  ): Promise<boolean> {
-    if (channel === "email") {
-      return this.sendEmail(run, templateData);
-    } else if (channel === "sms") {
-      return this.sendSms(run, templateData);
+  ): Promise<ChannelSendResult> {
+    switch (channel) {
+      case "email":
+        return this.sendEmail(run, templateData);
+      case "sms":
+        return this.sendSms(run, templateData);
+      case "email_and_sms":
+        throw new Error("email_and_sms should be split into individual channels");
+      default: {
+        const exhaustiveCheck: never = channel;
+        throw new Error(`Unknown channel: ${exhaustiveCheck}`);
+      }
     }
-    return false;
   }
 
-  private async sendEmail(run: RunReadyToSend, templateData: TemplateData): Promise<boolean> {
+  private async sendEmail(run: RunReadyToSend, templateData: TemplateData): Promise<ChannelSendResult> {
     const recipientEmail = run.stepIsOwnerAlert
       ? run.businessSenderEmail
       : run.customerContactEmail;
@@ -182,7 +210,7 @@ export class SendMessageUseCase {
         runId: run.runId,
         isOwnerAlert: run.stepIsOwnerAlert,
       });
-      return false;
+      return { sent: false, skippedReason: "no_recipient" };
     }
 
     const subject = run.stepSubjectTemplate
@@ -197,14 +225,14 @@ export class SendMessageUseCase {
 
     const messageId = randomUUID();
 
-    const result = await this.emailService.send({
+    const sendResult = await this.emailService.send({
       from: `${run.businessSenderName} <${run.businessSenderEmail}>`,
       to: recipientEmail,
       subject,
       html: body,
     });
 
-    await this.repo.createMessage({
+    const { created } = await this.repo.createMessage({
       id: messageId,
       sequenceRunId: run.runId,
       sequenceStepId: run.stepId,
@@ -217,14 +245,24 @@ export class SendMessageUseCase {
       subject,
       body,
       status: "sent",
-      externalMessageId: result.externalMessageId,
+      externalMessageId: sendResult.externalMessageId,
       sentAt: new Date(),
     });
 
-    return true;
+    if (!created) {
+      this.logger.warn({
+        msg: "Message record already exists (race condition), treating as duplicate",
+        event: "send_email_duplicate_race",
+        runId: run.runId,
+        stepId: run.stepId,
+      });
+      return { sent: false, skippedReason: "duplicate_race" };
+    }
+
+    return { sent: true };
   }
 
-  private async sendSms(run: RunReadyToSend, templateData: TemplateData): Promise<boolean> {
+  private async sendSms(run: RunReadyToSend, templateData: TemplateData): Promise<ChannelSendResult> {
     const recipientPhone = run.customerContactPhone;
 
     if (!recipientPhone) {
@@ -233,14 +271,14 @@ export class SendMessageUseCase {
         event: "send_sms_no_recipient",
         runId: run.runId,
       });
-      return false;
+      return { sent: false, skippedReason: "no_recipient" };
     }
 
     const smsTemplate = run.stepSmsBodyTemplate ?? run.stepBodyTemplate;
     const body = this.templateService.render(`${run.stepId}-sms`, smsTemplate, templateData);
     const messageId = randomUUID();
 
-    const result = await this.smsService.send({
+    const sendResult = await this.smsService.send({
       to: recipientPhone,
       body,
       businessId: run.businessId,
@@ -248,7 +286,7 @@ export class SendMessageUseCase {
       sequenceStepId: run.stepId,
     });
 
-    await this.repo.createMessage({
+    const { created } = await this.repo.createMessage({
       id: messageId,
       sequenceRunId: run.runId,
       sequenceStepId: run.stepId,
@@ -261,11 +299,21 @@ export class SendMessageUseCase {
       subject: null,
       body,
       status: "sent",
-      externalMessageId: result.externalMessageId,
+      externalMessageId: sendResult.externalMessageId,
       sentAt: new Date(),
     });
 
-    return true;
+    if (!created) {
+      this.logger.warn({
+        msg: "Message record already exists (race condition), treating as duplicate",
+        event: "send_sms_duplicate_race",
+        runId: run.runId,
+        stepId: run.stepId,
+      });
+      return { sent: false, skippedReason: "duplicate_race" };
+    }
+
+    return { sent: true };
   }
 
   private async advanceOrCompleteRun(run: RunReadyToSend): Promise<void> {
