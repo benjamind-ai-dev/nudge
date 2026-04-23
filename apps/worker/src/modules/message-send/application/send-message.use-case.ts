@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "crypto";
 import { addDays, differenceInDays, format } from "date-fns";
 import { formatCents } from "@nudge/shared";
@@ -13,6 +14,7 @@ import { TEMPLATE_SERVICE, type TemplateService, type TemplateData } from "../do
 import { EMAIL_SERVICE, type EmailService } from "../domain/email.service";
 import { SMS_SERVICE, type SmsService } from "../domain/sms.service";
 import { nextBusinessHour } from "../../../common/utils/business-hours";
+import { Env } from "../../../common/config/env.schema";
 
 interface ChannelSendResult {
   sent: boolean;
@@ -43,6 +45,7 @@ export class SendMessageUseCase {
     private readonly emailService: EmailService,
     @Inject(SMS_SERVICE)
     private readonly smsService: SmsService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
@@ -251,8 +254,10 @@ export class SendMessageUseCase {
       return { sent: false, skippedReason: "duplicate_race" };
     }
 
+    const notificationsEmail = this.config.get("NOTIFICATIONS_EMAIL", { infer: true });
     const sendResult = await this.emailService.send({
-      from: `${run.businessSenderName} <${run.businessSenderEmail}>`,
+      from: `${run.businessSenderName} <${notificationsEmail}>`,
+      replyTo: run.businessSenderEmail,
       to: recipientEmail,
       subject,
       html: body,
