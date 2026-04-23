@@ -3,11 +3,66 @@ import { PrismaClient } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import {
   type BusinessRepository,
-  type BusinessSettings,
-  type UpdateBusinessSettingsData,
   type BusinessWithConnections,
+  type BusinessSettings,
   type CreateBusinessData,
+  type UpdateBusinessSettingsData,
 } from "../domain/business.repository";
+
+const BUSINESS_WITH_CONNECTIONS_SELECT = {
+  id: true,
+  name: true,
+  accountingProvider: true,
+  senderName: true,
+  senderEmail: true,
+  emailSignature: true,
+  timezone: true,
+  isActive: true,
+  lastSyncAt: true,
+  connections: {
+    select: {
+      provider: true,
+      status: true,
+    },
+  },
+} as const;
+
+const BUSINESS_SETTINGS_SELECT = {
+  id: true,
+  senderName: true,
+  senderEmail: true,
+  emailSignature: true,
+  timezone: true,
+} as const;
+
+function toBusinessWithConnections(row: {
+  id: string;
+  name: string;
+  accountingProvider: string;
+  senderName: string;
+  senderEmail: string;
+  emailSignature: string | null;
+  timezone: string;
+  isActive: boolean;
+  lastSyncAt: Date | null;
+  connections: { provider: string; status: string }[];
+}): BusinessWithConnections {
+  return {
+    id: row.id,
+    name: row.name,
+    accountingProvider: row.accountingProvider,
+    senderName: row.senderName,
+    senderEmail: row.senderEmail,
+    emailSignature: row.emailSignature,
+    timezone: row.timezone,
+    isActive: row.isActive,
+    connections: row.connections.map((c) => ({
+      provider: c.provider,
+      status: c.status,
+      lastSyncAt: row.lastSyncAt,
+    })),
+  };
+}
 
 @Injectable()
 export class PrismaBusinessRepository implements BusinessRepository {
@@ -18,46 +73,13 @@ export class PrismaBusinessRepository implements BusinessRepository {
   async findById(id: string): Promise<BusinessWithConnections | null> {
     const row = await this.prisma.business.findUnique({
       where: { id },
-      select: {
-        id: true,
-        name: true,
-        accountingProvider: true,
-        senderName: true,
-        senderEmail: true,
-        emailSignature: true,
-        timezone: true,
-        isActive: true,
-        connections: {
-          select: {
-            provider: true,
-            status: true,
-            lastRefreshAt: true,
-          },
-        },
-      },
+      select: BUSINESS_WITH_CONNECTIONS_SELECT,
     });
-
-    if (!row) return null;
-
-    return {
-      id: row.id,
-      name: row.name,
-      accountingProvider: row.accountingProvider,
-      senderName: row.senderName,
-      senderEmail: row.senderEmail,
-      emailSignature: row.emailSignature,
-      timezone: row.timezone,
-      isActive: row.isActive,
-      connections: row.connections.map((conn) => ({
-        provider: conn.provider,
-        status: conn.status,
-        lastSyncAt: conn.lastRefreshAt,
-      })),
-    };
+    return row ? toBusinessWithConnections(row) : null;
   }
 
   async create(data: CreateBusinessData): Promise<BusinessWithConnections> {
-    const created = await this.prisma.business.create({
+    const row = await this.prisma.business.create({
       data: {
         accountId: data.accountId,
         name: data.name,
@@ -65,42 +87,11 @@ export class PrismaBusinessRepository implements BusinessRepository {
         senderName: data.senderName,
         senderEmail: data.senderEmail,
         timezone: data.timezone,
-        emailSignature: data.emailSignature,
+        emailSignature: data.emailSignature ?? null,
       },
-      select: {
-        id: true,
-        name: true,
-        accountingProvider: true,
-        senderName: true,
-        senderEmail: true,
-        emailSignature: true,
-        timezone: true,
-        isActive: true,
-        connections: {
-          select: {
-            provider: true,
-            status: true,
-            lastRefreshAt: true,
-          },
-        },
-      },
+      select: BUSINESS_WITH_CONNECTIONS_SELECT,
     });
-
-    return {
-      id: created.id,
-      name: created.name,
-      accountingProvider: created.accountingProvider,
-      senderName: created.senderName,
-      senderEmail: created.senderEmail,
-      emailSignature: created.emailSignature,
-      timezone: created.timezone,
-      isActive: created.isActive,
-      connections: created.connections.map((conn) => ({
-        provider: conn.provider,
-        status: conn.status,
-        lastSyncAt: conn.lastRefreshAt,
-      })),
-    };
+    return toBusinessWithConnections(row);
   }
 
   async updateSettings(id: string, data: UpdateBusinessSettingsData): Promise<BusinessSettings> {
@@ -112,22 +103,14 @@ export class PrismaBusinessRepository implements BusinessRepository {
         ...(data.emailSignature !== undefined && { emailSignature: data.emailSignature }),
         ...(data.timezone !== undefined && { timezone: data.timezone }),
       },
-      select: {
-        id: true,
-        senderName: true,
-        senderEmail: true,
-        emailSignature: true,
-        timezone: true,
-      },
+      select: BUSINESS_SETTINGS_SELECT,
     });
   }
 
   async softDelete(id: string): Promise<void> {
     await this.prisma.business.update({
       where: { id },
-      data: {
-        isActive: false,
-      },
+      data: { isActive: false },
     });
   }
 }
