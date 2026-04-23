@@ -17,11 +17,14 @@ const existing = {
   emailSignature: null,
   timezone: "America/New_York",
   isActive: true,
+  customerCount: 3,
+  invoiceCount: 8,
   connections: [],
 };
 
 const updated = {
   id: "550e8400-e29b-41d4-a716-446655440000",
+  name: "Acme Corp",
   senderName: "New Name",
   senderEmail: "billing@acme.com",
   emailSignature: null,

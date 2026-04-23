@@ -14,6 +14,8 @@ const business = {
   emailSignature: null,
   timezone: "America/New_York",
   isActive: true,
+  customerCount: 5,
+  invoiceCount: 12,
   connections: [{ provider: "quickbooks", status: "active", lastSyncAt: null }],
 };
 

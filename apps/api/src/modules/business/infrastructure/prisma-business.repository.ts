@@ -25,10 +25,17 @@ const BUSINESS_WITH_CONNECTIONS_SELECT = {
       status: true,
     },
   },
+  _count: {
+    select: {
+      customers: true,
+      invoices: true,
+    },
+  },
 } as const;
 
 const BUSINESS_SETTINGS_SELECT = {
   id: true,
+  name: true,
   senderName: true,
   senderEmail: true,
   emailSignature: true,
@@ -46,6 +53,7 @@ function toBusinessWithConnections(row: {
   isActive: boolean;
   lastSyncAt: Date | null;
   connections: { provider: string; status: string }[];
+  _count: { customers: number; invoices: number };
 }): BusinessWithConnections {
   return {
     id: row.id,
@@ -56,6 +64,8 @@ function toBusinessWithConnections(row: {
     emailSignature: row.emailSignature,
     timezone: row.timezone,
     isActive: row.isActive,
+    customerCount: row._count.customers,
+    invoiceCount: row._count.invoices,
     connections: row.connections.map((c) => ({
       provider: c.provider,
       status: c.status,
@@ -98,6 +108,7 @@ export class PrismaBusinessRepository implements BusinessRepository {
     return this.prisma.business.update({
       where: { id },
       data: {
+        ...(data.name !== undefined && { name: data.name }),
         ...(data.senderName !== undefined && { senderName: data.senderName }),
         ...(data.senderEmail !== undefined && { senderEmail: data.senderEmail }),
         ...(data.emailSignature !== undefined && { emailSignature: data.emailSignature }),

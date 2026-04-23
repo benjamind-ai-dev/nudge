@@ -22,6 +22,8 @@ const created = {
   emailSignature: null,
   timezone: "America/New_York",
   isActive: true,
+  customerCount: 0,
+  invoiceCount: 0,
   connections: [],
 };
 

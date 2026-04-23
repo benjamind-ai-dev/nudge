@@ -25,7 +25,7 @@ import {
   type UpdateBusinessSettingsDto,
 } from "./dto/update-business-settings.dto";
 
-@Controller("v1/business")
+@Controller("v1/businesses")
 export class BusinessController {
   constructor(
     private readonly getBusiness: GetBusinessUseCase,

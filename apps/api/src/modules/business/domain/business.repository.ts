@@ -15,11 +15,14 @@ export interface BusinessWithConnections {
   emailSignature: string | null;
   timezone: string;
   isActive: boolean;
+  customerCount: number;
+  invoiceCount: number;
   connections: ConnectionInfo[];
 }
 
 export interface BusinessSettings {
   id: string;
+  name: string;
   senderName: string;
   senderEmail: string;
   emailSignature: string | null;
@@ -37,6 +40,7 @@ export interface CreateBusinessData {
 }
 
 export interface UpdateBusinessSettingsData {
+  name?: string;
   senderName?: string;
   senderEmail?: string;
   emailSignature?: string | null;

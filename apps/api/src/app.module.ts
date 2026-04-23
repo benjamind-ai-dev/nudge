@@ -13,6 +13,7 @@ import { QuickbooksOAuthModule } from "./modules/quickbooks-oauth/quickbooks-oau
 import { XeroOAuthModule } from "./modules/xero-oauth/xero-oauth.module";
 import { ConnectionsCommonModule } from "./modules/connections-common/connections-common.module";
 import { ConnectionsModule } from "./modules/connections/connections.module";
+import { BusinessModule } from "./modules/business/business.module";
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { ConnectionsModule } from "./modules/connections/connections.module";
     XeroOAuthModule,
     ConnectionsCommonModule,
     ConnectionsModule,
+    BusinessModule,
   ],
 })
 export class AppModule {}
