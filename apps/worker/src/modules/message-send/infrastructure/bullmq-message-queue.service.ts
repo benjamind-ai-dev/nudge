@@ -19,6 +19,10 @@ export class BullMQMessageQueueService implements MessageQueueService {
       jobId: `send-${data.sequenceRunId}`,
       attempts: options.attempts,
       backoff: options.backoff,
+      // Remove completed jobs immediately so the same jobId can be re-enqueued
+      // on subsequent ticks (e.g. after a run advances to its next step).
+      removeOnComplete: true,
+      removeOnFail: false,
     });
   }
 }
