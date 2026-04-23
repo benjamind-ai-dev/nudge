@@ -277,6 +277,7 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
         sequenceStepId: stepId,
         channel,
         businessId,
+        status: "sent",
       },
     });
 
@@ -309,7 +310,43 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        return { created: false };
+        // A record already exists for this run/step/channel. Check its status:
+        // - "sent": genuine duplicate, skip
+        // - "queued": previous attempt failed mid-flight, delete stale record and retry
+        const existing = await this.prisma.message.findFirst({
+          where: {
+            sequenceRunId: data.sequenceRunId,
+            sequenceStepId: data.sequenceStepId,
+            channel: data.channel,
+            businessId: data.businessId,
+          },
+          select: { id: true, status: true },
+        });
+
+        if (!existing || existing.status === "sent") {
+          return { created: false };
+        }
+
+        await this.prisma.message.delete({ where: { id: existing.id } });
+        await this.prisma.message.create({
+          data: {
+            id: data.id,
+            sequenceRunId: data.sequenceRunId,
+            sequenceStepId: data.sequenceStepId,
+            invoiceId: data.invoiceId,
+            customerId: data.customerId,
+            businessId: data.businessId,
+            channel: data.channel,
+            recipientEmail: data.recipientEmail,
+            recipientPhone: data.recipientPhone,
+            subject: data.subject,
+            body: data.body,
+            status: data.status,
+            externalMessageId: data.externalMessageId,
+            sentAt: data.sentAt,
+          },
+        });
+        return { created: true };
       }
       throw error;
     }
