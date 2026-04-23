@@ -8,6 +8,10 @@ import { DeadLetterService } from "../../../common/queue/dead-letter.service";
 
 @Processor(QUEUE_NAMES.MESSAGE_SEND, {
   concurrency: 10,
+  limiter: {
+    max: 4,
+    duration: 1000,
+  },
 })
 export class MessageSendProcessor extends WorkerHost {
   private readonly logger = new Logger(MessageSendProcessor.name);
