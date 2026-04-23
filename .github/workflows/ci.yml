@@ -84,6 +84,7 @@ jobs:
       CLERK_SECRET_KEY: sk_test_dummy
       CLERK_WEBHOOK_SECRET: svix_dummy
       TWILIO_WEBHOOK_SECRET: dummy_twilio
+      APP_BASE_URL: http://localhost:3000
       # Worker env vars (pass Zod validation)
       RESEND_API_KEY: re_dummy
       TWILIO_ACCOUNT_SID: ACdummy12345678901234567890123456

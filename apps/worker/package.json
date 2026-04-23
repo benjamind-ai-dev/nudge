@@ -20,6 +20,7 @@
     "@nudge/shared": "workspace:*",
     "bullmq": "^5.31.0",
     "date-fns": "^4.1.0",
+    "handlebars": "^4.7.8",
     "date-fns-tz": "^3.2.0",
     "intuit-oauth": "^4.2.3",
     "ioredis": "^5.4.0",
