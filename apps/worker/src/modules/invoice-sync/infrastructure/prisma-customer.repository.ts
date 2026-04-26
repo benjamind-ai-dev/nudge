@@ -85,4 +85,15 @@ export class PrismaCustomerRepository implements CustomerRepository {
       }),
     );
   }
+
+  async existsByExternalId(
+    businessId: string,
+    externalId: string,
+  ): Promise<boolean> {
+    const row = await this.prisma.customer.findFirst({
+      where: { businessId, externalId },
+      select: { id: true },
+    });
+    return row !== null;
+  }
 }

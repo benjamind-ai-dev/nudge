@@ -52,6 +52,9 @@ export interface CustomerRepository {
     businessId: string,
     customerExternalIds: string[],
   ): Promise<void>;
+
+  /** True when a customer with `external_id` is already persisted for this business. */
+  existsByExternalId(businessId: string, externalId: string): Promise<boolean>;
 }
 
 export interface SyncConnectionReader {
