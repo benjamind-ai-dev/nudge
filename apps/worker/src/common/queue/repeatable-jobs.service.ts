@@ -52,7 +52,13 @@ export class RepeatableJobsService implements OnModuleInit {
     await this.daysRecalcQueue.upsertJobScheduler(
       "days-recalc-scheduler",
       { pattern: "0 0 * * *" },
-      { name: "days-recalc-tick" },
+      {
+        name: JOB_NAMES.DAYS_RECALC_TICK,
+        opts: {
+          attempts: 2,
+          backoff: { type: "fixed", delay: 60_000 },
+        },
+      },
     );
     this.logger.log("Registered days-recalc: daily at midnight UTC");
 

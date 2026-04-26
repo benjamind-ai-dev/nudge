@@ -11,6 +11,7 @@ import { InvoiceSyncModule } from "./modules/invoice-sync/invoice-sync.module";
 import { SequenceTriggerModule } from "./modules/sequence-trigger/sequence-trigger.module";
 import { MessageSendModule } from "./modules/message-send/message-send.module";
 import { DeadLetterMonitorModule } from "./modules/dead-letter-monitor/dead-letter-monitor.module";
+import { DaysRecalcModule } from "./modules/days-recalc/days-recalc.module";
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { DeadLetterMonitorModule } from "./modules/dead-letter-monitor/dead-lett
     SequenceTriggerModule,
     MessageSendModule,
     DeadLetterMonitorModule,
+    DaysRecalcModule,
   ],
 })
 export class AppModule {}

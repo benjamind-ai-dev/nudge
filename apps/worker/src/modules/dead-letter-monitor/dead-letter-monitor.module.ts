@@ -16,6 +16,7 @@ import { ALERT_SERVICE } from "./domain/alert.service";
       { name: QUEUE_NAMES.TOKEN_REFRESH },
       { name: QUEUE_NAMES.INVOICE_SYNC },
       { name: QUEUE_NAMES.SEQUENCE_TRIGGER },
+      { name: QUEUE_NAMES.DAYS_RECALC },
     ),
   ],
   providers: [

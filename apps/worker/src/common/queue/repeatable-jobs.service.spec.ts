@@ -69,13 +69,19 @@ describe("RepeatableJobsService", () => {
     );
   });
 
-  it("should register days-recalc daily at midnight UTC", async () => {
+  it("should register days-recalc daily at midnight UTC with attempts and backoff", async () => {
     await service.onModuleInit();
 
     expect(mockDaysRecalcQueue.upsertJobScheduler).toHaveBeenCalledWith(
       "days-recalc-scheduler",
       { pattern: "0 0 * * *" },
-      { name: "days-recalc-tick" },
+      {
+        name: "days-recalc-tick",
+        opts: {
+          attempts: 2,
+          backoff: { type: "fixed", delay: 60_000 },
+        },
+      },
     );
   });
 });
