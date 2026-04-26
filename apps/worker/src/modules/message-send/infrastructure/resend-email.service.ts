@@ -16,6 +16,7 @@ export class ResendEmailService implements EmailService {
   async send(params: SendEmailParams): Promise<SendEmailResult> {
     const response = await this.client.emails.send({
       from: params.from,
+      ...(params.replyTo && { replyTo: params.replyTo }),
       to: params.to,
       subject: params.subject,
       html: params.html,

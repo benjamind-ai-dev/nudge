@@ -3,6 +3,7 @@ import type { MessageSendRepository, RunReadyToSend } from "../domain/message-se
 import type { TemplateService } from "../domain/template.service";
 import type { EmailService } from "../domain/email.service";
 import type { SmsService } from "../domain/sms.service";
+import { ConfigService } from "@nestjs/config";
 
 const createMockRun = (overrides: Partial<RunReadyToSend> = {}): RunReadyToSend => ({
   runId: "run-1",
@@ -41,6 +42,7 @@ describe("SendMessageUseCase", () => {
   let templateService: jest.Mocked<TemplateService>;
   let emailService: jest.Mocked<EmailService>;
   let smsService: jest.Mocked<SmsService>;
+  let config: jest.Mocked<ConfigService>;
 
   beforeEach(() => {
     repo = {
@@ -66,7 +68,11 @@ describe("SendMessageUseCase", () => {
       send: jest.fn().mockResolvedValue({ externalMessageId: "twilio-456" }),
     };
 
-    useCase = new SendMessageUseCase(repo, templateService, emailService, smsService);
+    config = {
+      get: jest.fn().mockReturnValue("notifications@paynudge.net"),
+    } as unknown as jest.Mocked<ConfigService>;
+
+    useCase = new SendMessageUseCase(repo, templateService, emailService, smsService, config);
   });
 
   it("sends email and advances to next step", async () => {
@@ -82,7 +88,8 @@ describe("SendMessageUseCase", () => {
     expect(emailService.send).toHaveBeenCalledWith(
       expect.objectContaining({
         to: "sarah@acme.com",
-        from: "Bob Smith <bob@bobsplumbing.com>",
+        from: "Bob Smith <notifications@paynudge.net>",
+        replyTo: "bob@bobsplumbing.com",
       }),
     );
     expect(repo.createMessage).toHaveBeenCalledWith(
