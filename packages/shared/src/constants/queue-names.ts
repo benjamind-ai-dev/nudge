@@ -12,6 +12,7 @@ export const QUEUE_NAMES = {
   QUICKBOOKS_WEBHOOKS: "quickbooks-webhooks",
   SMS_SEND: "sms-send",
   DEAD_LETTER: "dead-letter",
+  DEAD_LETTER_CHECK: "dead-letter-check",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

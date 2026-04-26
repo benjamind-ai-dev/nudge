@@ -10,6 +10,7 @@ import { TokenRefreshModule } from "./modules/token-refresh/token-refresh.module
 import { InvoiceSyncModule } from "./modules/invoice-sync/invoice-sync.module";
 import { SequenceTriggerModule } from "./modules/sequence-trigger/sequence-trigger.module";
 import { MessageSendModule } from "./modules/message-send/message-send.module";
+import { DeadLetterMonitorModule } from "./modules/dead-letter-monitor/dead-letter-monitor.module";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MessageSendModule } from "./modules/message-send/message-send.module";
     InvoiceSyncModule,
     SequenceTriggerModule,
     MessageSendModule,
+    DeadLetterMonitorModule,
   ],
 })
 export class AppModule {}
