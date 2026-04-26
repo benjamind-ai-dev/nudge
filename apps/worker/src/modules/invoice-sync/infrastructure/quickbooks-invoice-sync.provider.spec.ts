@@ -275,3 +275,115 @@ describe("QuickbooksInvoiceSyncProvider", () => {
     ).rejects.toBeInstanceOf(SyncFailedError);
   });
 });
+
+describe("QuickbooksInvoiceSyncProvider.fetchInvoice", () => {
+  let provider: QuickbooksInvoiceSyncProvider;
+  let fetchMock: jest.Mock;
+
+  beforeEach(() => {
+    provider = new QuickbooksInvoiceSyncProvider(config);
+    fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const okJson = (body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+
+  it("fetches and maps a single invoice", async () => {
+    fetchMock.mockResolvedValueOnce(okJson({ Invoice: sampleInvoice }));
+
+    const inv = await provider.fetchInvoice({
+      tokens,
+      realmId: "realm-1",
+      invoiceId: "1001",
+    });
+
+    expect(inv.externalId).toBe("1001");
+    expect(inv.amountCents).toBe(50025);
+    expect(inv.balanceDueCents).toBe(20025);
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("/v3/company/realm-1/invoice/1001");
+    expect(url).toContain("minorversion=73");
+  });
+
+  it("throws SyncFailedError when QB returns 200 with no Invoice key", async () => {
+    fetchMock.mockResolvedValueOnce(okJson({}));
+    await expect(
+      provider.fetchInvoice({ tokens, realmId: "r", invoiceId: "1001" }),
+    ).rejects.toBeInstanceOf(SyncFailedError);
+  });
+
+  it("maps 401 -> AuthError", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("", { status: 401 }));
+    await expect(
+      provider.fetchInvoice({ tokens, realmId: "r", invoiceId: "1001" }),
+    ).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it("maps 429 with Retry-After -> RateLimitError(retryAfterMs)", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response("", { status: 429, headers: { "retry-after": "7" } }),
+    );
+    try {
+      await provider.fetchInvoice({ tokens, realmId: "r", invoiceId: "1001" });
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(RateLimitError);
+      expect((err as RateLimitError).retryAfterMs).toBe(7000);
+    }
+  });
+
+  it("maps 500 -> SyncFailedError", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("", { status: 500 }));
+    await expect(
+      provider.fetchInvoice({ tokens, realmId: "r", invoiceId: "1001" }),
+    ).rejects.toBeInstanceOf(SyncFailedError);
+  });
+});
+
+describe("QuickbooksInvoiceSyncProvider.fetchCustomerById", () => {
+  let provider: QuickbooksInvoiceSyncProvider;
+  let fetchMock: jest.Mock;
+
+  beforeEach(() => {
+    provider = new QuickbooksInvoiceSyncProvider(config);
+    fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const okJson = (body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+
+  it("fetches and maps a single customer", async () => {
+    fetchMock.mockResolvedValueOnce(okJson({ Customer: sampleCustomer }));
+
+    const cust = await provider.fetchCustomerById({
+      tokens,
+      realmId: "realm-1",
+      customerId: "C1",
+    });
+
+    expect(cust.externalId).toBe("C1");
+    expect(cust.companyName).toBe("Acme Co.");
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("/v3/company/realm-1/customer/C1");
+    expect(url).toContain("minorversion=73");
+  });
+
+  it("throws SyncFailedError when QB returns 200 with no Customer key", async () => {
+    fetchMock.mockResolvedValueOnce(okJson({}));
+    await expect(
+      provider.fetchCustomerById({ tokens, realmId: "r", customerId: "C1" }),
+    ).rejects.toBeInstanceOf(SyncFailedError);
+  });
+});
