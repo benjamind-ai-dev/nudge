@@ -27,6 +27,7 @@ describe("CheckDeadLetterUseCase", () => {
         { provide: getQueueToken(QUEUE_NAMES.TOKEN_REFRESH), useValue: createMockQueue() },
         { provide: getQueueToken(QUEUE_NAMES.INVOICE_SYNC), useValue: createMockQueue() },
         { provide: getQueueToken(QUEUE_NAMES.SEQUENCE_TRIGGER), useValue: createMockQueue() },
+        { provide: getQueueToken(QUEUE_NAMES.DAYS_RECALC), useValue: createMockQueue() },
         { provide: ALERT_SERVICE, useValue: alertService },
       ],
     }).compile();

@@ -34,6 +34,8 @@ export class CheckDeadLetterUseCase {
     private readonly invoiceSyncQueue: Queue,
     @InjectQueue(QUEUE_NAMES.SEQUENCE_TRIGGER)
     private readonly sequenceTriggerQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.DAYS_RECALC)
+    private readonly daysRecalcQueue: Queue,
     @Inject(ALERT_SERVICE)
     private readonly alertService: AlertService,
   ) {}
@@ -119,6 +121,7 @@ export class CheckDeadLetterUseCase {
       { queue: this.tokenRefreshQueue, name: QUEUE_NAMES.TOKEN_REFRESH },
       { queue: this.invoiceSyncQueue, name: QUEUE_NAMES.INVOICE_SYNC },
       { queue: this.sequenceTriggerQueue, name: QUEUE_NAMES.SEQUENCE_TRIGGER },
+      { queue: this.daysRecalcQueue, name: QUEUE_NAMES.DAYS_RECALC },
     ];
 
     for (const { queue, name } of queues) {
