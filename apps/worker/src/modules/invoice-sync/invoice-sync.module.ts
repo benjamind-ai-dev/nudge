@@ -46,5 +46,11 @@ import { XeroInvoiceSyncProvider } from "./infrastructure/xero-invoice-sync.prov
       inject: [QuickbooksInvoiceSyncProvider, XeroInvoiceSyncProvider],
     },
   ],
+  exports: [
+    QuickbooksInvoiceSyncProvider,
+    INVOICE_REPOSITORY,
+    CUSTOMER_REPOSITORY,
+    SYNC_CONNECTION_READER,
+  ],
 })
 export class InvoiceSyncModule {}
