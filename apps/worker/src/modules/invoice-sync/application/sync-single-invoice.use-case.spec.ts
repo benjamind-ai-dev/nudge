@@ -111,6 +111,7 @@ describe("SyncSingleInvoiceUseCase", () => {
     invoiceRepo = {
       findStatusesByExternalIds: jest.fn().mockResolvedValue(new Map()),
       upsertMany: jest.fn().mockResolvedValue(undefined),
+      markVoidedByExternalId: jest.fn().mockResolvedValue(null),
     } as unknown as jest.Mocked<InvoiceRepository>;
 
     customerRepo = {
@@ -281,6 +282,52 @@ describe("SyncSingleInvoiceUseCase", () => {
 
     expect(qb.fetchInvoice).toHaveBeenCalledTimes(2);
     expect(invoiceRepo.upsertMany).toHaveBeenCalledTimes(1);
+  });
+
+  describe("operation === 'deleted'", () => {
+    const deletedJob = { ...job, operation: "deleted" };
+
+    it("soft-voids the local invoice and recalcs customer outstanding", async () => {
+      reader.findById.mockResolvedValueOnce(mkConnection());
+      invoiceRepo.markVoidedByExternalId.mockResolvedValueOnce({
+        customerExternalId: "C1",
+      });
+
+      await useCase.execute(deletedJob);
+
+      expect(invoiceRepo.markVoidedByExternalId).toHaveBeenCalledWith(
+        "biz-1",
+        "inv_1",
+      );
+      expect(qb.fetchInvoice).not.toHaveBeenCalled();
+      expect(qb.fetchCustomerById).not.toHaveBeenCalled();
+      expect(invoiceRepo.upsertMany).not.toHaveBeenCalled();
+      expect(customerRepo.recalculateTotalOutstanding).toHaveBeenCalledWith(
+        "biz-1",
+        ["C1"],
+      );
+    });
+
+    it("no-ops when the invoice was never persisted locally", async () => {
+      reader.findById.mockResolvedValueOnce(mkConnection());
+      invoiceRepo.markVoidedByExternalId.mockResolvedValueOnce(null);
+
+      await useCase.execute(deletedJob);
+
+      expect(qb.fetchInvoice).not.toHaveBeenCalled();
+      expect(invoiceRepo.upsertMany).not.toHaveBeenCalled();
+      expect(customerRepo.recalculateTotalOutstanding).not.toHaveBeenCalled();
+    });
+
+    it("still respects connection gating (skipped when not 'connected')", async () => {
+      reader.findById.mockResolvedValueOnce(
+        mkConnection({ status: "expired" }),
+      );
+
+      await useCase.execute(deletedJob);
+
+      expect(invoiceRepo.markVoidedByExternalId).not.toHaveBeenCalled();
+    });
   });
 
   it("pre-flight refresh runs when token expires within window", async () => {

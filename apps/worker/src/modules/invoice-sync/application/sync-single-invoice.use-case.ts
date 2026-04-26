@@ -76,6 +76,12 @@ export class SyncSingleInvoiceUseCase {
     }
 
     const businessId = initial.businessId;
+
+    if (job.operation === "deleted") {
+      await this.handleDeleted(businessId, job);
+      return;
+    }
+
     const connection = await this.preflightRefresh(initial);
     const now = new Date();
 
@@ -130,6 +136,37 @@ export class SyncSingleInvoiceUseCase {
       externalInvoiceId: invoice.externalId,
       status: row.status,
       paymentTransition: row.paidAtIfNewlyPaid !== undefined,
+      eventId: job.eventId,
+    });
+  }
+
+  private async handleDeleted(
+    businessId: string,
+    job: QuickbooksWebhooksJobData,
+  ): Promise<void> {
+    const result = await this.invoices.markVoidedByExternalId(
+      businessId,
+      job.externalInvoiceId,
+    );
+    if (!result) {
+      this.logger.log({
+        msg: "QB invoice deleted but never persisted locally — no-op",
+        event: "qb_single_invoice_deleted_unknown",
+        businessId,
+        externalInvoiceId: job.externalInvoiceId,
+        eventId: job.eventId,
+      });
+      return;
+    }
+    await this.customers.recalculateTotalOutstanding(businessId, [
+      result.customerExternalId,
+    ]);
+    this.logger.log({
+      msg: "QB invoice soft-voided after delete event",
+      event: "qb_single_invoice_soft_voided",
+      businessId,
+      externalInvoiceId: job.externalInvoiceId,
+      customerExternalId: result.customerExternalId,
       eventId: job.eventId,
     });
   }

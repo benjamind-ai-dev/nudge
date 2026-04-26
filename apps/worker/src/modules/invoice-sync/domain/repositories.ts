@@ -35,6 +35,17 @@ export interface InvoiceRepository {
    * looking up customers.external_id — customers must be upserted first.
    */
   upsertMany(businessId: string, rows: InvoiceUpsertRow[]): Promise<void>;
+
+  /**
+   * Soft-void an invoice that was hard-deleted in the provider. Sets status
+   * to "voided" so downstream sequence-trigger logic stops dunning. Returns
+   * the customer's external id (so the caller can recalc total_outstanding),
+   * or null when the invoice was never persisted locally.
+   */
+  markVoidedByExternalId(
+    businessId: string,
+    externalId: string,
+  ): Promise<{ customerExternalId: string } | null>;
 }
 
 export interface CustomerRepository {
