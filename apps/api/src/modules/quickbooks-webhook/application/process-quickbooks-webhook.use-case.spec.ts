@@ -48,7 +48,7 @@ describe("ProcessQuickbooksWebhookUseCase", () => {
     expect(queueAdd).not.toHaveBeenCalled();
   });
 
-  it("enqueues 1 job with deterministic jobId for a valid Invoice event", async () => {
+  it("enqueues 1 job with deterministic jobId for a valid Invoice event (batched mode)", async () => {
     const body = Buffer.from(JSON.stringify([evt()]));
     await run(body);
 
@@ -65,6 +65,21 @@ describe("ProcessQuickbooksWebhookUseCase", () => {
     });
     expect(opts.jobId).toBe("qb-wh-evt-1");
     expect(opts.attempts).toBe(5);
+  });
+
+  it("enqueues 1 job for a valid Invoice event sent in CloudEvents structured mode (single object)", async () => {
+    const body = Buffer.from(JSON.stringify(evt()));
+    await run(body);
+
+    expect(queueAdd).toHaveBeenCalledTimes(1);
+    const [name, data] = queueAdd.mock.calls[0];
+    expect(name).toBe("sync-single-invoice");
+    expect(data).toMatchObject({
+      connectionId: "conn-1",
+      realmId: REALM,
+      externalInvoiceId: "1234",
+      operation: "updated",
+    });
   });
 
   it("ignores non-invoice event types", async () => {

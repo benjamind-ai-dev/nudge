@@ -14,7 +14,18 @@ export const cloudEventSchema = z.object({
 
 export type CloudEvent = z.infer<typeof cloudEventSchema>;
 
-export const cloudEventsArraySchema = z.array(cloudEventSchema).min(1);
+/**
+ * Intuit sends webhooks in either CloudEvents 1.0 delivery mode:
+ *  - Structured mode: a single CloudEvent JSON object
+ *  - Batched mode:    a JSON array of CloudEvent objects
+ *
+ * We normalize both to an array of CloudEvents so the use case has one shape
+ * to iterate over.
+ */
+export const cloudEventsPayloadSchema = z.preprocess(
+  (input) => (Array.isArray(input) ? input : [input]),
+  z.array(cloudEventSchema).min(1),
+);
 
 const INVOICE_TYPE = /^qbo\.invoice\.([a-z]+)\.v1$/i;
 

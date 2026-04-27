@@ -6,7 +6,7 @@ import {
   type QuickbooksWebhooksJobData,
 } from "@nudge/shared";
 import {
-  cloudEventsArraySchema,
+  cloudEventsPayloadSchema,
   parseInvoiceOperation,
   type CloudEvent,
 } from "../domain/cloudevents-payload";
@@ -33,6 +33,8 @@ export class ProcessQuickbooksWebhookUseCase {
   ) {}
 
   async execute(input: ProcessQuickbooksWebhookInput): Promise<void> {
+    const bodyPreview = input.rawBody.toString("utf8").slice(0, 500);
+
     let json: unknown;
     try {
       json = JSON.parse(input.rawBody.toString("utf8"));
@@ -40,16 +42,18 @@ export class ProcessQuickbooksWebhookUseCase {
       this.logger.warn({
         msg: "QB webhook body was not valid JSON",
         event: "qb_webhook_malformed",
+        bodyPreview,
       });
       return;
     }
 
-    const parsed = cloudEventsArraySchema.safeParse(json);
+    const parsed = cloudEventsPayloadSchema.safeParse(json);
     if (!parsed.success) {
       this.logger.warn({
         msg: "QB webhook body did not match CloudEvents schema",
         event: "qb_webhook_malformed",
         issues: parsed.error.issues.slice(0, 5),
+        bodyPreview,
       });
       return;
     }
