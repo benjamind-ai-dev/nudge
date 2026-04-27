@@ -48,6 +48,7 @@ import { XeroInvoiceSyncProvider } from "./infrastructure/xero-invoice-sync.prov
   ],
   exports: [
     QuickbooksInvoiceSyncProvider,
+    XeroInvoiceSyncProvider,
     INVOICE_REPOSITORY,
     CUSTOMER_REPOSITORY,
     SYNC_CONNECTION_READER,

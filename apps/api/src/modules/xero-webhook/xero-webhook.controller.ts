@@ -1,50 +1,27 @@
 import {
   Controller,
-  Post,
-  Req,
-  Headers,
-  Logger,
   HttpCode,
+  Post,
   RawBodyRequest,
-  UnauthorizedException,
+  Req,
+  UseGuards,
 } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { createHmac, timingSafeEqual } from "crypto";
-import { Request } from "express";
-import { Env } from "../../common/config/env.schema";
+import type { Request } from "express";
+import { ProcessXeroWebhookUseCase } from "./application/process-xero-webhook.use-case";
+import { XeroSignatureGuard } from "./infrastructure/xero-signature.guard";
 
 @Controller("v1/webhooks/xero")
 export class XeroWebhookController {
-  private readonly logger = new Logger(XeroWebhookController.name);
-
-  constructor(private readonly config: ConfigService<Env, true>) {}
+  constructor(
+    private readonly processWebhook: ProcessXeroWebhookUseCase,
+  ) {}
 
   @Post()
   @HttpCode(200)
-  handleWebhook(
-    @Req() req: RawBodyRequest<Request>,
-    @Headers("x-xero-signature") signature: string | undefined,
-  ): void {
-    const webhookKey = this.config.get("XERO_WEBHOOK_KEY", { infer: true });
-
-    if (!webhookKey || !signature || !req.rawBody) {
-      throw new UnauthorizedException();
-    }
-
-    const hash = createHmac("sha256", webhookKey)
-      .update(req.rawBody)
-      .digest("base64");
-
-    const hashBuffer = Buffer.from(hash);
-    const signatureBuffer = Buffer.from(signature);
-
-    if (
-      hashBuffer.length !== signatureBuffer.length ||
-      !timingSafeEqual(hashBuffer, signatureBuffer)
-    ) {
-      throw new UnauthorizedException();
-    }
-
-    this.logger.log({ msg: "Xero webhook received and validated" });
+  @UseGuards(XeroSignatureGuard)
+  async handle(@Req() req: RawBodyRequest<Request>): Promise<void> {
+    await this.processWebhook.execute({
+      rawBody: req.rawBody ?? Buffer.alloc(0),
+    });
   }
 }

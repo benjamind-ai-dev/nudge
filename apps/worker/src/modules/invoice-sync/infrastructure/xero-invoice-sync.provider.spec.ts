@@ -565,4 +565,227 @@ describe("XeroInvoiceSyncProvider", () => {
 
     await expect(provider.fetchPage(BASE_ARGS)).rejects.toBeInstanceOf(AuthError);
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // fetchInvoice (single-invoice GET) — used by webhook sync
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe("fetchInvoice", () => {
+    const SINGLE_ARGS = {
+      tokens,
+      tenantId: "tenant-uuid-123",
+      invoiceId: "inv-aaa",
+    };
+
+    it("happy path: GETs /Invoices/<id>, sends headers, returns mapped CanonicalInvoice", async () => {
+      // Non-AUTHORISED so OnlineInvoice is not fetched
+      const paid = { ...sampleXeroInvoice, Status: "PAID" };
+      fetchMock.mockResolvedValueOnce(ok(invoicePageResponse([paid])));
+
+      const result = await provider.fetchInvoice(SINGLE_ARGS);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const url = fetchMock.mock.calls[0][0] as string;
+      expect(url).toBe(
+        "https://api.xero.com/api.xro/2.0/Invoices/inv-aaa",
+      );
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      const headers = init.headers as Record<string, string>;
+      expect(headers["Authorization"]).toBe("Bearer access-token");
+      expect(headers["xero-tenant-id"]).toBe("tenant-uuid-123");
+      expect(headers["Accept"]).toBe("application/json");
+
+      expect(result.externalId).toBe("inv-aaa");
+      expect(result.invoiceNumber).toBe("INV-001");
+      expect(result.amountCents).toBe(50025);
+      expect(result.balanceDueCents).toBe(20025);
+      expect(result.currency).toBe("USD");
+      expect(result.paymentLinkUrl).toBeNull();
+    });
+
+    it("URL-encodes the invoice id", async () => {
+      const paid = { ...sampleXeroInvoice, Status: "PAID" };
+      fetchMock.mockResolvedValueOnce(ok(invoicePageResponse([paid])));
+
+      await provider.fetchInvoice({
+        ...SINGLE_ARGS,
+        invoiceId: "inv with spaces & symbols",
+      });
+
+      const url = fetchMock.mock.calls[0][0] as string;
+      expect(url).toContain("inv%20with%20spaces%20%26%20symbols");
+    });
+
+    it("AUTHORISED invoice → also fetches OnlineInvoice and populates paymentLinkUrl", async () => {
+      fetchMock
+        .mockResolvedValueOnce(ok(invoicePageResponse([sampleXeroInvoice])))
+        .mockResolvedValueOnce(
+          ok(onlineInvoiceResponse("https://in.xero.com/view/abc")),
+        );
+
+      const result = await provider.fetchInvoice(SINGLE_ARGS);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const onlineUrl = fetchMock.mock.calls[1][0] as string;
+      expect(onlineUrl).toContain("/Invoices/inv-aaa/OnlineInvoice");
+      expect(result.paymentLinkUrl).toBe("https://in.xero.com/view/abc");
+    });
+
+    it("non-AUTHORISED (PAID) → does NOT trigger OnlineInvoice fetch", async () => {
+      const paid = { ...sampleXeroInvoice, Status: "PAID" };
+      fetchMock.mockResolvedValueOnce(ok(invoicePageResponse([paid])));
+
+      const result = await provider.fetchInvoice(SINGLE_ARGS);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(result.paymentLinkUrl).toBeNull();
+    });
+
+    it("missing 'Invoices' key in response → SyncFailedError", async () => {
+      fetchMock.mockResolvedValueOnce(ok({}));
+
+      await expect(provider.fetchInvoice(SINGLE_ARGS)).rejects.toBeInstanceOf(
+        SyncFailedError,
+      );
+    });
+
+    it("empty Invoices array → SyncFailedError", async () => {
+      fetchMock.mockResolvedValueOnce(ok(invoicePageResponse([])));
+
+      await expect(provider.fetchInvoice(SINGLE_ARGS)).rejects.toBeInstanceOf(
+        SyncFailedError,
+      );
+    });
+
+    it("401 → AuthError", async () => {
+      fetchMock.mockResolvedValueOnce(new Response("", { status: 401 }));
+      await expect(provider.fetchInvoice(SINGLE_ARGS)).rejects.toBeInstanceOf(
+        AuthError,
+      );
+    });
+
+    it("429 with Retry-After: 5 → RateLimitError(5000)", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("", { status: 429, headers: { "retry-after": "5" } }),
+      );
+      try {
+        await provider.fetchInvoice(SINGLE_ARGS);
+        throw new Error("expected throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(RateLimitError);
+        expect((err as RateLimitError).retryAfterMs).toBe(5000);
+      }
+    });
+
+    it("500 → SyncFailedError", async () => {
+      fetchMock.mockResolvedValueOnce(new Response("", { status: 500 }));
+      await expect(provider.fetchInvoice(SINGLE_ARGS)).rejects.toBeInstanceOf(
+        SyncFailedError,
+      );
+    });
+
+    it("network/fetch throw → SyncFailedError", async () => {
+      fetchMock.mockRejectedValueOnce(new Error("network down"));
+      await expect(provider.fetchInvoice(SINGLE_ARGS)).rejects.toBeInstanceOf(
+        SyncFailedError,
+      );
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // fetchContactById (single-contact GET) — used by webhook sync
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe("fetchContactById", () => {
+    const CONTACT_ARGS = {
+      tokens,
+      tenantId: "tenant-uuid-123",
+      contactId: "contact-1",
+    };
+
+    it("happy path: GETs /Contacts/<id>, sends headers, returns mapped CanonicalCustomer", async () => {
+      fetchMock.mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+
+      const result = await provider.fetchContactById(CONTACT_ARGS);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const url = fetchMock.mock.calls[0][0] as string;
+      expect(url).toBe(
+        "https://api.xero.com/api.xro/2.0/Contacts/contact-1",
+      );
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      const headers = init.headers as Record<string, string>;
+      expect(headers["Authorization"]).toBe("Bearer access-token");
+      expect(headers["xero-tenant-id"]).toBe("tenant-uuid-123");
+      expect(headers["Accept"]).toBe("application/json");
+
+      expect(result.externalId).toBe("contact-1");
+      expect(result.companyName).toBe("Acme Corp");
+      expect(result.contactName).toBe("Jane Doe");
+      expect(result.contactEmail).toBe("jane@acme.test");
+      expect(result.contactPhone).toBe("5550000");
+    });
+
+    it("URL-encodes the contact id", async () => {
+      fetchMock.mockResolvedValueOnce(ok(contactsResponse([sampleXeroContact])));
+
+      await provider.fetchContactById({
+        ...CONTACT_ARGS,
+        contactId: "contact id/with slash",
+      });
+
+      const url = fetchMock.mock.calls[0][0] as string;
+      expect(url).toContain("contact%20id%2Fwith%20slash");
+    });
+
+    it("missing 'Contacts' key in response → SyncFailedError", async () => {
+      fetchMock.mockResolvedValueOnce(ok({}));
+
+      await expect(
+        provider.fetchContactById(CONTACT_ARGS),
+      ).rejects.toBeInstanceOf(SyncFailedError);
+    });
+
+    it("empty Contacts array → SyncFailedError", async () => {
+      fetchMock.mockResolvedValueOnce(ok(contactsResponse([])));
+
+      await expect(
+        provider.fetchContactById(CONTACT_ARGS),
+      ).rejects.toBeInstanceOf(SyncFailedError);
+    });
+
+    it("401 → AuthError", async () => {
+      fetchMock.mockResolvedValueOnce(new Response("", { status: 401 }));
+      await expect(
+        provider.fetchContactById(CONTACT_ARGS),
+      ).rejects.toBeInstanceOf(AuthError);
+    });
+
+    it("429 with Retry-After: 7 → RateLimitError(7000)", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("", { status: 429, headers: { "retry-after": "7" } }),
+      );
+      try {
+        await provider.fetchContactById(CONTACT_ARGS);
+        throw new Error("expected throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(RateLimitError);
+        expect((err as RateLimitError).retryAfterMs).toBe(7000);
+      }
+    });
+
+    it("500 → SyncFailedError", async () => {
+      fetchMock.mockResolvedValueOnce(new Response("", { status: 500 }));
+      await expect(
+        provider.fetchContactById(CONTACT_ARGS),
+      ).rejects.toBeInstanceOf(SyncFailedError);
+    });
+
+    it("network/fetch throw → SyncFailedError", async () => {
+      fetchMock.mockRejectedValueOnce(new Error("network down"));
+      await expect(
+        provider.fetchContactById(CONTACT_ARGS),
+      ).rejects.toBeInstanceOf(SyncFailedError);
+    });
+  });
 });

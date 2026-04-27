@@ -9,6 +9,7 @@ import { SmsModule } from "./modules/sms/sms.module";
 import { TokenRefreshModule } from "./modules/token-refresh/token-refresh.module";
 import { InvoiceSyncModule } from "./modules/invoice-sync/invoice-sync.module";
 import { QuickbooksWebhookSyncModule } from "./modules/quickbooks-webhook-sync/quickbooks-webhook-sync.module";
+import { XeroWebhookSyncModule } from "./modules/xero-webhook-sync/xero-webhook-sync.module";
 import { SequenceTriggerModule } from "./modules/sequence-trigger/sequence-trigger.module";
 import { MessageSendModule } from "./modules/message-send/message-send.module";
 import { DeadLetterMonitorModule } from "./modules/dead-letter-monitor/dead-letter-monitor.module";
@@ -30,6 +31,7 @@ import { DaysRecalcModule } from "./modules/days-recalc/days-recalc.module";
     TokenRefreshModule,
     InvoiceSyncModule,
     QuickbooksWebhookSyncModule,
+    XeroWebhookSyncModule,
     SequenceTriggerModule,
     MessageSendModule,
     DeadLetterMonitorModule,
