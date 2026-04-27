@@ -26,6 +26,26 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     return new Map(rows.map((r) => [r.externalId, r.status as InvoiceStatus]));
   }
 
+  async markVoidedByExternalId(
+    businessId: string,
+    externalId: string,
+  ): Promise<{ customerExternalId: string } | null> {
+    const row = await this.prisma.invoice.findFirst({
+      where: { businessId, externalId },
+      select: {
+        id: true,
+        customer: { select: { externalId: true } },
+      },
+    });
+    if (!row) return null;
+
+    await this.prisma.invoice.update({
+      where: { id: row.id },
+      data: { status: "voided", lastSyncedAt: new Date() },
+    });
+    return { customerExternalId: row.customer.externalId };
+  }
+
   async upsertMany(
     businessId: string,
     rows: InvoiceUpsertRow[],

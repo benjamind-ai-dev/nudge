@@ -40,8 +40,12 @@ export interface StripeEventsJobData {
 }
 
 export interface QuickbooksWebhooksJobData {
-  businessId: string;
+  connectionId: string;
   realmId: string;
+  externalInvoiceId: string;
+  eventId: string;
+  operation: string;
+  occurredAt: string;
 }
 
 export interface DeadLetterJobData {

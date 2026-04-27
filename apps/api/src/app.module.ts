@@ -9,6 +9,7 @@ import { HealthModule } from "./health/health.module";
 import { DebugModule } from "./debug/debug.module";
 import { TwilioWebhookModule } from "./modules/twilio-webhook/twilio-webhook.module";
 import { XeroWebhookModule } from "./modules/xero-webhook/xero-webhook.module";
+import { QuickbooksWebhookModule } from "./modules/quickbooks-webhook/quickbooks-webhook.module";
 import { QuickbooksOAuthModule } from "./modules/quickbooks-oauth/quickbooks-oauth.module";
 import { XeroOAuthModule } from "./modules/xero-oauth/xero-oauth.module";
 import { ConnectionsCommonModule } from "./modules/connections-common/connections-common.module";
@@ -57,6 +58,7 @@ import { BusinessModule } from "./modules/business/business.module";
     DebugModule,
     TwilioWebhookModule,
     XeroWebhookModule,
+    QuickbooksWebhookModule,
     QuickbooksOAuthModule,
     XeroOAuthModule,
     ConnectionsCommonModule,
