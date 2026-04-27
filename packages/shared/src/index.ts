@@ -15,6 +15,7 @@ export type {
   ResendEventsJobData,
   StripeEventsJobData,
   QuickbooksWebhooksJobData,
+  XeroWebhooksJobData,
   DeadLetterJobData,
   SmsSendJobData,
   RefreshConnectionJobData,

@@ -48,6 +48,15 @@ export interface QuickbooksWebhooksJobData {
   occurredAt: string;
 }
 
+export interface XeroWebhooksJobData {
+  connectionId: string;
+  tenantId: string;
+  externalInvoiceId: string;
+  eventCategory: string;
+  eventType: string;
+  occurredAt: string;
+}
+
 export interface DeadLetterJobData {
   originalQueue: string;
   originalJobId: string | undefined;
