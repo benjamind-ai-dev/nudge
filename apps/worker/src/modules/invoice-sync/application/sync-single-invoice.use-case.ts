@@ -15,10 +15,13 @@ import {
   SYNC_CONNECTION_READER,
   type CustomerRepository,
   type InvoiceRepository,
-  type InvoiceUpsertRow,
   type SyncConnectionReader,
 } from "../domain/repositories";
-import { deriveStatus, type CanonicalInvoice } from "../domain/canonical-invoice";
+import {
+  deriveStatus,
+  detectInvoiceTransition,
+  type CanonicalInvoice,
+} from "../domain/canonical-invoice";
 import { QuickbooksInvoiceSyncProvider } from "../infrastructure/quickbooks-invoice-sync.provider";
 import { RefreshTokenUseCase } from "../../token-refresh/application/refresh-token.use-case";
 
@@ -123,10 +126,49 @@ export class SyncSingleInvoiceUseCase {
       await this.customers.upsertMany(businessId, "quickbooks", [customer]);
     }
 
-    const row = await this.buildInvoiceRow(businessId, invoice, now);
-    await this.invoices.upsertMany(businessId, [row]);
+    const priorByExt = await this.invoices.findPriorStatesByExternalIds(
+      businessId,
+      [invoice.externalId],
+    );
+    const prior = priorByExt.get(invoice.externalId);
+    const transition = detectInvoiceTransition(prior, invoice, now);
+    const newStatus = deriveStatus(invoice, now);
 
-    await this.customers.recalculateTotalOutstanding(businessId, [customerExtId]);
+    const result = await this.invoices.applyChange(businessId, {
+      externalId: invoice.externalId,
+      customerExternalId: invoice.customerExternalId,
+      invoice,
+      newStatus,
+      transition,
+      provider: "quickbooks",
+      lastSyncedAt: now,
+    });
+
+    if (transition.kind === "fully_paid") {
+      this.logger.log({
+        msg: "Payment detected (QB single-invoice sync)",
+        event: "invoice_payment_detected",
+        businessId,
+        invoiceId: result.invoiceId,
+        externalId: invoice.externalId,
+        invoiceNumber: invoice.invoiceNumber,
+        priorBalance: transition.priorBalance,
+        amountPaid: invoice.amountPaidCents,
+        stoppedSequenceRunIds: result.stoppedSequenceRunIds,
+      });
+    } else if (transition.kind === "voided") {
+      this.logger.log({
+        msg: "Invoice voided (QB single-invoice sync)",
+        event: "invoice_voided",
+        businessId,
+        invoiceId: result.invoiceId,
+        externalId: invoice.externalId,
+        invoiceNumber: invoice.invoiceNumber,
+        priorStatus: transition.priorStatus,
+        priorBalance: transition.priorBalance,
+        stoppedSequenceRunIds: result.stoppedSequenceRunIds,
+      });
+    }
 
     this.logger.log({
       msg: "QB single-invoice sync completed",
@@ -134,8 +176,8 @@ export class SyncSingleInvoiceUseCase {
       businessId,
       connectionId: connection.id,
       externalInvoiceId: invoice.externalId,
-      status: row.status,
-      paymentTransition: row.paidAtIfNewlyPaid !== undefined,
+      status: newStatus,
+      transitionKind: transition.kind,
       eventId: job.eventId,
     });
   }
@@ -144,11 +186,11 @@ export class SyncSingleInvoiceUseCase {
     businessId: string,
     job: QuickbooksWebhooksJobData,
   ): Promise<void> {
-    const result = await this.invoices.markVoidedByExternalId(
+    const snapshot = await this.invoices.findLocalSnapshotForVoid(
       businessId,
       job.externalInvoiceId,
     );
-    if (!result) {
+    if (!snapshot) {
       this.logger.log({
         msg: "QB invoice deleted but never persisted locally — no-op",
         event: "qb_single_invoice_deleted_unknown",
@@ -158,15 +200,53 @@ export class SyncSingleInvoiceUseCase {
       });
       return;
     }
-    await this.customers.recalculateTotalOutstanding(businessId, [
-      result.customerExternalId,
-    ]);
+
+    const now = new Date();
+    const synthetic: CanonicalInvoice = {
+      externalId: job.externalInvoiceId,
+      invoiceNumber: snapshot.invoiceNumber,
+      customerExternalId: snapshot.customerExternalId,
+      amountCents: snapshot.amountCents,
+      amountPaidCents: snapshot.amountPaidCents,
+      balanceDueCents: snapshot.amountCents - snapshot.amountPaidCents,
+      currency: snapshot.currency,
+      paymentLinkUrl: snapshot.paymentLinkUrl,
+      issuedDate: snapshot.issuedDate,
+      dueDate: snapshot.dueDate,
+      lifecycle: "voided",
+      lastUpdatedAt: now,
+    };
+
+    const priorByExt = await this.invoices.findPriorStatesByExternalIds(
+      businessId,
+      [job.externalInvoiceId],
+    );
+    const prior = priorByExt.get(job.externalInvoiceId);
+    const transition = detectInvoiceTransition(prior, synthetic, now);
+    const newStatus = deriveStatus(synthetic, now);
+
+    const result = await this.invoices.applyChange(businessId, {
+      externalId: job.externalInvoiceId,
+      customerExternalId: snapshot.customerExternalId,
+      invoice: synthetic,
+      newStatus,
+      transition,
+      provider: "quickbooks",
+      lastSyncedAt: now,
+    });
+
     this.logger.log({
       msg: "QB invoice soft-voided after delete event",
       event: "qb_single_invoice_soft_voided",
       businessId,
+      invoiceId: result.invoiceId,
       externalInvoiceId: job.externalInvoiceId,
-      customerExternalId: result.customerExternalId,
+      customerExternalId: snapshot.customerExternalId,
+      transitionKind: transition.kind,
+      priorStatus: prior?.status ?? null,
+      priorBalance:
+        transition.kind === "voided" ? transition.priorBalance : null,
+      stoppedSequenceRunIds: result.stoppedSequenceRunIds,
       eventId: job.eventId,
     });
   }
@@ -228,49 +308,6 @@ export class SyncSingleInvoiceUseCase {
       accessToken: connection.accessToken,
       refreshToken: connection.refreshToken,
       expiresAt: connection.tokenExpiresAt,
-    };
-  }
-
-  private async buildInvoiceRow(
-    businessId: string,
-    invoice: CanonicalInvoice,
-    now: Date,
-  ): Promise<InvoiceUpsertRow> {
-    const prior = await this.invoices.findStatusesByExternalIds(businessId, [
-      invoice.externalId,
-    ]);
-    const newStatus = deriveStatus(invoice, now);
-    const priorStatus = prior.get(invoice.externalId);
-    const isPaymentTransition =
-      (priorStatus === "open" || priorStatus === "overdue") &&
-      newStatus === "paid";
-
-    if (isPaymentTransition) {
-      this.logger.log({
-        msg: "Payment detected (single-invoice sync)",
-        event: "invoice_payment_detected",
-        businessId,
-        externalId: invoice.externalId,
-        priorStatus,
-        newStatus,
-      });
-    }
-
-    return {
-      externalId: invoice.externalId,
-      invoiceNumber: invoice.invoiceNumber,
-      customerExternalId: invoice.customerExternalId,
-      amountCents: invoice.amountCents,
-      amountPaidCents: invoice.amountPaidCents,
-      balanceDueCents: invoice.balanceDueCents,
-      currency: invoice.currency,
-      paymentLinkUrl: invoice.paymentLinkUrl,
-      issuedDate: invoice.issuedDate,
-      dueDate: invoice.dueDate,
-      status: newStatus,
-      provider: "quickbooks",
-      paidAtIfNewlyPaid: isPaymentTransition ? now : undefined,
-      lastSyncedAt: now,
     };
   }
 }

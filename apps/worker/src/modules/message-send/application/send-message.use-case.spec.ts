@@ -168,14 +168,71 @@ describe("SendMessageUseCase", () => {
     expect(result.skippedReason).toBe("run_not_found");
   });
 
-  it("skips when run is no longer active", async () => {
-    const run = createMockRun({ runStatus: "completed" });
-    repo.findRunById.mockResolvedValue(run);
+  /**
+   * REGRESSION GUARD — these tests pin the contract that SendMessageUseCase
+   * silently skips any run that is not 'active'. This is the last-chance
+   * safety net for the payment-detection flow: when InvoiceRepository.applyChange
+   * stops a run (e.g., on payment received), an already-enqueued message-send
+   * job for that run must not fire. Removing this guard would silently send a
+   * "you haven't paid" email after the customer paid.
+   */
+  describe("regression: stopped/paused runs", () => {
+    it('does not send or mutate when runStatus is "stopped"', async () => {
+      const run = createMockRun({ runStatus: "stopped" });
+      repo.findRunById.mockResolvedValue(run);
 
-    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+      const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
-    expect(result.sent).toBe(false);
-    expect(result.skippedReason).toBe("run_not_active");
+      expect(result).toEqual({
+        sent: false,
+        skippedReason: "run_not_active",
+        messagesSent: 0,
+      });
+      expect(repo.messageExistsForRunStep).not.toHaveBeenCalled();
+      expect(repo.createMessage).not.toHaveBeenCalled();
+      expect(emailService.send).not.toHaveBeenCalled();
+      expect(smsService.send).not.toHaveBeenCalled();
+      expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+      expect(repo.completeRun).not.toHaveBeenCalled();
+    });
+
+    it('does not send or mutate when runStatus is "paused"', async () => {
+      const run = createMockRun({ runStatus: "paused" });
+      repo.findRunById.mockResolvedValue(run);
+
+      const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      expect(result).toEqual({
+        sent: false,
+        skippedReason: "run_not_active",
+        messagesSent: 0,
+      });
+      expect(repo.messageExistsForRunStep).not.toHaveBeenCalled();
+      expect(repo.createMessage).not.toHaveBeenCalled();
+      expect(emailService.send).not.toHaveBeenCalled();
+      expect(smsService.send).not.toHaveBeenCalled();
+      expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+      expect(repo.completeRun).not.toHaveBeenCalled();
+    });
+
+    it('does not send or mutate when runStatus is "completed"', async () => {
+      const run = createMockRun({ runStatus: "completed" });
+      repo.findRunById.mockResolvedValue(run);
+
+      const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      expect(result).toEqual({
+        sent: false,
+        skippedReason: "run_not_active",
+        messagesSent: 0,
+      });
+      expect(repo.messageExistsForRunStep).not.toHaveBeenCalled();
+      expect(repo.createMessage).not.toHaveBeenCalled();
+      expect(emailService.send).not.toHaveBeenCalled();
+      expect(smsService.send).not.toHaveBeenCalled();
+      expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+      expect(repo.completeRun).not.toHaveBeenCalled();
+    });
   });
 
   it("advances the run when all channels are duplicates (work was done previously, recover from crash)", async () => {

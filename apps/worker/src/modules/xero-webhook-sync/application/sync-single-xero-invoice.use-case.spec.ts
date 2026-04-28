@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { UnrecoverableError } from "bullmq";
 import type {
   Connection,
@@ -14,10 +15,12 @@ import type {
   InvoiceRepository,
   SyncConnectionReader,
 } from "../../invoice-sync/domain/repositories";
-import type {
-  CanonicalCustomer,
-  CanonicalInvoice,
-  InvoiceStatus,
+import {
+  deriveStatus,
+  detectInvoiceTransition,
+  type CanonicalCustomer,
+  type CanonicalInvoice,
+  type PriorInvoiceState,
 } from "../../invoice-sync/domain/canonical-invoice";
 import type { XeroInvoiceSyncProvider } from "../../invoice-sync/infrastructure/xero-invoice-sync.provider";
 import type { RefreshTokenUseCase } from "../../token-refresh/application/refresh-token.use-case";
@@ -72,6 +75,11 @@ const mkCustomer = (id = "C1"): CanonicalCustomer => ({
   contactPhone: null,
 });
 
+const defaultApplyChangeResult = {
+  invoiceId: "local-inv-1",
+  stoppedSequenceRunIds: [] as string[],
+};
+
 describe("SyncSingleXeroInvoiceUseCase", () => {
   let xero: jest.Mocked<
     Pick<XeroInvoiceSyncProvider, "fetchInvoice" | "fetchContactById" | "name">
@@ -112,14 +120,14 @@ describe("SyncSingleXeroInvoiceUseCase", () => {
     } as unknown as jest.Mocked<SyncConnectionReader>;
 
     invoiceRepo = {
-      findStatusesByExternalIds: jest.fn().mockResolvedValue(new Map()),
-      upsertMany: jest.fn().mockResolvedValue(undefined),
-      markVoidedByExternalId: jest.fn().mockResolvedValue(null),
+      findPriorStatesByExternalIds: jest.fn().mockResolvedValue(new Map()),
+      applyChange: jest.fn().mockResolvedValue(defaultApplyChangeResult),
+      findLocalSnapshotForVoid: jest.fn().mockResolvedValue(null),
     } as unknown as jest.Mocked<InvoiceRepository>;
 
     customerRepo = {
       upsertMany: jest.fn().mockResolvedValue(undefined),
-      recalculateTotalOutstanding: jest.fn().mockResolvedValue(undefined),
+      reconcileAllTotalOutstanding: jest.fn().mockResolvedValue({ updatedCount: 0 }),
       existsByExternalId: jest.fn(),
     } as unknown as jest.Mocked<CustomerRepository>;
 
@@ -140,7 +148,7 @@ describe("SyncSingleXeroInvoiceUseCase", () => {
     reader.findById.mockResolvedValueOnce(null);
     await useCase.execute(job);
     expect(xero.fetchInvoice).not.toHaveBeenCalled();
-    expect(invoiceRepo.upsertMany).not.toHaveBeenCalled();
+    expect(invoiceRepo.applyChange).not.toHaveBeenCalled();
   });
 
   it("skips with log when connection.status is not 'connected'", async () => {
@@ -159,10 +167,11 @@ describe("SyncSingleXeroInvoiceUseCase", () => {
     expect(xero.fetchInvoice).not.toHaveBeenCalled();
   });
 
-  it("happy path: fetches invoice + skips customer fetch when customer exists locally + upserts", async () => {
+  it("happy path: fetches invoice + skips customer fetch when customer exists locally + applyChange", async () => {
     reader.findById.mockResolvedValueOnce(mkConnection());
     customerRepo.existsByExternalId.mockResolvedValueOnce(true);
-    xero.fetchInvoice.mockResolvedValueOnce(mkInvoice());
+    const inv = mkInvoice();
+    xero.fetchInvoice.mockResolvedValueOnce(inv);
 
     await useCase.execute(job);
 
@@ -173,23 +182,28 @@ describe("SyncSingleXeroInvoiceUseCase", () => {
     });
     expect(xero.fetchContactById).not.toHaveBeenCalled();
     expect(customerRepo.upsertMany).not.toHaveBeenCalled();
-    expect(invoiceRepo.upsertMany).toHaveBeenCalledTimes(1);
-    const [businessId, rows] = invoiceRepo.upsertMany.mock.calls[0];
-    expect(businessId).toBe("biz-1");
-    expect(rows).toHaveLength(1);
-    expect(rows[0].externalId).toBe("inv_1");
-    expect(rows[0].provider).toBe("xero");
-    expect(customerRepo.recalculateTotalOutstanding).toHaveBeenCalledWith(
+    expect(invoiceRepo.findPriorStatesByExternalIds).toHaveBeenCalledWith(
       "biz-1",
-      ["C1"],
+      ["inv_1"],
     );
+    expect(invoiceRepo.applyChange).toHaveBeenCalledTimes(1);
+    expect(invoiceRepo.applyChange).toHaveBeenCalledWith("biz-1", {
+      externalId: inv.externalId,
+      customerExternalId: inv.customerExternalId,
+      invoice: inv,
+      newStatus: deriveStatus(inv, NOW),
+      transition: detectInvoiceTransition(undefined, inv, NOW),
+      provider: "xero",
+      lastSyncedAt: NOW,
+    });
   });
 
   it("conditional fetch: when customer is missing locally, fetches & upserts customer first", async () => {
     reader.findById.mockResolvedValueOnce(mkConnection());
     customerRepo.existsByExternalId.mockResolvedValueOnce(false);
     xero.fetchContactById.mockResolvedValueOnce(mkCustomer("C1"));
-    xero.fetchInvoice.mockResolvedValueOnce(mkInvoice());
+    const inv = mkInvoice();
+    xero.fetchInvoice.mockResolvedValueOnce(inv);
 
     await useCase.execute(job);
 
@@ -204,42 +218,76 @@ describe("SyncSingleXeroInvoiceUseCase", () => {
       [expect.objectContaining({ externalId: "C1" })],
     );
     const upsertCallOrder = customerRepo.upsertMany.mock.invocationCallOrder[0];
-    const invoiceCallOrder = invoiceRepo.upsertMany.mock.invocationCallOrder[0];
-    expect(upsertCallOrder).toBeLessThan(invoiceCallOrder);
+    const applyOrder = invoiceRepo.applyChange.mock.invocationCallOrder[0];
+    expect(upsertCallOrder).toBeLessThan(applyOrder);
   });
 
-  it("payment-transition: prior=open, new=paid sets paidAtIfNewlyPaid=now", async () => {
+  it("payment-transition: prior=open, new=paid — applyChange receives fully_paid transition", async () => {
+    const logSpy = jest.spyOn(Logger.prototype, "log").mockImplementation(() => {});
+
     reader.findById.mockResolvedValueOnce(mkConnection());
     customerRepo.existsByExternalId.mockResolvedValueOnce(true);
-    invoiceRepo.findStatusesByExternalIds.mockResolvedValueOnce(
-      new Map<string, InvoiceStatus>([["inv_1", "open"]]),
+    const prior: PriorInvoiceState = { status: "open", balanceDueCents: 10_000 };
+    invoiceRepo.findPriorStatesByExternalIds.mockResolvedValueOnce(
+      new Map<string, PriorInvoiceState>([["inv_1", prior]]),
     );
-    xero.fetchInvoice.mockResolvedValueOnce(
-      mkInvoice({ amountPaidCents: 10_000, balanceDueCents: 0 }),
-    );
+    const inv = mkInvoice({ amountPaidCents: 10_000, balanceDueCents: 0 });
+    xero.fetchInvoice.mockResolvedValueOnce(inv);
+    invoiceRepo.applyChange.mockResolvedValueOnce({
+      invoiceId: "inv-db-paid",
+      stoppedSequenceRunIds: ["run-1"],
+    });
 
     await useCase.execute(job);
 
-    const rows = invoiceRepo.upsertMany.mock.calls[0][1];
-    expect(rows[0].status).toBe("paid");
-    expect(rows[0].paidAtIfNewlyPaid).toEqual(NOW);
+    const expectedTransition = detectInvoiceTransition(prior, inv, NOW);
+    expect(expectedTransition.kind).toBe("fully_paid");
+
+    expect(invoiceRepo.applyChange).toHaveBeenCalledWith(
+      "biz-1",
+      expect.objectContaining({
+        transition: expectedTransition,
+        newStatus: "paid",
+      }),
+    );
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "invoice_payment_detected",
+        msg: "Payment detected (Xero single-invoice sync)",
+        businessId: "biz-1",
+        invoiceId: "inv-db-paid",
+        externalId: "inv_1",
+        priorBalance: 10_000,
+        amountPaid: 10_000,
+        stoppedSequenceRunIds: ["run-1"],
+      }),
+    );
+
+    logSpy.mockRestore();
   });
 
-  it("no payment transition: prior=paid → new=paid leaves paidAtIfNewlyPaid undefined", async () => {
+  it("no payment transition: prior=paid → new=paid — applyChange gets no_change", async () => {
     reader.findById.mockResolvedValueOnce(mkConnection());
     customerRepo.existsByExternalId.mockResolvedValueOnce(true);
-    invoiceRepo.findStatusesByExternalIds.mockResolvedValueOnce(
-      new Map<string, InvoiceStatus>([["inv_1", "paid"]]),
+    const prior: PriorInvoiceState = { status: "paid", balanceDueCents: 0 };
+    invoiceRepo.findPriorStatesByExternalIds.mockResolvedValueOnce(
+      new Map<string, PriorInvoiceState>([["inv_1", prior]]),
     );
-    xero.fetchInvoice.mockResolvedValueOnce(
-      mkInvoice({ amountPaidCents: 10_000, balanceDueCents: 0 }),
-    );
+    const inv = mkInvoice({ amountPaidCents: 10_000, balanceDueCents: 0 });
+    xero.fetchInvoice.mockResolvedValueOnce(inv);
 
     await useCase.execute(job);
 
-    const rows = invoiceRepo.upsertMany.mock.calls[0][1];
-    expect(rows[0].status).toBe("paid");
-    expect(rows[0].paidAtIfNewlyPaid).toBeUndefined();
+    expect(invoiceRepo.applyChange).toHaveBeenCalledWith("biz-1", {
+      externalId: inv.externalId,
+      customerExternalId: inv.customerExternalId,
+      invoice: inv,
+      newStatus: "paid",
+      transition: { kind: "no_change" },
+      provider: "xero",
+      lastSyncedAt: NOW,
+    });
   });
 
   it("AuthError on fetchInvoice → refresh tokens, reload connection, retry once", async () => {
@@ -257,7 +305,7 @@ describe("SyncSingleXeroInvoiceUseCase", () => {
 
     expect(refresh.execute).toHaveBeenCalledWith("conn-1");
     expect(xero.fetchInvoice).toHaveBeenCalledTimes(2);
-    expect(invoiceRepo.upsertMany).toHaveBeenCalledTimes(1);
+    expect(invoiceRepo.applyChange).toHaveBeenCalledTimes(1);
   });
 
   it("AuthError twice: refreshed connection still unusable → UnrecoverableError", async () => {
@@ -284,20 +332,30 @@ describe("SyncSingleXeroInvoiceUseCase", () => {
     await promise;
 
     expect(xero.fetchInvoice).toHaveBeenCalledTimes(2);
-    expect(invoiceRepo.upsertMany).toHaveBeenCalledTimes(1);
+    expect(invoiceRepo.applyChange).toHaveBeenCalledTimes(1);
   });
 
-  it("voided invoice (lifecycle='voided') → upserts row with status='voided'; no special delete branch", async () => {
+  it("voided invoice (lifecycle='voided') → applyChange with newStatus voided; no special delete branch", async () => {
     reader.findById.mockResolvedValueOnce(mkConnection());
     customerRepo.existsByExternalId.mockResolvedValueOnce(true);
-    xero.fetchInvoice.mockResolvedValueOnce(mkInvoice({ lifecycle: "voided" }));
+    const inv = mkInvoice({
+      lifecycle: "voided",
+      balanceDueCents: 0,
+      amountPaidCents: 0,
+    });
+    xero.fetchInvoice.mockResolvedValueOnce(inv);
 
     await useCase.execute(job);
 
     expect(xero.fetchInvoice).toHaveBeenCalledTimes(1);
-    expect(invoiceRepo.markVoidedByExternalId).not.toHaveBeenCalled();
-    const rows = invoiceRepo.upsertMany.mock.calls[0][1];
-    expect(rows[0].status).toBe("voided");
+    expect(invoiceRepo.applyChange).toHaveBeenCalledWith(
+      "biz-1",
+      expect.objectContaining({
+        newStatus: "voided",
+        invoice: expect.objectContaining({ lifecycle: "voided" }),
+        transition: detectInvoiceTransition(undefined, inv, NOW),
+      }),
+    );
   });
 
   it("pre-flight refresh runs when token expires within window", async () => {

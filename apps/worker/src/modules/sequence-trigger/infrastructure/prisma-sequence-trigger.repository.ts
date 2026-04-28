@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaClient } from "@nudge/database";
+import { SEQUENCE_RUN_STATUSES } from "@nudge/shared";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   OverdueInvoiceRow,
@@ -22,7 +23,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
         status: "overdue",
         sequenceRuns: {
           none: {
-            status: { in: ["active", "paused"] },
+            status: { in: [SEQUENCE_RUN_STATUSES.ACTIVE, SEQUENCE_RUN_STATUSES.PAUSED] },
           },
         },
         business: {
@@ -116,10 +117,27 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
   }): Promise<{ created: boolean; runId: string | null }> {
     try {
       const run = await this.prisma.$transaction(async (tx) => {
+        const invoice = await tx.invoice.findUnique({
+          where: { id: data.invoiceId },
+          select: { status: true },
+        });
+
+        // Guard: only create runs for invoices in a contributing status. If the
+        // invoice was paid/voided/etc. between the trigger query and now (concurrent
+        // sync committed an applyChange), abort to avoid dunning a paid invoice.
+        if (
+          !invoice ||
+          (invoice.status !== "open" &&
+            invoice.status !== "overdue" &&
+            invoice.status !== "partial")
+        ) {
+          return null;
+        }
+
         const existing = await tx.sequenceRun.findFirst({
           where: {
             invoiceId: data.invoiceId,
-            status: { in: ["active", "paused"] },
+            status: { in: [SEQUENCE_RUN_STATUSES.ACTIVE, SEQUENCE_RUN_STATUSES.PAUSED] },
           },
           select: { id: true },
         });

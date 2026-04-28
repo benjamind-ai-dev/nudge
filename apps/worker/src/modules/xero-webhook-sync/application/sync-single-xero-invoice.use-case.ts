@@ -15,11 +15,11 @@ import {
   SYNC_CONNECTION_READER,
   type CustomerRepository,
   type InvoiceRepository,
-  type InvoiceUpsertRow,
   type SyncConnectionReader,
 } from "../../invoice-sync/domain/repositories";
 import {
   deriveStatus,
+  detectInvoiceTransition,
   type CanonicalInvoice,
 } from "../../invoice-sync/domain/canonical-invoice";
 import { XeroInvoiceSyncProvider } from "../../invoice-sync/infrastructure/xero-invoice-sync.provider";
@@ -127,10 +127,49 @@ export class SyncSingleXeroInvoiceUseCase {
       await this.customers.upsertMany(businessId, "xero", [customer]);
     }
 
-    const row = await this.buildInvoiceRow(businessId, invoice, now);
-    await this.invoices.upsertMany(businessId, [row]);
+    const priorByExt = await this.invoices.findPriorStatesByExternalIds(
+      businessId,
+      [invoice.externalId],
+    );
+    const prior = priorByExt.get(invoice.externalId);
+    const transition = detectInvoiceTransition(prior, invoice, now);
+    const newStatus = deriveStatus(invoice, now);
 
-    await this.customers.recalculateTotalOutstanding(businessId, [customerExtId]);
+    const result = await this.invoices.applyChange(businessId, {
+      externalId: invoice.externalId,
+      customerExternalId: invoice.customerExternalId,
+      invoice,
+      newStatus,
+      transition,
+      provider: "xero",
+      lastSyncedAt: now,
+    });
+
+    if (transition.kind === "fully_paid") {
+      this.logger.log({
+        msg: "Payment detected (Xero single-invoice sync)",
+        event: "invoice_payment_detected",
+        businessId,
+        invoiceId: result.invoiceId,
+        externalId: invoice.externalId,
+        invoiceNumber: invoice.invoiceNumber,
+        priorBalance: transition.priorBalance,
+        amountPaid: invoice.amountPaidCents,
+        stoppedSequenceRunIds: result.stoppedSequenceRunIds,
+      });
+    } else if (transition.kind === "voided") {
+      this.logger.log({
+        msg: "Invoice voided (Xero single-invoice sync)",
+        event: "invoice_voided",
+        businessId,
+        invoiceId: result.invoiceId,
+        externalId: invoice.externalId,
+        invoiceNumber: invoice.invoiceNumber,
+        priorStatus: transition.priorStatus,
+        priorBalance: transition.priorBalance,
+        stoppedSequenceRunIds: result.stoppedSequenceRunIds,
+      });
+    }
 
     this.logger.log({
       msg: "Xero single-invoice sync completed",
@@ -139,8 +178,8 @@ export class SyncSingleXeroInvoiceUseCase {
       connectionId: connection.id,
       tenantId: job.tenantId,
       externalInvoiceId: invoice.externalId,
-      status: row.status,
-      paymentTransition: row.paidAtIfNewlyPaid !== undefined,
+      status: newStatus,
+      transitionKind: transition.kind,
       eventType: job.eventType,
     });
   }
@@ -202,49 +241,6 @@ export class SyncSingleXeroInvoiceUseCase {
       accessToken: connection.accessToken,
       refreshToken: connection.refreshToken,
       expiresAt: connection.tokenExpiresAt,
-    };
-  }
-
-  private async buildInvoiceRow(
-    businessId: string,
-    invoice: CanonicalInvoice,
-    now: Date,
-  ): Promise<InvoiceUpsertRow> {
-    const prior = await this.invoices.findStatusesByExternalIds(businessId, [
-      invoice.externalId,
-    ]);
-    const newStatus = deriveStatus(invoice, now);
-    const priorStatus = prior.get(invoice.externalId);
-    const isPaymentTransition =
-      (priorStatus === "open" || priorStatus === "overdue") &&
-      newStatus === "paid";
-
-    if (isPaymentTransition) {
-      this.logger.log({
-        msg: "Payment detected (single-invoice sync)",
-        event: "invoice_payment_detected",
-        businessId,
-        externalId: invoice.externalId,
-        priorStatus,
-        newStatus,
-      });
-    }
-
-    return {
-      externalId: invoice.externalId,
-      invoiceNumber: invoice.invoiceNumber,
-      customerExternalId: invoice.customerExternalId,
-      amountCents: invoice.amountCents,
-      amountPaidCents: invoice.amountPaidCents,
-      balanceDueCents: invoice.balanceDueCents,
-      currency: invoice.currency,
-      paymentLinkUrl: invoice.paymentLinkUrl,
-      issuedDate: invoice.issuedDate,
-      dueDate: invoice.dueDate,
-      status: newStatus,
-      provider: "xero",
-      paidAtIfNewlyPaid: isPaymentTransition ? now : undefined,
-      lastSyncedAt: now,
     };
   }
 }
