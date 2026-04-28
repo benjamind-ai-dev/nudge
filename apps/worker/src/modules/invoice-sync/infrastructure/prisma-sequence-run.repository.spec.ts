@@ -1,6 +1,10 @@
 import { Test } from "@nestjs/testing";
 import { PrismaClient } from "@nudge/database";
-import { STOPPED_REASONS } from "@nudge/shared";
+import {
+  SEQUENCE_RUN_STATUSES,
+  STOPPED_REASONS,
+  type SequenceRunStatus,
+} from "@nudge/shared";
 import { randomUUID } from "crypto";
 import { PrismaSequenceRunRepository } from "./prisma-sequence-run.repository";
 
@@ -113,7 +117,7 @@ describe("PrismaSequenceRunRepository (integration)", () => {
 
   const seedRun = async (
     invoiceId: string,
-    status: "active" | "paused" | "stopped" | "completed",
+    status: SequenceRunStatus,
   ): Promise<string> => {
     const run = await prisma.sequenceRun.create({
       data: {
@@ -129,8 +133,8 @@ describe("PrismaSequenceRunRepository (integration)", () => {
 
   it("returns [] and performs no update when there are no active or paused runs", async () => {
     const invoiceId = await seedInvoice();
-    const completedId = await seedRun(invoiceId, "completed");
-    const stoppedId = await seedRun(invoiceId, "stopped");
+    const completedId = await seedRun(invoiceId, SEQUENCE_RUN_STATUSES.COMPLETED);
+    const stoppedId = await seedRun(invoiceId, SEQUENCE_RUN_STATUSES.STOPPED);
 
     const completedAt = new Date("2026-02-01T12:00:00Z");
     const result = await prisma.$transaction((tx) =>
@@ -159,8 +163,8 @@ describe("PrismaSequenceRunRepository (integration)", () => {
 
   it("stops the active run and leaves completed runs unchanged", async () => {
     const invoiceId = await seedInvoice();
-    const activeId = await seedRun(invoiceId, "active");
-    const completedId = await seedRun(invoiceId, "completed");
+    const activeId = await seedRun(invoiceId, SEQUENCE_RUN_STATUSES.ACTIVE);
+    const completedId = await seedRun(invoiceId, SEQUENCE_RUN_STATUSES.COMPLETED);
 
     const completedAt = new Date("2026-02-01T12:00:00Z");
     const result = await prisma.$transaction((tx) =>
@@ -192,7 +196,7 @@ describe("PrismaSequenceRunRepository (integration)", () => {
 
   it("stops paused runs", async () => {
     const invoiceId = await seedInvoice();
-    const pausedId = await seedRun(invoiceId, "paused");
+    const pausedId = await seedRun(invoiceId, SEQUENCE_RUN_STATUSES.PAUSED);
 
     const completedAt = new Date("2026-02-02T08:00:00Z");
     const result = await prisma.$transaction((tx) =>
@@ -221,8 +225,8 @@ describe("PrismaSequenceRunRepository (integration)", () => {
   it("matches both active and paused statuses across invoices, isolated per invoice", async () => {
     const invoiceA = await seedInvoice();
     const invoiceB = await seedInvoice();
-    const activeId = await seedRun(invoiceA, "active");
-    const pausedId = await seedRun(invoiceB, "paused");
+    const activeId = await seedRun(invoiceA, SEQUENCE_RUN_STATUSES.ACTIVE);
+    const pausedId = await seedRun(invoiceB, SEQUENCE_RUN_STATUSES.PAUSED);
 
     const completedAt = new Date("2026-02-03T09:30:00Z");
 
@@ -265,7 +269,7 @@ describe("PrismaSequenceRunRepository (integration)", () => {
 
   it("honors the caller-provided transaction client", async () => {
     const invoiceId = await seedInvoice();
-    const activeId = await seedRun(invoiceId, "active");
+    const activeId = await seedRun(invoiceId, SEQUENCE_RUN_STATUSES.ACTIVE);
 
     const completedAt = new Date("2026-02-04T10:00:00Z");
     const ids = await prisma.$transaction(async (tx) => {

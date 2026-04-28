@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { StoppedReason } from "@nudge/shared";
+import { SEQUENCE_RUN_STATUSES, type StoppedReason } from "@nudge/shared";
 import type { PrismaTransactionClient } from "../../../common/database/prisma-tx";
 import type { SequenceRunRepository } from "../domain/repositories";
 
@@ -11,8 +11,10 @@ export class PrismaSequenceRunRepository implements SequenceRunRepository {
    * 1. findMany to capture the IDs (so the caller can log them).
    * 2. updateMany to flip status/stoppedReason/completedAt atomically.
    *
-   * The partial index `idx_runs_invoice` on `(invoiceId, status)` keeps the
-   * findMany cheap. Returns [] when no runs are active or paused.
+   * The partial unique index `idx_one_active_run_per_invoice` on
+   * `sequence_runs(invoice_id) WHERE status IN ('active','paused')` keeps the
+   * findMany cheap and guarantees at most one row will match in production.
+   * Returns [] when no runs are active or paused.
    */
   async stopActiveRunsForInvoice(
     tx: PrismaTransactionClient,
@@ -21,7 +23,12 @@ export class PrismaSequenceRunRepository implements SequenceRunRepository {
     completedAt: Date,
   ): Promise<string[]> {
     const runs = await tx.sequenceRun.findMany({
-      where: { invoiceId, status: { in: ["active", "paused"] } },
+      where: {
+        invoiceId,
+        status: {
+          in: [SEQUENCE_RUN_STATUSES.ACTIVE, SEQUENCE_RUN_STATUSES.PAUSED],
+        },
+      },
       select: { id: true },
     });
     if (runs.length === 0) return [];
@@ -30,7 +37,7 @@ export class PrismaSequenceRunRepository implements SequenceRunRepository {
     await tx.sequenceRun.updateMany({
       where: { id: { in: ids } },
       data: {
-        status: "stopped",
+        status: SEQUENCE_RUN_STATUSES.STOPPED,
         stoppedReason: reason,
         completedAt,
       },
