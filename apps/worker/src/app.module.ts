@@ -14,6 +14,7 @@ import { SequenceTriggerModule } from "./modules/sequence-trigger/sequence-trigg
 import { MessageSendModule } from "./modules/message-send/message-send.module";
 import { DeadLetterMonitorModule } from "./modules/dead-letter-monitor/dead-letter-monitor.module";
 import { DaysRecalcModule } from "./modules/days-recalc/days-recalc.module";
+import { StripeEventsModule } from "./modules/stripe-events/stripe-events.module";
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { DaysRecalcModule } from "./modules/days-recalc/days-recalc.module";
     MessageSendModule,
     DeadLetterMonitorModule,
     DaysRecalcModule,
+    StripeEventsModule,
   ],
 })
 export class AppModule {}

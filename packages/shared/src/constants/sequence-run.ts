@@ -3,6 +3,7 @@ export const STOPPED_REASONS = {
   INVOICE_VOIDED: "invoice_voided",
   CLIENT_REPLIED: "client_replied",
   MANUALLY_STOPPED: "manually_stopped",
+  SUBSCRIPTION_CANCELLED: "subscription_cancelled",
 } as const;
 
 export type StoppedReason =

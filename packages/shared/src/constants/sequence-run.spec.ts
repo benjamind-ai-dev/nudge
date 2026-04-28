@@ -7,12 +7,13 @@ import {
 } from "./sequence-run";
 
 describe("STOPPED_REASONS", () => {
-  it("exposes the four reasons used across the system", () => {
+  it("exposes all reasons used across the system", () => {
     expect(STOPPED_REASONS).toEqual({
       PAYMENT_RECEIVED: "payment_received",
       INVOICE_VOIDED: "invoice_voided",
       CLIENT_REPLIED: "client_replied",
       MANUALLY_STOPPED: "manually_stopped",
+      SUBSCRIPTION_CANCELLED: "subscription_cancelled",
     });
   });
 
@@ -22,8 +23,9 @@ describe("STOPPED_REASONS", () => {
       "invoice_voided",
       "client_replied",
       "manually_stopped",
+      "subscription_cancelled",
     ];
-    expect(values).toHaveLength(4);
+    expect(values).toHaveLength(5);
   });
 });
 

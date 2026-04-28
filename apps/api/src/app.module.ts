@@ -16,6 +16,7 @@ import { ConnectionsCommonModule } from "./modules/connections-common/connection
 import { ConnectionsModule } from "./modules/connections/connections.module";
 import { BusinessModule } from "./modules/business/business.module";
 import { BillingModule } from "./modules/billing/billing.module";
+import { StripeWebhookModule } from "./modules/stripe-webhook/stripe-webhook.module";
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { BillingModule } from "./modules/billing/billing.module";
     ConnectionsModule,
     BusinessModule,
     BillingModule,
+    StripeWebhookModule,
   ],
 })
 export class AppModule {}

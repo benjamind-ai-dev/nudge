@@ -37,6 +37,7 @@ export interface ResendEventsJobData {
 export interface StripeEventsJobData {
   eventId: string;
   eventType: string;
+  payload: unknown;
 }
 
 export interface QuickbooksWebhooksJobData {
