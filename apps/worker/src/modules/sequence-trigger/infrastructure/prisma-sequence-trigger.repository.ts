@@ -116,6 +116,23 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
   }): Promise<{ created: boolean; runId: string | null }> {
     try {
       const run = await this.prisma.$transaction(async (tx) => {
+        const invoice = await tx.invoice.findUnique({
+          where: { id: data.invoiceId },
+          select: { status: true },
+        });
+
+        // Guard: only create runs for invoices in a contributing status. If the
+        // invoice was paid/voided/etc. between the trigger query and now (concurrent
+        // sync committed an applyChange), abort to avoid dunning a paid invoice.
+        if (
+          !invoice ||
+          (invoice.status !== "open" &&
+            invoice.status !== "overdue" &&
+            invoice.status !== "partial")
+        ) {
+          return null;
+        }
+
         const existing = await tx.sequenceRun.findFirst({
           where: {
             invoiceId: data.invoiceId,
