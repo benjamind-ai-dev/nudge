@@ -21,3 +21,9 @@ export type {
   RefreshConnectionJobData,
 } from "./types/index";
 export { encrypt, decrypt } from "./crypto/encrypt";
+export {
+  STOPPED_REASONS,
+  type StoppedReason,
+  SEQUENCE_RUN_STATUSES,
+  type SequenceRunStatus,
+} from "./constants/sequence-run";
