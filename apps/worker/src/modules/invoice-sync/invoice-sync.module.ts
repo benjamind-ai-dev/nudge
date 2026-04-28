@@ -11,11 +11,13 @@ import {
 import {
   CUSTOMER_REPOSITORY,
   INVOICE_REPOSITORY,
+  SEQUENCE_RUN_REPOSITORY,
   SYNC_CONNECTION_READER,
 } from "./domain/repositories";
 import { InvoiceSyncProcessor } from "./infrastructure/invoice-sync.processor";
 import { PrismaCustomerRepository } from "./infrastructure/prisma-customer.repository";
 import { PrismaInvoiceRepository } from "./infrastructure/prisma-invoice.repository";
+import { PrismaSequenceRunRepository } from "./infrastructure/prisma-sequence-run.repository";
 import { PrismaSyncConnectionReader } from "./infrastructure/prisma-sync-connection.reader";
 import { QuickbooksInvoiceSyncProvider } from "./infrastructure/quickbooks-invoice-sync.provider";
 import { XeroInvoiceSyncProvider } from "./infrastructure/xero-invoice-sync.provider";
@@ -34,6 +36,7 @@ import { XeroInvoiceSyncProvider } from "./infrastructure/xero-invoice-sync.prov
     { provide: INVOICE_REPOSITORY, useClass: PrismaInvoiceRepository },
     { provide: CUSTOMER_REPOSITORY, useClass: PrismaCustomerRepository },
     { provide: SYNC_CONNECTION_READER, useClass: PrismaSyncConnectionReader },
+    { provide: SEQUENCE_RUN_REPOSITORY, useClass: PrismaSequenceRunRepository },
     {
       provide: INVOICE_SYNC_PROVIDERS,
       useFactory: (
@@ -52,6 +55,7 @@ import { XeroInvoiceSyncProvider } from "./infrastructure/xero-invoice-sync.prov
     INVOICE_REPOSITORY,
     CUSTOMER_REPOSITORY,
     SYNC_CONNECTION_READER,
+    SEQUENCE_RUN_REPOSITORY,
   ],
 })
 export class InvoiceSyncModule {}
