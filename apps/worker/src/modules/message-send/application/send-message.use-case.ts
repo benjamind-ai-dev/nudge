@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "crypto";
 import { addDays, differenceInDays, format } from "date-fns";
 import { formatCents } from "@nudge/shared";
@@ -13,6 +14,7 @@ import { TEMPLATE_SERVICE, type TemplateService, type TemplateData } from "../do
 import { EMAIL_SERVICE, type EmailService } from "../domain/email.service";
 import { SMS_SERVICE, type SmsService } from "../domain/sms.service";
 import { nextBusinessHour } from "../../../common/utils/business-hours";
+import { Env } from "../../../common/config/env.schema";
 
 interface ChannelSendResult {
   sent: boolean;
@@ -43,6 +45,7 @@ export class SendMessageUseCase {
     private readonly emailService: EmailService,
     @Inject(SMS_SERVICE)
     private readonly smsService: SmsService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
@@ -70,7 +73,20 @@ export class SendMessageUseCase {
 
     const templateData = this.buildTemplateData(run);
     let messagesSent = 0;
-    let duplicatesSkipped = 0;
+    // We track two duplicate sources separately because they have *different*
+    // semantics for run-advancement:
+    //   - previouslySentDuplicates: messageExistsForRunStep returned true.
+    //     The check filters status='sent', so the message definitely went
+    //     out before. Safe to advance the run on this signal alone — the
+    //     prior tick succeeded and just didn't get to advanceOrCompleteRun.
+    //   - raceConditionDuplicates: createMessage hit the (run,step,channel)
+    //     unique index, returning created=false. The index is status-agnostic
+    //     so the existing row could be 'queued' (a previous attempt crashed
+    //     after INSERT but before/during the actual send) or 'sent'. We
+    //     CANNOT tell from here whether the email went out, so it is NOT safe
+    //     to advance — doing so would silently drop a customer follow-up.
+    let previouslySentDuplicates = 0;
+    let raceConditionDuplicates = 0;
     let channelsSkippedNoRecipient = 0;
 
     const channels = this.getChannels(run.stepChannel);
@@ -91,7 +107,7 @@ export class SendMessageUseCase {
           stepId: run.stepId,
           channel,
         });
-        duplicatesSkipped++;
+        previouslySentDuplicates++;
         continue;
       }
 
@@ -102,7 +118,7 @@ export class SendMessageUseCase {
         } else if (result.skippedReason === "no_recipient") {
           channelsSkippedNoRecipient++;
         } else if (result.skippedReason === "duplicate_race") {
-          duplicatesSkipped++;
+          raceConditionDuplicates++;
         }
       } catch (error) {
         this.logger.error({
@@ -117,6 +133,8 @@ export class SendMessageUseCase {
     }
 
     if (messagesSent === 0) {
+      const duplicatesSkipped =
+        previouslySentDuplicates + raceConditionDuplicates;
       const skippedReason =
         duplicatesSkipped > 0 && channelsSkippedNoRecipient > 0
           ? "all_skipped_mixed"
@@ -124,15 +142,34 @@ export class SendMessageUseCase {
             ? "all_duplicates"
             : "no_recipients";
 
+      // Advance only when EVERY duplicate we saw is a confirmed-sent
+      // duplicate (status='sent' row found) — that proves the prior attempt
+      // completed the actual delivery and only failed to mutate the run row,
+      // which is the well-known crash-between-send-and-advance case. Any
+      // raceConditionDuplicate keeps us in place: the existing row could be
+      // a stale 'queued' (email never went out) and silently advancing past
+      // it would drop a customer follow-up.
+      const allDuplicatesAreConfirmedSent =
+        previouslySentDuplicates > 0 && raceConditionDuplicates === 0;
+
       this.logger.warn({
-        msg: "No messages sent, skipping step advancement",
+        msg: allDuplicatesAreConfirmedSent
+          ? "All duplicates are confirmed-sent, advancing run to break scheduler loop"
+          : "No messages sent, leaving run on current step",
         event: "send_message_all_skipped",
         runId: run.runId,
         stepId: run.stepId,
-        duplicatesSkipped,
+        previouslySentDuplicates,
+        raceConditionDuplicates,
         channelsSkippedNoRecipient,
         skippedReason,
+        advancing: allDuplicatesAreConfirmedSent,
       });
+
+      if (allDuplicatesAreConfirmedSent) {
+        await this.advanceOrCompleteRun(run);
+      }
+
       return { sent: false, skippedReason, messagesSent: 0 };
     }
 
@@ -251,8 +288,10 @@ export class SendMessageUseCase {
       return { sent: false, skippedReason: "duplicate_race" };
     }
 
+    const notificationsEmail = this.config.get("NOTIFICATIONS_EMAIL", { infer: true });
     const sendResult = await this.emailService.send({
-      from: `${run.businessSenderName} <${run.businessSenderEmail}>`,
+      from: `${run.businessSenderName} <${notificationsEmail}>`,
+      replyTo: run.businessSenderEmail,
       to: recipientEmail,
       subject,
       html: body,

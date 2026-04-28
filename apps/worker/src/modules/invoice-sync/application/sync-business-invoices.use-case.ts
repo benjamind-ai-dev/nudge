@@ -1,12 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { UnrecoverableError } from "bullmq";
-import type {
-  Connection,
-  ProviderName,
-  ProviderTokens,
-} from "@nudge/connections-domain";
-import type { CanonicalInvoice } from "../domain/canonical-invoice";
-import { deriveStatus } from "../domain/canonical-invoice";
+import type { Connection, ProviderTokens } from "@nudge/connections-domain";
+import { deriveStatus, detectInvoiceTransition } from "../domain/canonical-invoice";
 import {
   AuthError,
   INVOICE_SYNC_PROVIDERS,
@@ -22,7 +17,6 @@ import {
   SYNC_CONNECTION_READER,
   type CustomerRepository,
   type InvoiceRepository,
-  type InvoiceUpsertRow,
   type SyncConnectionReader,
 } from "../domain/repositories";
 import { RefreshTokenUseCase } from "../../token-refresh/application/refresh-token.use-case";
@@ -120,12 +114,73 @@ export class SyncBusinessInvoicesUseCase {
         }
 
         if (page.invoices.length) {
-          const rows = await this.buildInvoiceRows(businessId, provider.name, page.invoices, now);
-          await this.invoices.upsertMany(businessId, rows);
-          for (const inv of page.invoices) {
-            touchedCustomerExtIds.add(inv.customerExternalId);
-            if (inv.lastUpdatedAt > lastSeenUpdatedAt) {
-              lastSeenUpdatedAt = inv.lastUpdatedAt;
+          const externalIds = page.invoices.map((i) => i.externalId);
+          const priorByExt = await this.invoices.findPriorStatesByExternalIds(
+            businessId,
+            externalIds,
+          );
+
+          for (const ci of page.invoices) {
+            const prior = priorByExt.get(ci.externalId);
+            const transition = detectInvoiceTransition(prior, ci, now);
+            const newStatus = deriveStatus(ci, now);
+
+            try {
+              const result = await this.invoices.applyChange(businessId, {
+                externalId: ci.externalId,
+                customerExternalId: ci.customerExternalId,
+                invoice: ci,
+                newStatus,
+                transition,
+                provider: provider.name,
+                lastSyncedAt: now,
+              });
+
+              if (transition.kind === "fully_paid") {
+                this.logger.log({
+                  msg: "Payment detected",
+                  event: "invoice_payment_detected",
+                  businessId,
+                  invoiceId: result.invoiceId,
+                  externalId: ci.externalId,
+                  invoiceNumber: ci.invoiceNumber,
+                  priorBalance: transition.priorBalance,
+                  amountPaid: ci.amountPaidCents,
+                  stoppedSequenceRunIds: result.stoppedSequenceRunIds,
+                });
+              } else if (transition.kind === "voided") {
+                this.logger.log({
+                  msg: "Invoice voided",
+                  event: "invoice_voided",
+                  businessId,
+                  invoiceId: result.invoiceId,
+                  externalId: ci.externalId,
+                  invoiceNumber: ci.invoiceNumber,
+                  priorStatus: transition.priorStatus,
+                  priorBalance: transition.priorBalance,
+                  stoppedSequenceRunIds: result.stoppedSequenceRunIds,
+                });
+              }
+
+              touchedCustomerExtIds.add(ci.customerExternalId);
+              if (ci.lastUpdatedAt > lastSeenUpdatedAt) {
+                lastSeenUpdatedAt = ci.lastUpdatedAt;
+              }
+            } catch (err) {
+              this.logger.error({
+                msg: "Failed to apply invoice change — skipping and continuing",
+                event: "invoice_apply_failed",
+                businessId,
+                externalId: ci.externalId,
+                invoiceNumber: ci.invoiceNumber,
+                customerExternalId: ci.customerExternalId,
+                transitionKind: transition.kind,
+                error: err instanceof Error ? err.message : String(err),
+              });
+              // Intentionally do NOT advance lastSeenUpdatedAt for the failing row
+              // so the next sync re-pulls it. The bad row's `lastUpdatedAt` is older-or-equal
+              // to the cursor we'll set, so any subsequent successful row of the same
+              // updatedAt timestamp will still be re-pulled and tried again.
             }
           }
         }
@@ -145,15 +200,10 @@ export class SyncBusinessInvoicesUseCase {
         }
       }
     } finally {
-      // Advance cursor and recalculate totals even on partial failure, so that
-      // already-committed pages aren't reprocessed next tick (avoids feedback
-      // loops when e.g. a rate-limit budget exhausts mid-job).
-      if (touchedCustomerExtIds.size) {
-        await this.customers.recalculateTotalOutstanding(
-          businessId,
-          Array.from(touchedCustomerExtIds),
-        );
-      }
+      // Advance the cursor even on partial failure so already-committed pages
+      // aren't reprocessed next tick. Customer total_outstanding is now
+      // maintained atomically per invoice in `applyChange`; the periodic
+      // reconciliation tick (days-recalc) catches any drift.
       if (connection.id && lastSeenUpdatedAt > cursor) {
         await this.reader.updateSyncCursor(connection.id, lastSeenUpdatedAt);
       }
@@ -248,48 +298,4 @@ export class SyncBusinessInvoicesUseCase {
     };
   }
 
-  private async buildInvoiceRows(
-    businessId: string,
-    providerName: ProviderName,
-    invoices: CanonicalInvoice[],
-    now: Date,
-  ): Promise<InvoiceUpsertRow[]> {
-    const prior = await this.invoices.findStatusesByExternalIds(
-      businessId,
-      invoices.map((i) => i.externalId),
-    );
-    return invoices.map((ci) => {
-      const newStatus = deriveStatus(ci, now);
-      const priorStatus = prior.get(ci.externalId);
-      const isPaymentTransition =
-        (priorStatus === "open" || priorStatus === "overdue") &&
-        newStatus === "paid";
-      if (isPaymentTransition) {
-        this.logger.log({
-          msg: "Payment detected",
-          event: "invoice_payment_detected",
-          businessId,
-          externalId: ci.externalId,
-          priorStatus,
-          newStatus,
-        });
-      }
-      return {
-        externalId: ci.externalId,
-        invoiceNumber: ci.invoiceNumber,
-        customerExternalId: ci.customerExternalId,
-        amountCents: ci.amountCents,
-        amountPaidCents: ci.amountPaidCents,
-        balanceDueCents: ci.balanceDueCents,
-        currency: ci.currency,
-        paymentLinkUrl: ci.paymentLinkUrl,
-        issuedDate: ci.issuedDate,
-        dueDate: ci.dueDate,
-        status: newStatus,
-        provider: providerName,
-        paidAtIfNewlyPaid: isPaymentTransition ? now : undefined,
-        lastSyncedAt: now,
-      } satisfies InvoiceUpsertRow;
-    });
-  }
 }

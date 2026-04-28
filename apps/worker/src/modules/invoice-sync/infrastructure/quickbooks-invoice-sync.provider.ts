@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import type { ProviderName } from "@nudge/connections-domain";
+import type { ProviderName, ProviderTokens } from "@nudge/connections-domain";
 import { Env } from "../../../common/config/env.schema";
 import type {
   CanonicalCustomer,
@@ -119,12 +119,60 @@ export class QuickbooksInvoiceSyncProvider implements InvoiceSyncProvider {
       `${this.baseUrl()}/v3/company/${encodeURIComponent(args.tenantId)}/query` +
       `?query=${encodeURIComponent(query)}&minorversion=${MINOR_VERSION}`;
 
+    const res = await this.fetchOrThrow(url, args.tokens.accessToken, `${key} query`);
+    const body = (await res.json()) as QBQueryResponse<typeof key, T>;
+    return body.QueryResponse?.[key] ?? [];
+  }
+
+  async fetchInvoice(args: {
+    tokens: ProviderTokens;
+    realmId: string;
+    invoiceId: string;
+  }): Promise<CanonicalInvoice> {
+    const url =
+      `${this.baseUrl()}/v3/company/${encodeURIComponent(args.realmId)}` +
+      `/invoice/${encodeURIComponent(args.invoiceId)}` +
+      `?minorversion=${MINOR_VERSION}`;
+    const res = await this.fetchOrThrow(url, args.tokens.accessToken, "Invoice");
+    const body = (await res.json()) as { Invoice?: QBInvoice };
+    if (!body.Invoice) {
+      throw new SyncFailedError(
+        `QB invoice ${args.invoiceId} response missing Invoice key`,
+      );
+    }
+    return this.mapInvoice(body.Invoice);
+  }
+
+  async fetchCustomerById(args: {
+    tokens: ProviderTokens;
+    realmId: string;
+    customerId: string;
+  }): Promise<CanonicalCustomer> {
+    const url =
+      `${this.baseUrl()}/v3/company/${encodeURIComponent(args.realmId)}` +
+      `/customer/${encodeURIComponent(args.customerId)}` +
+      `?minorversion=${MINOR_VERSION}`;
+    const res = await this.fetchOrThrow(url, args.tokens.accessToken, "Customer");
+    const body = (await res.json()) as { Customer?: QBCustomer };
+    if (!body.Customer) {
+      throw new SyncFailedError(
+        `QB customer ${args.customerId} response missing Customer key`,
+      );
+    }
+    return this.mapCustomer(body.Customer);
+  }
+
+  private async fetchOrThrow(
+    url: string,
+    accessToken: string,
+    context: string,
+  ): Promise<Response> {
     let res: Response;
     try {
       res = await fetch(url, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${args.tokens.accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           Accept: "application/json",
         },
       });
@@ -143,11 +191,9 @@ export class QuickbooksInvoiceSyncProvider implements InvoiceSyncProvider {
       throw new RateLimitError(retryAfterMs);
     }
     if (!res.ok) {
-      throw new SyncFailedError(`QB ${key} query failed: HTTP ${res.status}`);
+      throw new SyncFailedError(`QB ${context} failed: HTTP ${res.status}`);
     }
-
-    const body = (await res.json()) as QBQueryResponse<typeof key, T>;
-    return body.QueryResponse?.[key] ?? [];
+    return res;
   }
 
   private mapInvoice(r: QBInvoice): CanonicalInvoice {

@@ -3,6 +3,7 @@ import type { MessageSendRepository, RunReadyToSend } from "../domain/message-se
 import type { TemplateService } from "../domain/template.service";
 import type { EmailService } from "../domain/email.service";
 import type { SmsService } from "../domain/sms.service";
+import { ConfigService } from "@nestjs/config";
 
 const createMockRun = (overrides: Partial<RunReadyToSend> = {}): RunReadyToSend => ({
   runId: "run-1",
@@ -41,6 +42,7 @@ describe("SendMessageUseCase", () => {
   let templateService: jest.Mocked<TemplateService>;
   let emailService: jest.Mocked<EmailService>;
   let smsService: jest.Mocked<SmsService>;
+  let config: jest.Mocked<ConfigService>;
 
   beforeEach(() => {
     repo = {
@@ -66,7 +68,11 @@ describe("SendMessageUseCase", () => {
       send: jest.fn().mockResolvedValue({ externalMessageId: "twilio-456" }),
     };
 
-    useCase = new SendMessageUseCase(repo, templateService, emailService, smsService);
+    config = {
+      get: jest.fn().mockReturnValue("notifications@paynudge.net"),
+    } as unknown as jest.Mocked<ConfigService>;
+
+    useCase = new SendMessageUseCase(repo, templateService, emailService, smsService, config);
   });
 
   it("sends email and advances to next step", async () => {
@@ -82,7 +88,8 @@ describe("SendMessageUseCase", () => {
     expect(emailService.send).toHaveBeenCalledWith(
       expect.objectContaining({
         to: "sarah@acme.com",
-        from: "Bob Smith <bob@bobsplumbing.com>",
+        from: "Bob Smith <notifications@paynudge.net>",
+        replyTo: "bob@bobsplumbing.com",
       }),
     );
     expect(repo.createMessage).toHaveBeenCalledWith(
@@ -161,17 +168,74 @@ describe("SendMessageUseCase", () => {
     expect(result.skippedReason).toBe("run_not_found");
   });
 
-  it("skips when run is no longer active", async () => {
-    const run = createMockRun({ runStatus: "completed" });
-    repo.findRunById.mockResolvedValue(run);
+  /**
+   * REGRESSION GUARD — these tests pin the contract that SendMessageUseCase
+   * silently skips any run that is not 'active'. This is the last-chance
+   * safety net for the payment-detection flow: when InvoiceRepository.applyChange
+   * stops a run (e.g., on payment received), an already-enqueued message-send
+   * job for that run must not fire. Removing this guard would silently send a
+   * "you haven't paid" email after the customer paid.
+   */
+  describe("regression: stopped/paused runs", () => {
+    it('does not send or mutate when runStatus is "stopped"', async () => {
+      const run = createMockRun({ runStatus: "stopped" });
+      repo.findRunById.mockResolvedValue(run);
 
-    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+      const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
-    expect(result.sent).toBe(false);
-    expect(result.skippedReason).toBe("run_not_active");
+      expect(result).toEqual({
+        sent: false,
+        skippedReason: "run_not_active",
+        messagesSent: 0,
+      });
+      expect(repo.messageExistsForRunStep).not.toHaveBeenCalled();
+      expect(repo.createMessage).not.toHaveBeenCalled();
+      expect(emailService.send).not.toHaveBeenCalled();
+      expect(smsService.send).not.toHaveBeenCalled();
+      expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+      expect(repo.completeRun).not.toHaveBeenCalled();
+    });
+
+    it('does not send or mutate when runStatus is "paused"', async () => {
+      const run = createMockRun({ runStatus: "paused" });
+      repo.findRunById.mockResolvedValue(run);
+
+      const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      expect(result).toEqual({
+        sent: false,
+        skippedReason: "run_not_active",
+        messagesSent: 0,
+      });
+      expect(repo.messageExistsForRunStep).not.toHaveBeenCalled();
+      expect(repo.createMessage).not.toHaveBeenCalled();
+      expect(emailService.send).not.toHaveBeenCalled();
+      expect(smsService.send).not.toHaveBeenCalled();
+      expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+      expect(repo.completeRun).not.toHaveBeenCalled();
+    });
+
+    it('does not send or mutate when runStatus is "completed"', async () => {
+      const run = createMockRun({ runStatus: "completed" });
+      repo.findRunById.mockResolvedValue(run);
+
+      const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      expect(result).toEqual({
+        sent: false,
+        skippedReason: "run_not_active",
+        messagesSent: 0,
+      });
+      expect(repo.messageExistsForRunStep).not.toHaveBeenCalled();
+      expect(repo.createMessage).not.toHaveBeenCalled();
+      expect(emailService.send).not.toHaveBeenCalled();
+      expect(smsService.send).not.toHaveBeenCalled();
+      expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+      expect(repo.completeRun).not.toHaveBeenCalled();
+    });
   });
 
-  it("skips duplicate message and does not advance when all channels are duplicates", async () => {
+  it("advances the run when all channels are duplicates (work was done previously, recover from crash)", async () => {
     const run = createMockRun();
     repo.findRunById.mockResolvedValue(run);
     repo.messageExistsForRunStep.mockResolvedValue(true);
@@ -183,7 +247,28 @@ describe("SendMessageUseCase", () => {
     expect(result.skippedReason).toBe("all_duplicates");
     expect(result.messagesSent).toBe(0);
     expect(emailService.send).not.toHaveBeenCalled();
-    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+    // Even though no fresh message went out, the underlying work for this
+    // step was already completed on a previous attempt — completing the run
+    // here breaks the otherwise-infinite scheduler loop.
+    expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
+  });
+
+  it("advances the run to the next step when all channels are duplicates and a next step exists", async () => {
+    const run = createMockRun();
+    repo.findRunById.mockResolvedValue(run);
+    repo.messageExistsForRunStep.mockResolvedValue(true);
+    repo.findNextStep.mockResolvedValue({ id: "step-2", stepOrder: 2, delayDays: 5 });
+
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(result.sent).toBe(false);
+    expect(result.skippedReason).toBe("all_duplicates");
+    expect(repo.advanceRunToNextStep).toHaveBeenCalledWith(
+      "run-1",
+      "biz-1",
+      "step-2",
+      expect.any(Date),
+    );
     expect(repo.completeRun).not.toHaveBeenCalled();
   });
 
@@ -202,9 +287,14 @@ describe("SendMessageUseCase", () => {
     expect(repo.completeRun).not.toHaveBeenCalled();
   });
 
-  it("handles duplicate race condition from createMessage", async () => {
+  it("does NOT advance on createMessage race condition (queued row may mean email never sent)", async () => {
     const run = createMockRun();
     repo.findRunById.mockResolvedValue(run);
+    // P2002 from createMessage: a row exists for (run, step, channel) but we
+    // can't tell from this signal alone whether the row is status='sent' or
+    // a stale status='queued' from a crashed prior attempt. Conservatively
+    // do not advance — silently advancing past a stale-queued row would mean
+    // the customer never receives this follow-up.
     repo.createMessage.mockResolvedValue({ created: false });
     repo.findNextStep.mockResolvedValue(null);
 
@@ -213,6 +303,32 @@ describe("SendMessageUseCase", () => {
     expect(result.sent).toBe(false);
     expect(result.skippedReason).toBe("all_duplicates");
     expect(result.messagesSent).toBe(0);
+    expect(repo.completeRun).not.toHaveBeenCalled();
+    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+  });
+
+  it("does NOT advance when one channel is confirmed-sent and another is a race-condition duplicate", async () => {
+    // The dangerous mixed case: SMS was confirmed sent (good, work done),
+    // but email hit a P2002 race — could be a stale 'queued' row, meaning
+    // the email never went out. We must not advance and silently lose it.
+    const run = createMockRun({ stepChannel: "email_and_sms" });
+    repo.findRunById.mockResolvedValue(run);
+    // First call (email): not previously sent.
+    // Second call (sms): previously sent → confirmed.
+    repo.messageExistsForRunStep
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+    // The email's createMessage hits the unique constraint (race).
+    repo.createMessage.mockResolvedValueOnce({ created: false });
+    repo.findNextStep.mockResolvedValue({ id: "step-2", stepOrder: 2, delayDays: 5 });
+
+    const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(result.sent).toBe(false);
+    expect(result.skippedReason).toBe("all_duplicates");
+    expect(emailService.send).not.toHaveBeenCalled();
+    expect(smsService.send).not.toHaveBeenCalled();
+    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
     expect(repo.completeRun).not.toHaveBeenCalled();
   });
 
@@ -269,7 +385,7 @@ describe("SendMessageUseCase", () => {
     expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
   });
 
-  it("does not advance when email_and_sms has no email recipient and SMS is duplicate", async () => {
+  it("advances when email_and_sms has no email recipient and SMS is a duplicate (mixed but work was done)", async () => {
     const run = createMockRun({
       stepChannel: "email_and_sms",
       customerContactEmail: null,
@@ -287,7 +403,14 @@ describe("SendMessageUseCase", () => {
     expect(result.messagesSent).toBe(0);
     expect(emailService.send).not.toHaveBeenCalled();
     expect(smsService.send).not.toHaveBeenCalled();
-    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+    // The SMS was a duplicate (work happened on a previous attempt), and the
+    // email channel can't send for this run anyway. Advance to break the loop.
+    expect(repo.advanceRunToNextStep).toHaveBeenCalledWith(
+      "run-1",
+      "biz-1",
+      "step-2",
+      expect.any(Date),
+    );
   });
 
   it("sends SMS but not email when email_and_sms has no email recipient", async () => {

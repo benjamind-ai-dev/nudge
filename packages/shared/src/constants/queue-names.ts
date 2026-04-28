@@ -10,8 +10,10 @@ export const QUEUE_NAMES = {
   RESEND_EVENTS: "resend-events",
   STRIPE_EVENTS: "stripe-events",
   QUICKBOOKS_WEBHOOKS: "quickbooks-webhooks",
+  XERO_WEBHOOKS: "xero-webhooks",
   SMS_SEND: "sms-send",
   DEAD_LETTER: "dead-letter",
+  DEAD_LETTER_CHECK: "dead-letter-check",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

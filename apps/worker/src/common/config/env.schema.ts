@@ -14,6 +14,7 @@ export const envSchema = z.object({
     .optional(),
   APP_BASE_URL: z.string().url(),
   RESEND_API_KEY: z.string().min(1),
+  NOTIFICATIONS_EMAIL: z.string().email(),
   TWILIO_ACCOUNT_SID: z.string().startsWith("AC"),
   TWILIO_AUTH_TOKEN: z.string().min(1),
   TWILIO_PHONE_NUMBER: z.string().startsWith("+"),
@@ -26,6 +27,7 @@ export const envSchema = z.object({
   XERO_CLIENT_SECRET: z.string().min(1),
   XERO_REDIRECT_URI: z.string().url().optional(),
   ENCRYPTION_KEY: z.string().length(64),
+  ALERT_DISCORD_WEBHOOK_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

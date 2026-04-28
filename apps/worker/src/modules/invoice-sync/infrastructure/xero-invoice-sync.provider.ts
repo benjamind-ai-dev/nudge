@@ -171,6 +171,69 @@ export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
     };
   }
 
+  /**
+   * Fetch a single invoice by its Xero InvoiceID. Used by the webhook-driven
+   * single-invoice sync. Xero's single-invoice GET still wraps the result in
+   * an `Invoices` array of length 1.
+   *
+   * For AUTHORISED invoices, this also fetches the OnlineInvoiceUrl (mirroring
+   * what `fetchPage` does), so callers get a fully-populated CanonicalInvoice
+   * including `paymentLinkUrl`.
+   */
+  async fetchInvoice(args: {
+    tokens: ProviderTokens;
+    tenantId: string;
+    invoiceId: string;
+  }): Promise<CanonicalInvoice> {
+    const url = `${XERO_BASE}/Invoices/${encodeURIComponent(args.invoiceId)}`;
+    const body = await this.get<{ Invoices?: XeroInvoice[] }>(
+      url,
+      this.commonHeaders(args),
+      "Invoice",
+    );
+    const raw = body.Invoices?.[0];
+    if (!raw) {
+      throw new SyncFailedError(
+        `Xero invoice ${args.invoiceId} response missing Invoices entry`,
+      );
+    }
+
+    const invoice = mapXeroInvoice(raw);
+    if (raw.Status === "AUTHORISED") {
+      invoice.paymentLinkUrl = await this.fetchOnlineInvoiceUrl(
+        args.tokens,
+        args.tenantId,
+        raw.InvoiceID,
+      );
+    }
+    return invoice;
+  }
+
+  /**
+   * Fetch a single contact by its Xero ContactID. Used by the webhook-driven
+   * single-invoice sync to backfill a missing customer. Xero's single-contact
+   * GET wraps the result in a `Contacts` array of length 1.
+   */
+  async fetchContactById(args: {
+    tokens: ProviderTokens;
+    tenantId: string;
+    contactId: string;
+  }): Promise<CanonicalCustomer> {
+    const url = `${XERO_BASE}/Contacts/${encodeURIComponent(args.contactId)}`;
+    const body = await this.get<{ Contacts?: XeroContact[] }>(
+      url,
+      this.commonHeaders(args),
+      "Contact",
+    );
+    const raw = body.Contacts?.[0];
+    if (!raw) {
+      throw new SyncFailedError(
+        `Xero contact ${args.contactId} response missing Contacts entry`,
+      );
+    }
+    return mapXeroCustomer(raw);
+  }
+
   private buildInvoiceUrl(args: InvoiceSyncFetchArgs): string {
     const c = args.cursor;
     // Xero's `where` parser expects unpadded integer components.
@@ -201,7 +264,10 @@ export class XeroInvoiceSyncProvider implements InvoiceSyncProvider {
     );
   }
 
-  private commonHeaders(args: InvoiceSyncFetchArgs): Record<string, string> {
+  private commonHeaders(args: {
+    tokens: ProviderTokens;
+    tenantId: string;
+  }): Record<string, string> {
     return {
       Authorization: `Bearer ${args.tokens.accessToken}`,
       "xero-tenant-id": args.tenantId,
