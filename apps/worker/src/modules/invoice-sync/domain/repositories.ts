@@ -18,7 +18,7 @@ export const SEQUENCE_RUN_REPOSITORY = Symbol("SEQUENCE_RUN_REPOSITORY");
  * One invoice change to apply atomically. Built by the sync use cases from
  * the (priorState, canonicalInvoice, now) triple via detectInvoiceTransition.
  *
- * Used by `InvoiceRepository.applyChange` (added in Task 6).
+ * Used by `InvoiceRepository.applyChange`.
  */
 export interface InvoiceChange {
   externalId: string;

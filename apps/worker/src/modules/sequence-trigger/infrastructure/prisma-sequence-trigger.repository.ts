@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaClient } from "@nudge/database";
+import { SEQUENCE_RUN_STATUSES } from "@nudge/shared";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   OverdueInvoiceRow,
@@ -22,7 +23,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
         status: "overdue",
         sequenceRuns: {
           none: {
-            status: { in: ["active", "paused"] },
+            status: { in: [SEQUENCE_RUN_STATUSES.ACTIVE, SEQUENCE_RUN_STATUSES.PAUSED] },
           },
         },
         business: {
@@ -136,7 +137,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
         const existing = await tx.sequenceRun.findFirst({
           where: {
             invoiceId: data.invoiceId,
-            status: { in: ["active", "paused"] },
+            status: { in: [SEQUENCE_RUN_STATUSES.ACTIVE, SEQUENCE_RUN_STATUSES.PAUSED] },
           },
           select: { id: true },
         });
