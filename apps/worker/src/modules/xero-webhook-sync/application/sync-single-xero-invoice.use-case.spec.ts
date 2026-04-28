@@ -122,10 +122,12 @@ describe("SyncSingleXeroInvoiceUseCase", () => {
     invoiceRepo = {
       findPriorStatesByExternalIds: jest.fn().mockResolvedValue(new Map()),
       applyChange: jest.fn().mockResolvedValue(defaultApplyChangeResult),
+      findLocalSnapshotForVoid: jest.fn().mockResolvedValue(null),
     } as unknown as jest.Mocked<InvoiceRepository>;
 
     customerRepo = {
       upsertMany: jest.fn().mockResolvedValue(undefined),
+      reconcileAllTotalOutstanding: jest.fn().mockResolvedValue({ updatedCount: 0 }),
       existsByExternalId: jest.fn(),
     } as unknown as jest.Mocked<CustomerRepository>;
 

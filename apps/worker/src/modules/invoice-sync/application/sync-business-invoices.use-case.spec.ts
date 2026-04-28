@@ -102,14 +102,14 @@ describe("SyncBusinessInvoicesUseCase", () => {
       updateSyncCursor: jest.fn(),
     } as unknown as jest.Mocked<SyncConnectionReader>;
     invoiceRepo = {
-      findStatusesByExternalIds: jest.fn().mockResolvedValue(new Map()),
-      upsertMany: jest.fn().mockResolvedValue(undefined),
       findPriorStatesByExternalIds: jest.fn().mockResolvedValue(new Map()),
       applyChange: jest.fn().mockResolvedValue(defaultApplyChangeResult),
+      findLocalSnapshotForVoid: jest.fn().mockResolvedValue(null),
     } as unknown as jest.Mocked<InvoiceRepository>;
     customerRepo = {
       upsertMany: jest.fn().mockResolvedValue(undefined),
-      recalculateTotalOutstanding: jest.fn().mockResolvedValue(undefined),
+      reconcileAllTotalOutstanding: jest.fn().mockResolvedValue({ updatedCount: 0 }),
+      existsByExternalId: jest.fn().mockResolvedValue(false),
     } as unknown as jest.Mocked<CustomerRepository>;
     refresh = { execute: jest.fn().mockResolvedValue(undefined) } as unknown as jest.Mocked<RefreshTokenUseCaseLike>;
 
@@ -147,7 +147,6 @@ describe("SyncBusinessInvoicesUseCase", () => {
       provider: "quickbooks",
       lastSyncedAt: NOW,
     });
-    expect(customerRepo.recalculateTotalOutstanding).not.toHaveBeenCalled();
     expect(reader.updateSyncCursor).toHaveBeenCalledWith(
       "conn-1",
       new Date("2026-04-05"),

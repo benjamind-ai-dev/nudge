@@ -14,24 +14,6 @@ export const CUSTOMER_REPOSITORY = Symbol("CUSTOMER_REPOSITORY");
 export const SYNC_CONNECTION_READER = Symbol("SYNC_CONNECTION_READER");
 export const SEQUENCE_RUN_REPOSITORY = Symbol("SEQUENCE_RUN_REPOSITORY");
 
-export interface InvoiceUpsertRow {
-  externalId: string;
-  invoiceNumber: string | null;
-  customerExternalId: string;
-  amountCents: number;
-  amountPaidCents: number;
-  balanceDueCents: number;
-  currency: string;
-  paymentLinkUrl: string | null;
-  issuedDate: Date | null;
-  dueDate: Date;
-  status: InvoiceStatus;
-  provider: ProviderName;
-  /** Set to `now` only on open/overdue → paid transitions; otherwise undefined. */
-  paidAtIfNewlyPaid: Date | undefined;
-  lastSyncedAt: Date;
-}
-
 /**
  * One invoice change to apply atomically. Built by the sync use cases from
  * the (priorState, canonicalInvoice, now) triple via detectInvoiceTransition.
@@ -73,29 +55,6 @@ export interface LocalInvoiceSnapshot {
 }
 
 export interface InvoiceRepository {
-  /** Returns map of externalId → prior status, for invoices that already exist. */
-  findStatusesByExternalIds(
-    businessId: string,
-    externalIds: string[],
-  ): Promise<Map<string, InvoiceStatus>>;
-
-  /**
-   * Upsert invoices by (business_id, external_id). Resolves customer FK by
-   * looking up customers.external_id — customers must be upserted first.
-   */
-  upsertMany(businessId: string, rows: InvoiceUpsertRow[]): Promise<void>;
-
-  /**
-   * Soft-void an invoice that was hard-deleted in the provider. Sets status
-   * to "voided" so downstream sequence-trigger logic stops dunning. Returns
-   * the customer's external id (so the caller can recalc total_outstanding),
-   * or null when the invoice was never persisted locally.
-   */
-  markVoidedByExternalId(
-    businessId: string,
-    externalId: string,
-  ): Promise<{ customerExternalId: string } | null>;
-
   /**
    * Returns map of externalId → { status, balanceDueCents } for invoices that
    * already exist for this business. Missing externalIds are absent from the
@@ -153,15 +112,6 @@ export interface CustomerRepository {
     businessId: string,
     provider: ProviderName,
     customers: CanonicalCustomer[],
-  ): Promise<void>;
-
-  /**
-   * Recomputes `customers.total_outstanding` as the sum of balance_due_cents
-   * of open/overdue/partial invoices, for the given customer external IDs.
-   */
-  recalculateTotalOutstanding(
-    businessId: string,
-    customerExternalIds: string[],
   ): Promise<void>;
 
   /**

@@ -124,6 +124,7 @@ describe("SyncSingleInvoiceUseCase", () => {
 
     customerRepo = {
       upsertMany: jest.fn().mockResolvedValue(undefined),
+      reconcileAllTotalOutstanding: jest.fn().mockResolvedValue({ updatedCount: 0 }),
       existsByExternalId: jest.fn(),
     } as unknown as jest.Mocked<CustomerRepository>;
 
