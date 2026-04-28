@@ -6,6 +6,7 @@ import type {
   CanonicalInvoice,
   InvoiceStatus,
   InvoiceTransition,
+  PriorInvoiceState,
 } from "./canonical-invoice";
 
 export const INVOICE_REPOSITORY = Symbol("INVOICE_REPOSITORY");
@@ -41,16 +42,34 @@ export interface InvoiceChange {
   externalId: string;
   customerExternalId: string;
   invoice: CanonicalInvoice;
+  /** MUST equal `deriveStatus(invoice, lastSyncedAt)`; pre-computed by the caller to avoid re-deriving in the repository. */
   newStatus: InvoiceStatus;
   transition: InvoiceTransition;
   provider: ProviderName;
   lastSyncedAt: Date;
 }
 
+/** Result of `InvoiceRepository.applyChange`. */
 export interface ApplyChangeResult {
   invoiceId: string;
   /** Empty when no active/paused run was stopped. */
   stoppedSequenceRunIds: string[];
+}
+
+/**
+ * Local-only fields needed to synthesize a CanonicalInvoice when the provider
+ * sends a deletion event without a payload (e.g., QuickBooks Deleted webhook).
+ * Populated from the persisted row by `InvoiceRepository.findLocalSnapshotForVoid`.
+ */
+export interface LocalInvoiceSnapshot {
+  invoiceNumber: string | null;
+  customerExternalId: string;
+  amountCents: number;
+  amountPaidCents: number;
+  currency: string;
+  paymentLinkUrl: string | null;
+  issuedDate: Date | null;
+  dueDate: Date;
 }
 
 export interface InvoiceRepository {
@@ -76,6 +95,57 @@ export interface InvoiceRepository {
     businessId: string,
     externalId: string,
   ): Promise<{ customerExternalId: string } | null>;
+
+  /**
+   * Returns map of externalId → { status, balanceDueCents } for invoices that
+   * already exist for this business. Missing externalIds are absent from the
+   * map. Used by the sync use cases to feed `detectInvoiceTransition`.
+   */
+  findPriorStatesByExternalIds(
+    businessId: string,
+    externalIds: string[],
+  ): Promise<Map<string, PriorInvoiceState>>;
+
+  /**
+   * Apply one invoice change atomically. Wraps everything in a single Prisma
+   * transaction so the invoice update, the sequence-run stop, and the
+   * customer.total_outstanding adjustment commit together.
+   *
+   * Dispatches by `change.transition.kind`:
+   *  - `no_change`        — bumps `last_synced_at` only.
+   *  - `new_invoice`      — inserts; if the new row is open/overdue/partial,
+   *                          increments customer.total_outstanding by its
+   *                          balance.
+   *  - `balance_changed`  — updates fields; adjusts customer balance by
+   *                          (newBalance − priorBalance).
+   *  - `partial_payment`  — updates fields; adjusts customer balance by
+   *                          (newBalance − priorBalance).
+   *  - `fully_paid`       — sets status='paid', stamps paid_at, zeros
+   *                          balance, stops active|paused sequence_runs with
+   *                          reason='payment_received', decrements customer
+   *                          balance by priorBalance.
+   *  - `voided`           — sets status='voided', stops active|paused
+   *                          sequence_runs with reason='invoice_voided',
+   *                          decrements customer balance by priorBalance.
+   *
+   * Always returns `ApplyChangeResult` with the local invoice id and the IDs
+   * of any sequence runs that were stopped (empty when none).
+   */
+  applyChange(
+    businessId: string,
+    change: InvoiceChange,
+  ): Promise<ApplyChangeResult>;
+
+  /**
+   * Reads the persisted invoice's local fields needed to synthesize a
+   * CanonicalInvoice for a void-only flow (e.g., QuickBooks Deleted webhook
+   * where the provider doesn't include the invoice payload). Returns null
+   * when the invoice was never persisted locally.
+   */
+  findLocalSnapshotForVoid(
+    businessId: string,
+    externalId: string,
+  ): Promise<LocalInvoiceSnapshot | null>;
 }
 
 export interface CustomerRepository {
