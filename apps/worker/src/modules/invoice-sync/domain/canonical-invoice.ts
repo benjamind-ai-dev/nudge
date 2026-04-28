@@ -45,3 +45,62 @@ export function deriveStatus(inv: CanonicalInvoice, now: Date): InvoiceStatus {
   if (inv.balanceDueCents < inv.amountCents) return "partial";
   return inv.dueDate < now ? "overdue" : "open";
 }
+
+export interface PriorInvoiceState {
+  status: InvoiceStatus;
+  balanceDueCents: number;
+}
+
+export type InvoiceTransition =
+  | { kind: "no_change" }
+  | { kind: "new_invoice" }
+  | { kind: "balance_changed"; priorBalance: number; newBalance: number }
+  | { kind: "fully_paid"; priorBalance: number }
+  | { kind: "partial_payment"; priorBalance: number; newBalance: number }
+  | { kind: "voided"; priorBalance: number; priorStatus: InvoiceStatus };
+
+/**
+ * Pure transition detection. Top-to-bottom rule order — first match wins.
+ *
+ * Provider-agnostic: takes a generic prior state + canonical invoice. The
+ * caller is responsible for fetching the prior state out of the DB.
+ */
+export function detectInvoiceTransition(
+  prior: PriorInvoiceState | undefined,
+  next: CanonicalInvoice,
+  _now: Date,
+): InvoiceTransition {
+  if (!prior) return { kind: "new_invoice" };
+  if (prior.status === "voided") return { kind: "no_change" };
+  if (prior.status === "paid") return { kind: "no_change" };
+
+  if (next.lifecycle === "voided") {
+    return {
+      kind: "voided",
+      priorBalance: prior.balanceDueCents,
+      priorStatus: prior.status,
+    };
+  }
+
+  if (next.balanceDueCents <= 0) {
+    return { kind: "fully_paid", priorBalance: prior.balanceDueCents };
+  }
+
+  if (next.balanceDueCents < prior.balanceDueCents) {
+    return {
+      kind: "partial_payment",
+      priorBalance: prior.balanceDueCents,
+      newBalance: next.balanceDueCents,
+    };
+  }
+
+  if (next.balanceDueCents !== prior.balanceDueCents) {
+    return {
+      kind: "balance_changed",
+      priorBalance: prior.balanceDueCents,
+      newBalance: next.balanceDueCents,
+    };
+  }
+
+  return { kind: "no_change" };
+}
