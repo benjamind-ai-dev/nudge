@@ -125,43 +125,62 @@ export class SyncBusinessInvoicesUseCase {
             const transition = detectInvoiceTransition(prior, ci, now);
             const newStatus = deriveStatus(ci, now);
 
-            const result = await this.invoices.applyChange(businessId, {
-              externalId: ci.externalId,
-              customerExternalId: ci.customerExternalId,
-              invoice: ci,
-              newStatus,
-              transition,
-              provider: provider.name,
-              lastSyncedAt: now,
-            });
+            try {
+              const result = await this.invoices.applyChange(businessId, {
+                externalId: ci.externalId,
+                customerExternalId: ci.customerExternalId,
+                invoice: ci,
+                newStatus,
+                transition,
+                provider: provider.name,
+                lastSyncedAt: now,
+              });
 
-            if (transition.kind === "fully_paid") {
-              this.logger.log({
-                msg: "Payment detected",
-                event: "invoice_payment_detected",
+              if (transition.kind === "fully_paid") {
+                this.logger.log({
+                  msg: "Payment detected",
+                  event: "invoice_payment_detected",
+                  businessId,
+                  invoiceId: result.invoiceId,
+                  externalId: ci.externalId,
+                  invoiceNumber: ci.invoiceNumber,
+                  priorBalance: transition.priorBalance,
+                  amountPaid: ci.amountPaidCents,
+                  stoppedSequenceRunIds: result.stoppedSequenceRunIds,
+                });
+              } else if (transition.kind === "voided") {
+                this.logger.log({
+                  msg: "Invoice voided",
+                  event: "invoice_voided",
+                  businessId,
+                  invoiceId: result.invoiceId,
+                  externalId: ci.externalId,
+                  invoiceNumber: ci.invoiceNumber,
+                  priorStatus: transition.priorStatus,
+                  priorBalance: transition.priorBalance,
+                  stoppedSequenceRunIds: result.stoppedSequenceRunIds,
+                });
+              }
+
+              touchedCustomerExtIds.add(ci.customerExternalId);
+              if (ci.lastUpdatedAt > lastSeenUpdatedAt) {
+                lastSeenUpdatedAt = ci.lastUpdatedAt;
+              }
+            } catch (err) {
+              this.logger.error({
+                msg: "Failed to apply invoice change — skipping and continuing",
+                event: "invoice_apply_failed",
                 businessId,
                 externalId: ci.externalId,
                 invoiceNumber: ci.invoiceNumber,
-                priorBalance: transition.priorBalance,
-                amountPaid: ci.amountPaidCents,
-                stoppedSequenceRunIds: result.stoppedSequenceRunIds,
+                customerExternalId: ci.customerExternalId,
+                transitionKind: transition.kind,
+                error: err instanceof Error ? err.message : String(err),
               });
-            } else if (transition.kind === "voided") {
-              this.logger.log({
-                msg: "Invoice voided",
-                event: "invoice_voided",
-                businessId,
-                externalId: ci.externalId,
-                invoiceNumber: ci.invoiceNumber,
-                priorStatus: transition.priorStatus,
-                priorBalance: transition.priorBalance,
-                stoppedSequenceRunIds: result.stoppedSequenceRunIds,
-              });
-            }
-
-            touchedCustomerExtIds.add(ci.customerExternalId);
-            if (ci.lastUpdatedAt > lastSeenUpdatedAt) {
-              lastSeenUpdatedAt = ci.lastUpdatedAt;
+              // Intentionally do NOT advance lastSeenUpdatedAt for the failing row
+              // so the next sync re-pulls it. The bad row's `lastUpdatedAt` is older-or-equal
+              // to the cursor we'll set, so any subsequent successful row of the same
+              // updatedAt timestamp will still be re-pulled and tried again.
             }
           }
         }

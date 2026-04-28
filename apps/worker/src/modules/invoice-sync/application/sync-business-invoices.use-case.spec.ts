@@ -292,6 +292,7 @@ describe("SyncBusinessInvoicesUseCase", () => {
       expect.objectContaining({
         event: "invoice_payment_detected",
         businessId: "biz-1",
+        invoiceId: "inv-db-1",
         externalId: "inv_1",
         invoiceNumber: "1001",
         priorBalance: 10_000,
@@ -362,11 +363,63 @@ describe("SyncBusinessInvoicesUseCase", () => {
       expect.objectContaining({
         event: "invoice_voided",
         businessId: "biz-1",
+        invoiceId: "inv-db-void",
         externalId: "inv_1",
         priorStatus: "open",
         priorBalance: 10_000,
         stoppedSequenceRunIds: ["run-void-1"],
       }),
+    );
+
+    logSpy.mockRestore();
+  });
+
+  it("continues processing remaining invoices when applyChange throws on one", async () => {
+    const logSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => {});
+
+    reader.findById.mockResolvedValue(mkConnection());
+    const first = mkInvoice({
+      externalId: "inv_bad",
+      invoiceNumber: "BAD",
+      lastUpdatedAt: new Date("2026-04-05"),
+    });
+    const second = mkInvoice({
+      externalId: "inv_ok",
+      invoiceNumber: "OK",
+      lastUpdatedAt: new Date("2026-04-10"),
+    });
+    invoiceRepo.findPriorStatesByExternalIds.mockResolvedValue(
+      new Map<string, PriorInvoiceState>([
+        ["inv_bad", { status: "open", balanceDueCents: 10_000 }],
+        ["inv_ok", { status: "open", balanceDueCents: 10_000 }],
+      ]),
+    );
+    invoiceRepo.applyChange
+      .mockRejectedValueOnce(new Error("orphan customer"))
+      .mockResolvedValueOnce(defaultApplyChangeResult);
+
+    provider.fetchPage.mockResolvedValueOnce({
+      invoices: [first, second],
+      customers: [mkCustomer()],
+      hasMore: false,
+    });
+
+    await expect(useCase.execute("conn-1")).resolves.toBeUndefined();
+
+    expect(invoiceRepo.applyChange).toHaveBeenCalledTimes(2);
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "invoice_apply_failed",
+        businessId: "biz-1",
+        externalId: "inv_bad",
+        invoiceNumber: "BAD",
+        customerExternalId: "C1",
+        error: "orphan customer",
+      }),
+    );
+    expect(reader.updateSyncCursor).toHaveBeenCalledWith(
+      "conn-1",
+      new Date("2026-04-10"),
     );
 
     logSpy.mockRestore();
