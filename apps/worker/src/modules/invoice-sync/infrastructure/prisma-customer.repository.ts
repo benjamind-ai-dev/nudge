@@ -86,6 +86,25 @@ export class PrismaCustomerRepository implements CustomerRepository {
     );
   }
 
+  async reconcileAllTotalOutstanding(): Promise<{ updatedCount: number }> {
+    const updated = await this.prisma.$executeRaw`
+      UPDATE "customers" AS c
+      SET "total_outstanding" = COALESCE(sub.total, 0)
+      FROM (
+        SELECT c2.id AS customer_id,
+               COALESCE(SUM(i.balance_due_cents), 0) AS total
+        FROM "customers" c2
+        LEFT JOIN "invoices" i
+          ON i.customer_id = c2.id
+         AND i.status IN ('open', 'overdue', 'partial')
+        GROUP BY c2.id
+      ) AS sub
+      WHERE c."id" = sub.customer_id
+        AND c."total_outstanding" IS DISTINCT FROM COALESCE(sub.total, 0);
+    `;
+    return { updatedCount: Number(updated) };
+  }
+
   async existsByExternalId(
     businessId: string,
     externalId: string,

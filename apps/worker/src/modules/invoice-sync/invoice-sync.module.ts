@@ -3,6 +3,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { QUEUE_NAMES } from "@nudge/shared";
 import { TokenRefreshModule } from "../token-refresh/token-refresh.module";
 import { EnqueueBusinessSyncsUseCase } from "./application/enqueue-business-syncs.use-case";
+import { ReconcileTotalOutstandingUseCase } from "./application/reconcile-total-outstanding.use-case";
 import { SyncBusinessInvoicesUseCase } from "./application/sync-business-invoices.use-case";
 import {
   INVOICE_SYNC_PROVIDERS,
@@ -31,6 +32,7 @@ import { XeroInvoiceSyncProvider } from "./infrastructure/xero-invoice-sync.prov
     QuickbooksInvoiceSyncProvider,
     XeroInvoiceSyncProvider,
     EnqueueBusinessSyncsUseCase,
+    ReconcileTotalOutstandingUseCase,
     SyncBusinessInvoicesUseCase,
     InvoiceSyncProcessor,
     { provide: INVOICE_REPOSITORY, useClass: PrismaInvoiceRepository },
@@ -56,6 +58,7 @@ import { XeroInvoiceSyncProvider } from "./infrastructure/xero-invoice-sync.prov
     CUSTOMER_REPOSITORY,
     SYNC_CONNECTION_READER,
     SEQUENCE_RUN_REPOSITORY,
+    ReconcileTotalOutstandingUseCase,
   ],
 })
 export class InvoiceSyncModule {}

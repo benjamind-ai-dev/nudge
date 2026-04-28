@@ -164,6 +164,18 @@ export interface CustomerRepository {
     customerExternalIds: string[],
   ): Promise<void>;
 
+  /**
+   * Recompute `customers.total_outstanding` for **every** customer in the
+   * database in a single bulk SQL UPDATE. Used by the periodic days-recalc
+   * tick as a drift-safety net for the per-invoice atomic balance updates
+   * done by `InvoiceRepository.applyChange`.
+   *
+   * Returns the count of customer rows whose `total_outstanding` actually
+   * changed (rows where the recomputed sum differed from the stored value).
+   * The bulk update uses `IS DISTINCT FROM` to skip no-op writes.
+   */
+  reconcileAllTotalOutstanding(): Promise<{ updatedCount: number }>;
+
   /** True when a customer with `external_id` is already persisted for this business. */
   existsByExternalId(businessId: string, externalId: string): Promise<boolean>;
 }
