@@ -80,6 +80,9 @@ jobs:
       # API env vars (pass Zod validation)
       STRIPE_SECRET_KEY: sk_test_dummy
       STRIPE_WEBHOOK_SECRET: whsec_dummy
+      STRIPE_PRICE_STARTER: price_dummy_starter
+      STRIPE_PRICE_GROWTH: price_dummy_growth
+      STRIPE_PRICE_AGENCY: price_dummy_agency
       RESEND_WEBHOOK_SECRET: dummy_resend
       CLERK_SECRET_KEY: sk_test_dummy
       CLERK_WEBHOOK_SECRET: svix_dummy

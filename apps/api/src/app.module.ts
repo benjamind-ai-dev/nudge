@@ -15,6 +15,7 @@ import { XeroOAuthModule } from "./modules/xero-oauth/xero-oauth.module";
 import { ConnectionsCommonModule } from "./modules/connections-common/connections-common.module";
 import { ConnectionsModule } from "./modules/connections/connections.module";
 import { BusinessModule } from "./modules/business/business.module";
+import { BillingModule } from "./modules/billing/billing.module";
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { BusinessModule } from "./modules/business/business.module";
     ConnectionsCommonModule,
     ConnectionsModule,
     BusinessModule,
+    BillingModule,
   ],
 })
 export class AppModule {}
