@@ -3,16 +3,16 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from "@nestjs/common";
+import { getAuth } from "@clerk/express";
 import { Request } from "express";
 
 export const AccountId = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): string => {
     const req = ctx.switchToHttp().getRequest<Request>();
-    const accountId = (req as unknown as { auth?: { userId?: string } }).auth
-      ?.userId;
-    if (!accountId) {
+    const { userId } = getAuth(req);
+    if (!userId) {
       throw new UnauthorizedException("No account in session");
     }
-    return accountId;
+    return userId;
   },
 );
