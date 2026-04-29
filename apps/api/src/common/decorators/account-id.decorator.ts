@@ -5,14 +5,15 @@ import {
 } from "@nestjs/common";
 import { Request } from "express";
 
+type ClerkRequest = Request & { auth: () => { userId?: string | null } };
+
 export const AccountId = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): string => {
-    const req = ctx.switchToHttp().getRequest<Request>();
-    const accountId = (req as unknown as { auth?: { userId?: string } }).auth
-      ?.userId;
-    if (!accountId) {
+    const req = ctx.switchToHttp().getRequest<ClerkRequest>();
+    const userId = req.auth?.()?.userId;
+    if (!userId) {
       throw new UnauthorizedException("No account in session");
     }
-    return accountId;
+    return userId;
   },
 );
