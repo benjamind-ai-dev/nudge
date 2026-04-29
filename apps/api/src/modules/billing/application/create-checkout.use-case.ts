@@ -36,7 +36,7 @@ export class CreateCheckoutUseCase {
       isNewCustomer: !account.hasStripeCustomer(),
     });
 
-    if (!account.hasStripeCustomer()) {
+    if (result.stripeCustomerId) {
       await this.billingRepo.updateStripeCustomerId(
         accountId,
         result.stripeCustomerId,

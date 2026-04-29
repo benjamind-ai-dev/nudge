@@ -83,7 +83,7 @@ describe("CreateCheckoutUseCase", () => {
     );
   });
 
-  it("uses existing stripeCustomerId for upgrade flow and does not re-save", async () => {
+  it("uses existing stripeCustomerId for upgrade flow and persists returned customer id", async () => {
     billingRepo.findByAccountId.mockResolvedValue(
       makeAccount({ stripeCustomerId: "cus_existing" }),
     );
@@ -100,7 +100,10 @@ describe("CreateCheckoutUseCase", () => {
         isNewCustomer: false,
       }),
     );
-    expect(billingRepo.updateStripeCustomerId).not.toHaveBeenCalled();
+    expect(billingRepo.updateStripeCustomerId).toHaveBeenCalledWith(
+      "acc-1",
+      "cus_existing",
+    );
   });
 
   it("throws AccountNotFoundError when account does not exist", async () => {
