@@ -16,6 +16,7 @@ export interface AccountBillingRepository {
   findByStripeCustomerId(customerId: string): Promise<AccountBilling | null>;
   findByEmail(email: string): Promise<AccountBilling | null>;
   findById(accountId: string): Promise<AccountBilling | null>;
+  findByClerkId(clerkId: string): Promise<AccountBilling | null>;
   updateBillingState(
     accountId: string,
     params: UpdateBillingStateParams,

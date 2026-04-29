@@ -13,6 +13,7 @@ import Invoices from "./pages/invoices";
 import Sequences from "./pages/sequences";
 import Reports from "./pages/reports";
 import Settings from "./pages/settings";
+import { BillingPage } from "./pages/billing/billing.page";
 
 function ClerkTokenBridge() {
   const { getToken } = useAuth();
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/sequences" element={<Sequences />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/billing" element={<BillingPage />} />
           </Route>
         </Route>
 

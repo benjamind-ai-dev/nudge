@@ -19,7 +19,7 @@ function getParamDecoratorFactory() {
 }
 
 function createMockExecutionContext(
-  auth: { orgId?: string } | undefined
+  auth: { userId?: string } | undefined
 ): ExecutionContext {
   return {
     switchToHttp: () => ({
@@ -31,10 +31,10 @@ function createMockExecutionContext(
 describe("@AccountId decorator", () => {
   const factory = getParamDecoratorFactory();
 
-  it("returns orgId when present in request.auth", () => {
-    const ctx = createMockExecutionContext({ orgId: "org_123abc" });
+  it("returns userId when present in request.auth", () => {
+    const ctx = createMockExecutionContext({ userId: "user_123abc" });
     const result = factory(undefined, ctx);
-    expect(result).toBe("org_123abc");
+    expect(result).toBe("user_123abc");
   });
 
   it("throws UnauthorizedException when auth is undefined", () => {
@@ -43,14 +43,14 @@ describe("@AccountId decorator", () => {
     expect(() => factory(undefined, ctx)).toThrow("No account in session");
   });
 
-  it("throws UnauthorizedException when orgId is undefined", () => {
+  it("throws UnauthorizedException when userId is undefined", () => {
     const ctx = createMockExecutionContext({});
     expect(() => factory(undefined, ctx)).toThrow(UnauthorizedException);
     expect(() => factory(undefined, ctx)).toThrow("No account in session");
   });
 
-  it("throws UnauthorizedException when orgId is empty string", () => {
-    const ctx = createMockExecutionContext({ orgId: "" });
+  it("throws UnauthorizedException when userId is empty string", () => {
+    const ctx = createMockExecutionContext({ userId: "" });
     expect(() => factory(undefined, ctx)).toThrow(UnauthorizedException);
   });
 });
