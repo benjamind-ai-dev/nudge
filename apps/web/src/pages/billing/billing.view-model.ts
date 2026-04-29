@@ -1,15 +1,24 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
-import { useBillingStatus } from "../../queries/use-billing";
+import { useQueryClient } from "@tanstack/react-query";
+import { useBillingStatus, billingKeys } from "../../queries/use-billing";
 import { createCheckout, createPortal, type BillingPlan } from "../../api/billing.api";
 
 export function useBillingViewModel() {
+  const queryClient = useQueryClient();
   const { data: status, isLoading, error } = useBillingStatus();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   const redirectStatus = searchParams.get("status") as "success" | "cancelled" | null;
+
+  useEffect(() => {
+    if (searchParams.get("portal_return") === "1") {
+      void queryClient.invalidateQueries({ queryKey: billingKeys.status });
+      setSearchParams((p) => { p.delete("portal_return"); return p; }, { replace: true });
+    }
+  }, [searchParams, queryClient, setSearchParams]);
 
   const hasActiveSubscription =
     status?.has_stripe_customer === true && status.status !== "canceled";

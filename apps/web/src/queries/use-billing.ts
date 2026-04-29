@@ -9,5 +9,7 @@ export function useBillingStatus() {
   return useQuery({
     queryKey: billingKeys.status,
     queryFn: () => getBillingStatus().then((r) => r.data),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 }
