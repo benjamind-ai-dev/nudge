@@ -19,11 +19,11 @@ function getParamDecoratorFactory() {
 }
 
 function createMockExecutionContext(
-  auth: { userId?: string } | undefined
+  authData: { userId?: string } | undefined
 ): ExecutionContext {
   return {
     switchToHttp: () => ({
-      getRequest: () => ({ auth }),
+      getRequest: () => ({ auth: jest.fn().mockReturnValue(authData ?? {}) }),
     }),
   } as unknown as ExecutionContext;
 }
