@@ -9,6 +9,10 @@ import "./index.css";
 const queryClient = new QueryClient();
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
+if (!publishableKey) {
+  throw new Error("Missing env var: VITE_CLERK_PUBLISHABLE_KEY");
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ClerkProvider publishableKey={publishableKey}>
