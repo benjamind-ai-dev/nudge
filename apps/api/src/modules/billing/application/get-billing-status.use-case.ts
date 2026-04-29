@@ -13,6 +13,7 @@ export interface BillingStatusResult {
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   trialEndsAt: Date | null;
+  hasStripeCustomer: boolean;
 }
 
 @Injectable()
@@ -37,6 +38,7 @@ export class GetBillingStatusUseCase {
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
         trialEndsAt: account.trialEndsAt,
+        hasStripeCustomer: false,
       };
     }
 
@@ -51,15 +53,19 @@ export class GetBillingStatusUseCase {
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
         trialEndsAt: account.trialEndsAt,
+        hasStripeCustomer: true,
       };
     }
 
+    const stripeStatus = stripeInfo.status === "trialing" ? "trial" : stripeInfo.status;
+
     return {
       plan: stripeInfo.plan,
-      status: stripeInfo.status as BillingStatus,
+      status: stripeStatus as BillingStatus,
       currentPeriodEnd: stripeInfo.currentPeriodEnd,
       cancelAtPeriodEnd: stripeInfo.cancelAtPeriodEnd,
       trialEndsAt: stripeInfo.trialEnd,
+      hasStripeCustomer: true,
     };
   }
 }

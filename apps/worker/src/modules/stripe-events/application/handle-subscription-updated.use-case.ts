@@ -15,6 +15,15 @@ import type {
   StripeSubscription,
   StripeEventEnvelope,
 } from "../domain/stripe-event-payloads";
+import type { BillingStatus } from "../domain/account-billing.entity";
+
+const STRIPE_STATUS_MAP: Record<string, BillingStatus | undefined> = {
+  trialing: "trial",
+  active: "active",
+  past_due: "past_due",
+  canceled: "canceled",
+  incomplete: "incomplete",
+};
 
 @Injectable()
 export class HandleSubscriptionUpdatedUseCase {
@@ -54,10 +63,12 @@ export class HandleSubscriptionUpdatedUseCase {
     }
 
     const isDowngrade = planMeta.maxBusinesses < account.maxBusinesses;
+    const newStatus = STRIPE_STATUS_MAP[subscription.status];
 
     await this.accounts.updateBillingState(account.id, {
       plan: planMeta.plan,
       maxBusinesses: planMeta.maxBusinesses,
+      ...(newStatus !== undefined ? { status: newStatus } : {}),
     });
 
     this.logger.log({
@@ -66,6 +77,8 @@ export class HandleSubscriptionUpdatedUseCase {
       accountId: account.id,
       oldPlan: account.plan,
       newPlan: planMeta.plan,
+      oldStatus: account.status,
+      newStatus: newStatus ?? "(unchanged)",
       oldMaxBusinesses: account.maxBusinesses,
       newMaxBusinesses: planMeta.maxBusinesses,
       isDowngrade,

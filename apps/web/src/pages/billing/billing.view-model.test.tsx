@@ -27,6 +27,7 @@ const mockStatus = (overrides: Partial<BillingStatus> = {}): BillingStatus => ({
   current_period_end: null,
   cancel_at_period_end: false,
   trial_ends_at: new Date(Date.now() + 14 * 86400000).toISOString(),
+  has_stripe_customer: false,
   ...overrides,
 });
 
@@ -53,7 +54,7 @@ describe("useBillingViewModel", () => {
 
   it("hasActiveSubscription is true on active status", () => {
     vi.mocked(useBillingStatus).mockReturnValue({
-      data: mockStatus({ status: "active", plan: "starter" }),
+      data: mockStatus({ status: "active", plan: "starter", has_stripe_customer: true }),
       isLoading: false,
       error: null,
     } as ReturnType<typeof useBillingStatus>);

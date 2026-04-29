@@ -45,7 +45,7 @@ export class HandleSubscriptionDeletedUseCase {
     }
 
     await this.accounts.updateBillingState(account.id, {
-      status: "cancelled",
+      status: "canceled",
     });
 
     const stoppedCount = await this.accounts.stopAllActiveSequenceRuns(

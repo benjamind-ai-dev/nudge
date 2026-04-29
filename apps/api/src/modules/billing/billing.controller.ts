@@ -70,6 +70,7 @@ export class BillingController {
           current_period_end: result.currentPeriodEnd,
           cancel_at_period_end: result.cancelAtPeriodEnd,
           trial_ends_at: result.trialEndsAt,
+          has_stripe_customer: result.hasStripeCustomer,
         },
       };
     } catch (error) {
