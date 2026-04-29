@@ -71,6 +71,9 @@ importers:
       stripe:
         specifier: ^22.0.1
         version: 22.0.2(@types/node@22.19.17)
+      svix:
+        specifier: ^1.92.2
+        version: 1.92.2
       xero-node:
         specifier: ^15.0.0
         version: 15.0.1
@@ -4360,6 +4363,9 @@ packages:
 
   svix@1.90.0:
     resolution: {integrity: sha512-ljkZuyy2+IBEoESkIpn8sLM+sxJHQcPxlZFxU+nVDhltNfUMisMBzWX/UR8SjEnzoI28ZjCzMbmYAPwSTucoMw==}
+
+  svix@1.92.2:
+    resolution: {integrity: sha512-ZmuA3UVvlnF9EgxlzmPtF7CKjQb64Z6OFlyfdDfU0sdcC7dJa+3aOYX5B9mA+RS6ch1AxBa4UP/l6KmqfGtWBQ==}
 
   swr@2.3.4:
     resolution: {integrity: sha512-bYd2lrhc+VarcpkgWclcUi92wYCpOgMws9Sd1hG1ntAu0NEy+14CbotuFjshBU2kt9rYj9TSmDcybpxpeTU1fg==}
@@ -9123,6 +9129,10 @@ snapshots:
     dependencies:
       standardwebhooks: 1.0.0
       uuid: 10.0.0
+
+  svix@1.92.2:
+    dependencies:
+      standardwebhooks: 1.0.0
 
   swr@2.3.4(react@19.2.5):
     dependencies:
