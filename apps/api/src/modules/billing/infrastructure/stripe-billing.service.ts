@@ -93,7 +93,7 @@ export class StripeBillingService implements StripeService {
   async createPortalSession(
     params: CreatePortalSessionParams,
   ): Promise<PortalSessionResult> {
-    const returnUrl = `${this.frontendUrl}/settings/billing`;
+    const returnUrl = `${this.frontendUrl}/settings/billing?portal_return=1`;
     const session = await this.stripe.billingPortal.sessions.create({
       customer: params.stripeCustomerId,
       return_url: returnUrl,
