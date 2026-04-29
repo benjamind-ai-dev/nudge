@@ -1,6 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useBillingViewModel } from "./billing.view-model";
 import type { BillingStatus } from "../../api/billing.api";
@@ -18,7 +19,9 @@ import { useBillingStatus } from "../../queries/use-billing";
 import { createCheckout, createPortal } from "../../api/billing.api";
 
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <MemoryRouter>{children}</MemoryRouter>
+  <QueryClientProvider client={new QueryClient()}>
+    <MemoryRouter>{children}</MemoryRouter>
+  </QueryClientProvider>
 );
 
 const mockStatus = (overrides: Partial<BillingStatus> = {}): BillingStatus => ({
