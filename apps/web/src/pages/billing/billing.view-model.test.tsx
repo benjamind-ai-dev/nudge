@@ -62,6 +62,26 @@ describe("useBillingViewModel", () => {
     expect(result.current.hasActiveSubscription).toBe(true);
   });
 
+  it("currentPlanId is null when cancel_at_period_end is true", () => {
+    vi.mocked(useBillingStatus).mockReturnValue({
+      data: mockStatus({ status: "active", plan: "starter", has_stripe_customer: true, cancel_at_period_end: true }),
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useBillingStatus>);
+    const { result } = renderHook(() => useBillingViewModel(), { wrapper });
+    expect(result.current.currentPlanId).toBeNull();
+  });
+
+  it("currentPlanId returns plan when active and not cancelling", () => {
+    vi.mocked(useBillingStatus).mockReturnValue({
+      data: mockStatus({ status: "active", plan: "starter", has_stripe_customer: true, cancel_at_period_end: false }),
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useBillingStatus>);
+    const { result } = renderHook(() => useBillingViewModel(), { wrapper });
+    expect(result.current.currentPlanId).toBe("starter");
+  });
+
   it("handleCheckout redirects to checkout URL", async () => {
     Object.defineProperty(window, "location", {
       value: { href: "" },

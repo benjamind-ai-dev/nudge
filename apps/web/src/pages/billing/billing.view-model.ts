@@ -14,6 +14,12 @@ export function useBillingViewModel() {
   const hasActiveSubscription =
     status?.has_stripe_customer === true && status.status !== "canceled";
 
+  const currentPlanId =
+    !status?.cancel_at_period_end &&
+    (status?.status === "active" || status?.status === "trial")
+      ? (status.plan ?? null)
+      : null;
+
   const handleCheckout = useCallback(async (plan: BillingPlan) => {
     setIsCheckingOut(true);
     try {
@@ -40,6 +46,7 @@ export function useBillingViewModel() {
     error,
     redirectStatus,
     hasActiveSubscription,
+    currentPlanId,
     isCheckingOut,
     isOpeningPortal,
     handleCheckout,
