@@ -1,3 +1,9 @@
-export default function SignIn() {
-  return <h1 className="text-2xl font-bold p-8">Sign In</h1>;
+import { SignIn } from "@clerk/clerk-react";
+
+export default function SignInPage() {
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <SignIn routing="path" path="/sign-in" fallbackRedirectUrl="/dashboard" />
+    </div>
+  );
 }

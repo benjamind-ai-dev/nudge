@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@clerk/backend": "^3.2.11",
+    "@clerk/express": "^2.1.5",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",

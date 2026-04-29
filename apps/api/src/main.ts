@@ -3,6 +3,7 @@ import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Logger } from "nestjs-pino";
 import { ConfigService } from "@nestjs/config";
+import { clerkMiddleware } from "@clerk/express";
 import { AppModule } from "./app.module";
 import { Env } from "./common/config/env.schema";
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
@@ -26,6 +27,7 @@ async function bootstrap() {
       "application/cloudevents-batch+json",
     ],
   });
+  app.use(clerkMiddleware());
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new GlobalExceptionFilter());
 

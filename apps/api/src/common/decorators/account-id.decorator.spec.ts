@@ -1,0 +1,56 @@
+import { UnauthorizedException, ExecutionContext } from "@nestjs/common";
+import { ROUTE_ARGS_METADATA } from "@nestjs/common/constants";
+import { AccountId } from "./account-id.decorator";
+
+function getParamDecoratorFactory() {
+  class TestController {
+    test(@AccountId() accountId: string) {
+      return accountId;
+    }
+  }
+
+  const metadata = Reflect.getMetadata(
+    ROUTE_ARGS_METADATA,
+    TestController,
+    "test"
+  );
+  const key = Object.keys(metadata)[0];
+  return metadata[key].factory;
+}
+
+function createMockExecutionContext(
+  auth: { orgId?: string } | undefined
+): ExecutionContext {
+  return {
+    switchToHttp: () => ({
+      getRequest: () => ({ auth }),
+    }),
+  } as unknown as ExecutionContext;
+}
+
+describe("@AccountId decorator", () => {
+  const factory = getParamDecoratorFactory();
+
+  it("returns orgId when present in request.auth", () => {
+    const ctx = createMockExecutionContext({ orgId: "org_123abc" });
+    const result = factory(undefined, ctx);
+    expect(result).toBe("org_123abc");
+  });
+
+  it("throws UnauthorizedException when auth is undefined", () => {
+    const ctx = createMockExecutionContext(undefined);
+    expect(() => factory(undefined, ctx)).toThrow(UnauthorizedException);
+    expect(() => factory(undefined, ctx)).toThrow("No account in session");
+  });
+
+  it("throws UnauthorizedException when orgId is undefined", () => {
+    const ctx = createMockExecutionContext({});
+    expect(() => factory(undefined, ctx)).toThrow(UnauthorizedException);
+    expect(() => factory(undefined, ctx)).toThrow("No account in session");
+  });
+
+  it("throws UnauthorizedException when orgId is empty string", () => {
+    const ctx = createMockExecutionContext({ orgId: "" });
+    expect(() => factory(undefined, ctx)).toThrow(UnauthorizedException);
+  });
+});
