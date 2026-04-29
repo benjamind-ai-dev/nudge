@@ -14,7 +14,7 @@ export class PrismaBillingRepository implements BillingRepository {
 
   async findByAccountId(accountId: string): Promise<BillingAccount | null> {
     const row = await this.prisma.account.findUnique({
-      where: { id: accountId },
+      where: { clerkId: accountId },
       select: {
         id: true,
         plan: true,
@@ -42,7 +42,7 @@ export class PrismaBillingRepository implements BillingRepository {
     customerId: string,
   ): Promise<void> {
     await this.prisma.account.update({
-      where: { id: accountId },
+      where: { clerkId: accountId },
       data: { stripeCustomerId: customerId },
     });
   }
