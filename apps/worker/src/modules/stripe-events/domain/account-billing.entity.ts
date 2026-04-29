@@ -4,7 +4,7 @@ export type BillingStatus =
   | "trial"
   | "active"
   | "past_due"
-  | "cancelled"
+  | "canceled"
   | "incomplete";
 
 export class AccountBilling {
