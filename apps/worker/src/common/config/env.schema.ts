@@ -28,6 +28,11 @@ export const envSchema = z.object({
   XERO_REDIRECT_URI: z.string().url().optional(),
   ENCRYPTION_KEY: z.string().length(64),
   ALERT_DISCORD_WEBHOOK_URL: z.string().url().optional(),
+  STRIPE_SECRET_KEY: z.string().min(1),
+  STRIPE_PRICE_STARTER: z.string().min(1),
+  STRIPE_PRICE_GROWTH: z.string().min(1),
+  STRIPE_PRICE_AGENCY: z.string().min(1),
+  FRONTEND_URL: z.string().url(),
 });
 
 export type Env = z.infer<typeof envSchema>;
