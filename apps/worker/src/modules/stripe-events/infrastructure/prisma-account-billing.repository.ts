@@ -95,7 +95,7 @@ export class PrismaAccountBillingRepository implements AccountBillingRepository 
   private toDomain(row: {
     id: string;
     email: string;
-    plan: string;
+    plan: string | null;
     status: string;
     stripeCustomerId: string | null;
     stripeSubscriptionId: string | null;

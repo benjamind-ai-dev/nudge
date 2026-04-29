@@ -15,7 +15,8 @@ export class PrismaAccountProvisionRepository implements AccountProvisionReposit
       where: { clerkId },
       select: { clerkId: true },
     });
-    return row as { clerkId: string } | null;
+    if (!row || !row.clerkId) return null;
+    return { clerkId: row.clerkId };
   }
 
   async create(params: CreateAccountParams): Promise<void> {
@@ -23,7 +24,7 @@ export class PrismaAccountProvisionRepository implements AccountProvisionReposit
       data: {
         name: params.name,
         email: params.email,
-        plan: params.plan ?? "",
+        plan: params.plan,
         status: params.status,
         maxBusinesses: params.maxBusinesses,
         clerkId: params.clerkId,

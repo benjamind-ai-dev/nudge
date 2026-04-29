@@ -29,7 +29,7 @@ export class PrismaBillingRepository implements BillingRepository {
 
     return new BillingAccount(
       row.id,
-      (row.plan as BillingPlan) || null,
+      (row.plan as BillingPlan | null) ?? null,
       row.status as BillingStatus,
       row.stripeCustomerId,
       row.stripeSubscriptionId,
