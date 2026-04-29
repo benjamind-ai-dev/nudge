@@ -47,24 +47,36 @@ export class StripeBillingService implements StripeService {
     const successUrl = `${this.frontendUrl}/settings/billing?status=success`;
     const cancelUrl = `${this.frontendUrl}/settings/billing?status=cancelled`;
 
-    const session = await this.stripe.checkout.sessions.create({
-      mode: "subscription",
+    const buildSessionParams = (customerId?: string) => ({
+      mode: "subscription" as const,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      metadata: {
-        account_id: params.accountId,
-        plan: params.plan,
-      },
+      metadata: { account_id: params.accountId, plan: params.plan },
       subscription_data: {
-        metadata: {
-          account_id: params.accountId,
-          plan: params.plan,
-        },
-        ...(params.isNewCustomer && { trial_period_days: 14 }),
+        metadata: { account_id: params.accountId, plan: params.plan },
+        ...(!customerId && params.isNewCustomer && { trial_period_days: 14 }),
       },
-      ...(params.stripeCustomerId && { customer: params.stripeCustomerId }),
+      ...(customerId ? { customer: customerId } : {}),
     });
+
+    let session;
+    try {
+      session = await this.stripe.checkout.sessions.create(
+        buildSessionParams(params.stripeCustomerId ?? undefined),
+      );
+    } catch (err) {
+      if (
+        err instanceof Stripe.errors.StripeInvalidRequestError &&
+        err.message.includes("No such customer")
+      ) {
+        session = await this.stripe.checkout.sessions.create(
+          buildSessionParams(),
+        );
+      } else {
+        throw err;
+      }
+    }
 
     if (!session.url) {
       throw new Error("Stripe did not return a checkout URL");
