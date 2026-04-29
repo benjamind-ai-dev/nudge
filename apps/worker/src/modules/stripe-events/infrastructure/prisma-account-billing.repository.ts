@@ -42,6 +42,14 @@ export class PrismaAccountBillingRepository implements AccountBillingRepository 
     return row ? this.toDomain(row) : null;
   }
 
+  async findByClerkId(clerkId: string): Promise<AccountBilling | null> {
+    const row = await this.prisma.account.findUnique({
+      where: { clerkId },
+      include: { _count: { select: { businesses: true } } },
+    });
+    return row ? this.toDomain(row) : null;
+  }
+
   async updateBillingState(
     accountId: string,
     params: UpdateBillingStateParams,
