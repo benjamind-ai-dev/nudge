@@ -12,7 +12,7 @@ export function useBillingViewModel() {
   const redirectStatus = searchParams.get("status") as "success" | "cancelled" | null;
 
   const hasActiveSubscription =
-    status?.status === "active" || status?.status === "past_due";
+    status?.has_stripe_customer === true && status.status !== "canceled";
 
   const handleCheckout = useCallback(async (plan: BillingPlan) => {
     setIsCheckingOut(true);

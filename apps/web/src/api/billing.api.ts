@@ -8,6 +8,7 @@ export interface BillingStatus {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   trial_ends_at: string | null;
+  has_stripe_customer: boolean;
 }
 
 export function getBillingStatus(): Promise<{ data: BillingStatus }> {
