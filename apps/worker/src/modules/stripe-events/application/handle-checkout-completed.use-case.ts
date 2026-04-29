@@ -30,7 +30,7 @@ export class HandleCheckoutCompletedUseCase {
     const planFromMeta = session.metadata?.["plan"];
 
     let account = accountIdFromMeta
-      ? await this.accounts.findById(accountIdFromMeta)
+      ? await this.accounts.findByClerkId(accountIdFromMeta)
       : null;
 
     if (!account && session.customer_email) {
