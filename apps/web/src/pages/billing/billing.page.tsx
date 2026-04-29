@@ -67,14 +67,14 @@ export function BillingPage() {
                 <button
                   key={plan.id}
                   onClick={() => vm.handleCheckout(plan.id)}
-                  disabled={vm.isCheckingOut || vm.status?.plan === plan.id}
+                  disabled={vm.isCheckingOut || (vm.status?.plan === plan.id && vm.hasActiveSubscription)}
                   className="rounded-lg border p-4 text-left hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <p className="font-semibold">{plan.label}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {plan.description}
                   </p>
-                  {vm.status?.plan === plan.id && (
+                  {vm.status?.plan === plan.id && vm.hasActiveSubscription && (
                     <p className="text-xs text-primary mt-2 font-medium">
                       Current plan
                     </p>
