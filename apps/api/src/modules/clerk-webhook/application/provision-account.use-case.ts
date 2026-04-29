@@ -1,3 +1,4 @@
+import { addDays } from "date-fns";
 import { Inject, Injectable } from "@nestjs/common";
 import {
   AccountProvisionRepository,
@@ -17,8 +18,7 @@ export class ProvisionAccountUseCase {
     const existing = await this.repo.findByClerkId(clerkId);
     if (existing) return;
 
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+    const trialEndsAt = addDays(new Date(), TRIAL_DAYS);
 
     await this.repo.create({
       clerkId,

@@ -22,6 +22,7 @@
     "@nudge/database": "workspace:*",
     "@nudge/shared": "workspace:*",
     "bullmq": "^5.31.0",
+    "date-fns": "^4.1.0",
     "intuit-oauth": "^4.2.3",
     "ioredis": "^5.4.0",
     "nestjs-pino": "^4.6.1",
