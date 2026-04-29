@@ -17,6 +17,7 @@ import { ConnectionsModule } from "./modules/connections/connections.module";
 import { BusinessModule } from "./modules/business/business.module";
 import { BillingModule } from "./modules/billing/billing.module";
 import { StripeWebhookModule } from "./modules/stripe-webhook/stripe-webhook.module";
+import { ClerkWebhookModule } from "./modules/clerk-webhook/clerk-webhook.module";
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { StripeWebhookModule } from "./modules/stripe-webhook/stripe-webhook.mod
     BusinessModule,
     BillingModule,
     StripeWebhookModule,
+    ClerkWebhookModule,
   ],
 })
 export class AppModule {}
