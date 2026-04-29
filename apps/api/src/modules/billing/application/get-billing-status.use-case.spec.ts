@@ -79,6 +79,7 @@ describe("GetBillingStatusUseCase", () => {
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
         trialEndsAt: TRIAL_ENDS,
+        hasStripeCustomer: false,
       });
       expect(stripeService.getSubscriptionInfo).not.toHaveBeenCalled();
     });
@@ -99,6 +100,7 @@ describe("GetBillingStatusUseCase", () => {
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
         trialEndsAt: TRIAL_ENDS,
+        hasStripeCustomer: true,
       });
     });
   });
@@ -121,6 +123,7 @@ describe("GetBillingStatusUseCase", () => {
         currentPeriodEnd: PERIOD_END,
         cancelAtPeriodEnd: false,
         trialEndsAt: null,
+        hasStripeCustomer: true,
       });
       expect(stripeService.getSubscriptionInfo).toHaveBeenCalledWith("cus_abc");
     });
@@ -143,7 +146,7 @@ describe("GetBillingStatusUseCase", () => {
 
       const result = await useCase.execute("acc-1");
 
-      expect(result.status).toBe("trialing");
+      expect(result.status).toBe("trial");
       expect(result.trialEndsAt).toEqual(trialEnd);
     });
 
