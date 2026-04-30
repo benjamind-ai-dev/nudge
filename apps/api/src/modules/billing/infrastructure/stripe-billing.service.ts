@@ -121,8 +121,8 @@ export class StripeBillingService implements StripeService {
         stripeSubscriptionId,
         { expand: ["items.data.price"] },
       );
-      this.logger.debug({
-        msg: "stripe subscription retrieved",
+      this.logger.warn({
+        msg: "stripe_sub_debug",
         id: retrieved.id,
         status: retrieved.status,
         cancel_at_period_end: retrieved.cancel_at_period_end,
