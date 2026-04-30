@@ -44,6 +44,7 @@ export class GetBillingStatusUseCase {
 
     const stripeInfo = await this.stripe.getSubscriptionInfo(
       account.stripeCustomerId!,
+      account.stripeSubscriptionId,
     );
 
     if (!stripeInfo) {
