@@ -1,4 +1,4 @@
-import { HandleEmailBouncedUseCase } from "./handle-email-bounced.use-case";
+import { HandleEmailComplainedUseCase } from "./handle-email-complained.use-case";
 import type { ResendEventsMessageRepository } from "../domain/resend-events-message.repository";
 import type { ResendEventsSequenceRunRepository } from "../domain/resend-events-sequence-run.repository";
 import type { ResendEventsBusinessRepository } from "../domain/resend-events-business.repository";
@@ -26,8 +26,8 @@ function makeMessageRepo(message = mockMessage): jest.Mocked<ResendEventsMessage
 
 function makeRunRepo(): jest.Mocked<ResendEventsSequenceRunRepository> {
   return {
-    stopRun: jest.fn().mockResolvedValue(undefined),
-    pauseRun: jest.fn(),
+    stopRun: jest.fn(),
+    pauseRun: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -39,18 +39,18 @@ function makeEmailService(): jest.Mocked<EmailService> {
   return { send: jest.fn().mockResolvedValue({ externalMessageId: "re_alert" }) };
 }
 
-describe("HandleEmailBouncedUseCase", () => {
-  it("marks message as bounced, stops the sequence run, and sends alert", async () => {
+describe("HandleEmailComplainedUseCase", () => {
+  it("marks message as failed, pauses the sequence run, and sends alert", async () => {
     const messageRepo = makeMessageRepo();
     const runRepo = makeRunRepo();
     const businessRepo = makeBusinessRepo();
     const emailService = makeEmailService();
 
-    const useCase = new HandleEmailBouncedUseCase(messageRepo, runRepo, businessRepo, emailService);
+    const useCase = new HandleEmailComplainedUseCase(messageRepo, runRepo, businessRepo, emailService);
     await useCase.execute({ externalMessageId: "re_abc" });
 
-    expect(messageRepo.updateStatus).toHaveBeenCalledWith("msg-uuid", "biz-uuid", "bounced");
-    expect(runRepo.stopRun).toHaveBeenCalledWith("run-uuid", "biz-uuid", "email_bounced");
+    expect(messageRepo.updateStatus).toHaveBeenCalledWith("msg-uuid", "biz-uuid", "failed");
+    expect(runRepo.pauseRun).toHaveBeenCalledWith("run-uuid", "biz-uuid", "spam_complaint");
     expect(emailService.send).toHaveBeenCalledWith(
       expect.objectContaining({
         to: "sandra@example.com",
@@ -70,25 +70,12 @@ describe("HandleEmailBouncedUseCase", () => {
     const businessRepo = makeBusinessRepo();
     const emailService = makeEmailService();
 
-    const useCase = new HandleEmailBouncedUseCase(messageRepo, runRepo, businessRepo, emailService);
+    const useCase = new HandleEmailComplainedUseCase(messageRepo, runRepo, businessRepo, emailService);
     await expect(useCase.execute({ externalMessageId: "re_unknown" })).resolves.not.toThrow();
 
     expect(messageRepo.updateStatus).not.toHaveBeenCalled();
-    expect(runRepo.stopRun).not.toHaveBeenCalled();
+    expect(runRepo.pauseRun).not.toHaveBeenCalled();
     expect(emailService.send).not.toHaveBeenCalled();
-  });
-
-  it("does not stop the run when sequenceRunId is null", async () => {
-    const messageRepo = makeMessageRepo({ ...mockMessage, sequenceRunId: undefined as any });
-    const runRepo = makeRunRepo();
-    const businessRepo = makeBusinessRepo();
-    const emailService = makeEmailService();
-
-    const useCase = new HandleEmailBouncedUseCase(messageRepo, runRepo, businessRepo, emailService);
-    await useCase.execute({ externalMessageId: "re_abc" });
-
-    expect(messageRepo.updateStatus).toHaveBeenCalledWith("msg-uuid", "biz-uuid", "bounced");
-    expect(runRepo.stopRun).not.toHaveBeenCalled();
   });
 
   it("does not fail the job when alert email send fails", async () => {
@@ -99,10 +86,10 @@ describe("HandleEmailBouncedUseCase", () => {
       send: jest.fn().mockRejectedValue(new Error("Resend API error")),
     };
 
-    const useCase = new HandleEmailBouncedUseCase(messageRepo, runRepo, businessRepo, emailService);
+    const useCase = new HandleEmailComplainedUseCase(messageRepo, runRepo, businessRepo, emailService);
     await expect(useCase.execute({ externalMessageId: "re_abc" })).resolves.not.toThrow();
 
     expect(messageRepo.updateStatus).toHaveBeenCalled();
-    expect(runRepo.stopRun).toHaveBeenCalled();
+    expect(runRepo.pauseRun).toHaveBeenCalled();
   });
 });
