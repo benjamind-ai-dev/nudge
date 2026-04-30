@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Stripe from "stripe";
 import { Env } from "../../../common/config/env.schema";
@@ -14,6 +14,7 @@ import { BillingPlan } from "../domain/billing.entity";
 
 @Injectable()
 export class StripeBillingService implements StripeService {
+  private readonly logger = new Logger(StripeBillingService.name);
   private readonly stripe: InstanceType<typeof Stripe>;
   private readonly priceMap: Record<BillingPlan, string>;
   private readonly planFromPrice: Record<string, BillingPlan>;
@@ -120,6 +121,12 @@ export class StripeBillingService implements StripeService {
         stripeSubscriptionId,
         { expand: ["items.data.price"] },
       );
+      this.logger.debug({
+        msg: "stripe subscription retrieved",
+        id: retrieved.id,
+        status: retrieved.status,
+        cancel_at_period_end: retrieved.cancel_at_period_end,
+      });
       if (retrieved.status !== "canceled") sub = retrieved as unknown as Sub;
     }
 
