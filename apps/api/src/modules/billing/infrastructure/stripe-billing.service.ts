@@ -110,6 +110,7 @@ export class StripeBillingService implements StripeService {
     type Sub = {
       status: string;
       cancel_at_period_end: boolean;
+      cancel_at: number | null;
       trial_end: number | null;
       items: { data: { price?: { id: string } | null; current_period_end?: number }[] };
     };
@@ -126,6 +127,7 @@ export class StripeBillingService implements StripeService {
         id: retrieved.id,
         status: retrieved.status,
         cancel_at_period_end: retrieved.cancel_at_period_end,
+        cancel_at: retrieved.cancel_at,
       });
       if (retrieved.status !== "canceled") sub = retrieved as unknown as Sub;
     }
@@ -156,7 +158,9 @@ export class StripeBillingService implements StripeService {
       plan,
       status: sub.status,
       currentPeriodEnd: periodEnd != null ? new Date(periodEnd * 1000) : null,
-      cancelAtPeriodEnd: sub.cancel_at_period_end,
+      // Stripe portal sets cancel_at (specific timestamp) instead of cancel_at_period_end
+      // in flexible billing mode — treat either as "scheduled to cancel"
+      cancelAtPeriodEnd: sub.cancel_at_period_end || sub.cancel_at != null,
       trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
     };
   }
