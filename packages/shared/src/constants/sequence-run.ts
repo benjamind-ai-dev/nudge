@@ -4,10 +4,18 @@ export const STOPPED_REASONS = {
   CLIENT_REPLIED: "client_replied",
   MANUALLY_STOPPED: "manually_stopped",
   SUBSCRIPTION_CANCELLED: "subscription_cancelled",
+  EMAIL_BOUNCED: "email_bounced",
 } as const;
 
 export type StoppedReason =
   (typeof STOPPED_REASONS)[keyof typeof STOPPED_REASONS];
+
+export const PAUSED_REASONS = {
+  SPAM_COMPLAINT: "spam_complaint",
+} as const;
+
+export type PausedReason =
+  (typeof PAUSED_REASONS)[keyof typeof PAUSED_REASONS];
 
 export const SEQUENCE_RUN_STATUSES = {
   ACTIVE: "active",

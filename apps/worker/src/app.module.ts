@@ -15,6 +15,7 @@ import { MessageSendModule } from "./modules/message-send/message-send.module";
 import { DeadLetterMonitorModule } from "./modules/dead-letter-monitor/dead-letter-monitor.module";
 import { DaysRecalcModule } from "./modules/days-recalc/days-recalc.module";
 import { StripeEventsModule } from "./modules/stripe-events/stripe-events.module";
+import { ResendEventsModule } from "./modules/resend-events/resend-events.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { StripeEventsModule } from "./modules/stripe-events/stripe-events.module
     DeadLetterMonitorModule,
     DaysRecalcModule,
     StripeEventsModule,
+    ResendEventsModule,
   ],
 })
 export class AppModule {}

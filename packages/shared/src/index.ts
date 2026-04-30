@@ -24,6 +24,8 @@ export { encrypt, decrypt } from "./crypto/encrypt";
 export {
   STOPPED_REASONS,
   type StoppedReason,
+  PAUSED_REASONS,
+  type PausedReason,
   SEQUENCE_RUN_STATUSES,
   type SequenceRunStatus,
 } from "./constants/sequence-run";

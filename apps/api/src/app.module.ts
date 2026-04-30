@@ -18,6 +18,7 @@ import { BusinessModule } from "./modules/business/business.module";
 import { BillingModule } from "./modules/billing/billing.module";
 import { StripeWebhookModule } from "./modules/stripe-webhook/stripe-webhook.module";
 import { ClerkWebhookModule } from "./modules/clerk-webhook/clerk-webhook.module";
+import { ResendWebhookModule } from "./modules/resend-webhook/resend-webhook.module";
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { ClerkWebhookModule } from "./modules/clerk-webhook/clerk-webhook.module
     BillingModule,
     StripeWebhookModule,
     ClerkWebhookModule,
+    ResendWebhookModule,
   ],
 })
 export class AppModule {}
