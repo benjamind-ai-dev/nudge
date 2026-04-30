@@ -126,11 +126,13 @@ export class StripeBillingService implements StripeService {
     if (!sub) {
       const list = await this.stripe.subscriptions.list({
         customer: stripeCustomerId,
-        limit: 1,
+        limit: 10,
         status: "all",
         expand: ["data.items.data.price"],
       });
-      sub = (list.data[0] as unknown as Sub) ?? null;
+      sub =
+        (list.data.find((s) => s.status !== "canceled") as unknown as Sub) ??
+        null;
     }
 
     if (!sub) return null;
