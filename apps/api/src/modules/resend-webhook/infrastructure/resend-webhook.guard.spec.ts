@@ -1,6 +1,7 @@
 import { ExecutionContext, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Webhook } from "svix";
+import type { Env } from "../../../common/config/env.schema";
 import { ResendWebhookGuard, RESEND_EVENTS_KEY } from "./resend-webhook.guard";
 
 const TEST_SECRET = "whsec_MfKQ9r8GKYqrTwjUPZB8TDgpZv+7t4gQdMqNBfWGGlc=";
@@ -38,7 +39,7 @@ describe("ResendWebhookGuard", () => {
   beforeEach(() => {
     const config = {
       get: () => TEST_SECRET,
-    } as unknown as ConfigService;
+    } as unknown as ConfigService<Env, true>;
     guard = new ResendWebhookGuard(config);
   });
 
@@ -79,6 +80,23 @@ describe("ResendWebhookGuard", () => {
       "svix-timestamp": "1234567890",
       "svix-signature": "v1,sig",
     });
+
+    expect(() => guard.canActivate(ctx)).toThrow(BadRequestException);
+  });
+
+  it("throws BadRequestException when rawBody is undefined", () => {
+    const req = {
+      rawBody: undefined,
+      headers: {
+        "svix-id": "msg_test",
+        "svix-timestamp": "1234567890",
+        "svix-signature": "v1,sig",
+      },
+    } as unknown;
+
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => req }),
+    } as ExecutionContext;
 
     expect(() => guard.canActivate(ctx)).toThrow(BadRequestException);
   });
