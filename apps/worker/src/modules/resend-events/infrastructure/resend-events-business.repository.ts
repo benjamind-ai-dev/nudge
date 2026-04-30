@@ -15,7 +15,7 @@ export class PrismaResendEventsBusinessRepository
   ) {}
 
   async findWithOwner(businessId: string): Promise<BusinessWithOwner | null> {
-    const business = await this.prisma.business.findFirst({
+    const business = await this.prisma.business.findUnique({
       where: { id: businessId },
       select: {
         name: true,

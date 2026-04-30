@@ -1,10 +1,10 @@
 import { HandleEmailBouncedUseCase } from "./handle-email-bounced.use-case";
-import type { ResendEventsMessageRepository } from "../domain/resend-events-message.repository";
+import type { MessageRecord, ResendEventsMessageRepository } from "../domain/resend-events-message.repository";
 import type { ResendEventsSequenceRunRepository } from "../domain/resend-events-sequence-run.repository";
 import type { ResendEventsBusinessRepository } from "../domain/resend-events-business.repository";
 import type { EmailService } from "../../message-send/domain/email.service";
 
-const mockMessage = {
+const mockMessage: MessageRecord = {
   id: "msg-uuid",
   businessId: "biz-uuid",
   sequenceRunId: "run-uuid",
@@ -79,7 +79,7 @@ describe("HandleEmailBouncedUseCase", () => {
   });
 
   it("does not stop the run when sequenceRunId is null", async () => {
-    const messageRepo = makeMessageRepo({ ...mockMessage, sequenceRunId: undefined as any });
+    const messageRepo = makeMessageRepo({ ...mockMessage, sequenceRunId: null });
     const runRepo = makeRunRepo();
     const businessRepo = makeBusinessRepo();
     const emailService = makeEmailService();

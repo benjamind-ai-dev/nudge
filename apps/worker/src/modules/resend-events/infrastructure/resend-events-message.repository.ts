@@ -16,6 +16,8 @@ export class PrismaResendEventsMessageRepository
   ) {}
 
   async findByExternalId(externalMessageId: string): Promise<MessageRecord | null> {
+    // Cross-tenant read: Resend events carry only the external ID, not businessId.
+    // businessId is extracted from the returned record and used for all subsequent writes.
     const row = await this.prisma.message.findFirst({
       where: { externalMessageId },
       select: {
