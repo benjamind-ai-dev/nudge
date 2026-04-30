@@ -125,7 +125,7 @@ describe("GetBillingStatusUseCase", () => {
         trialEndsAt: null,
         hasStripeCustomer: true,
       });
-      expect(stripeService.getSubscriptionInfo).toHaveBeenCalledWith("cus_abc");
+      expect(stripeService.getSubscriptionInfo).toHaveBeenCalledWith("cus_abc", null);
     });
 
     it("reflects cancel_at_period_end when user is cancelling", async () => {

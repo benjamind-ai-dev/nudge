@@ -104,23 +104,41 @@ export class StripeBillingService implements StripeService {
 
   async getSubscriptionInfo(
     stripeCustomerId: string,
+    stripeSubscriptionId?: string | null,
   ): Promise<StripeSubscriptionInfo | null> {
-    const subscriptions = await this.stripe.subscriptions.list({
-      customer: stripeCustomerId,
-      limit: 1,
-      status: "all",
-      expand: ["data.items.data.price"],
-    });
+    type Sub = {
+      status: string;
+      cancel_at_period_end: boolean;
+      trial_end: number | null;
+      items: { data: { price?: { id: string } | null; current_period_end?: number }[] };
+    };
 
-    const subscription = subscriptions.data[0];
-    if (!subscription) {
-      return null;
+    let sub: Sub | null = null;
+
+    if (stripeSubscriptionId) {
+      const retrieved = await this.stripe.subscriptions.retrieve(
+        stripeSubscriptionId,
+        { expand: ["items.data.price"] },
+      );
+      if (retrieved.status !== "canceled") sub = retrieved as unknown as Sub;
     }
 
-    const item = subscription.items.data[0];
-    const price = item?.price;
-    const priceId =
-      typeof price === "object" && price !== null ? price.id : null;
+    if (!sub) {
+      const list = await this.stripe.subscriptions.list({
+        customer: stripeCustomerId,
+        limit: 10,
+        status: "all",
+        expand: ["data.items.data.price"],
+      });
+      sub =
+        (list.data.find((s) => s.status !== "canceled") as unknown as Sub) ??
+        null;
+    }
+
+    if (!sub) return null;
+
+    const item = sub.items.data[0];
+    const priceId = item?.price?.id ?? null;
     const plan = priceId ? (this.planFromPrice[priceId] ?? null) : null;
 
     // In Stripe API 2026-03-25.dahlia, current_period_end moved from
@@ -129,12 +147,10 @@ export class StripeBillingService implements StripeService {
 
     return {
       plan,
-      status: subscription.status,
+      status: sub.status,
       currentPeriodEnd: periodEnd != null ? new Date(periodEnd * 1000) : null,
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      trialEnd: subscription.trial_end
-        ? new Date(subscription.trial_end * 1000)
-        : null,
+      cancelAtPeriodEnd: sub.cancel_at_period_end,
+      trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
     };
   }
 }

@@ -39,6 +39,7 @@ export interface StripeService {
 
   getSubscriptionInfo(
     stripeCustomerId: string,
+    stripeSubscriptionId?: string | null,
   ): Promise<StripeSubscriptionInfo | null>;
 }
 
