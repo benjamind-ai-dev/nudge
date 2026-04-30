@@ -14,6 +14,7 @@ describe("STOPPED_REASONS", () => {
       CLIENT_REPLIED: "client_replied",
       MANUALLY_STOPPED: "manually_stopped",
       SUBSCRIPTION_CANCELLED: "subscription_cancelled",
+      EMAIL_BOUNCED: "email_bounced",
     });
   });
 
@@ -24,8 +25,9 @@ describe("STOPPED_REASONS", () => {
       "client_replied",
       "manually_stopped",
       "subscription_cancelled",
+      "email_bounced",
     ];
-    expect(values).toHaveLength(5);
+    expect(values).toHaveLength(6);
   });
 });
 
