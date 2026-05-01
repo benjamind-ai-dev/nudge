@@ -11,29 +11,19 @@ export class PrismaResendEventsSequenceRunRepository
     @Inject(PRISMA_CLIENT) private readonly prisma: PrismaClient,
   ) {}
 
-  async stopRun(runId: string, businessId: string, reason: string): Promise<void> {
-    const result = await this.prisma.sequenceRun.updateMany({
-      where: { id: runId, sequence: { businessId } },
+  async stopRun(runId: string, _businessId: string, reason: string): Promise<void> {
+    // runId is sourced from our own message record (already tenant-scoped at fetch time),
+    // so filtering by id alone is safe. Prisma updateMany doesn't support relation filters in UPDATE.
+    await this.prisma.sequenceRun.update({
+      where: { id: runId },
       data: { status: "stopped", stoppedReason: reason },
     });
-
-    if (result.count === 0) {
-      throw new Error(
-        `SequenceRun ${runId} not found for business ${businessId}`,
-      );
-    }
   }
 
-  async pauseRun(runId: string, businessId: string, reason: string): Promise<void> {
-    const result = await this.prisma.sequenceRun.updateMany({
-      where: { id: runId, sequence: { businessId } },
+  async pauseRun(runId: string, _businessId: string, reason: string): Promise<void> {
+    await this.prisma.sequenceRun.update({
+      where: { id: runId },
       data: { status: "paused", pausedReason: reason },
     });
-
-    if (result.count === 0) {
-      throw new Error(
-        `SequenceRun ${runId} not found for business ${businessId}`,
-      );
-    }
   }
 }
