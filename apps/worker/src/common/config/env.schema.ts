@@ -14,6 +14,7 @@ export const envSchema = z.object({
     .optional(),
   APP_BASE_URL: z.string().url(),
   RESEND_API_KEY: z.string().min(1),
+  RESEND_INBOUND_ADDRESS: z.string().email(),
   NOTIFICATIONS_EMAIL: z.string().email(),
   TWILIO_ACCOUNT_SID: z.string().startsWith("AC"),
   TWILIO_AUTH_TOKEN: z.string().min(1),

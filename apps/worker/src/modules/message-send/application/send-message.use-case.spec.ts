@@ -89,7 +89,7 @@ describe("SendMessageUseCase", () => {
       expect.objectContaining({
         to: "sarah@acme.com",
         from: "Bob Smith <notifications@paynudge.net>",
-        replyTo: "bob@bobsplumbing.com",
+        replyTo: "notifications@paynudge.net",
       }),
     );
     expect(repo.createMessage).toHaveBeenCalledWith(
