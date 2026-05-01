@@ -291,7 +291,7 @@ export class SendMessageUseCase {
     const notificationsEmail = this.config.get("NOTIFICATIONS_EMAIL", { infer: true });
     const sendResult = await this.emailService.send({
       from: `${run.businessSenderName} <${notificationsEmail}>`,
-      replyTo: run.businessSenderEmail,
+      replyTo: this.config.get("RESEND_INBOUND_ADDRESS", { infer: true }),
       to: recipientEmail,
       subject,
       html: body,
