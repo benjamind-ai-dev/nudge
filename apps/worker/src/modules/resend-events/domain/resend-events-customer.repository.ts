@@ -1,6 +1,7 @@
 export interface ActiveRunForCustomer {
   runId: string;
   businessId: string;
+  companyName: string;
 }
 
 export interface ResendEventsCustomerRepository {

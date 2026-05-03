@@ -24,13 +24,19 @@ export class PrismaResendEventsCustomerRepository
       },
       select: {
         id: true,
-        invoice: { select: { businessId: true } },
+        invoice: {
+          select: {
+            businessId: true,
+            customer: { select: { companyName: true } },
+          },
+        },
       },
     });
 
     return runs.map((run) => ({
       runId: run.id,
       businessId: run.invoice.businessId,
+      companyName: run.invoice.customer.companyName,
     }));
   }
 }
