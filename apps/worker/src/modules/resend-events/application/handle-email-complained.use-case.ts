@@ -17,7 +17,7 @@ import {
   EMAIL_SERVICE,
 } from "../../message-send/domain/email.service";
 
-const ALERTS_FROM = "Nudge <alerts@nudge.co>";
+const ALERTS_FROM = "Nudge <alerts@paynudge.net>";
 
 export interface HandleEmailComplainedInput {
   externalMessageId: string;
