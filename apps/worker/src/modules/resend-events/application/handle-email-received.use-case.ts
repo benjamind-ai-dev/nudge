@@ -39,29 +39,7 @@ export class HandleEmailReceivedUseCase {
   ) {}
 
   async execute(input: HandleEmailReceivedInput): Promise<void> {
-    this.logger.log({
-      msg: "Handling email.received event",
-      event: "email_received_handling",
-      fromEmail: input.fromEmail,
-    });
-
-    let runs;
-    try {
-      runs = await this.customerRepo.findActiveRunsByContactEmail(input.fromEmail);
-    } catch (err) {
-      this.logger.error({
-        msg: "findActiveRunsByContactEmail threw",
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      throw err;
-    }
-
-    this.logger.log({
-      msg: "findActiveRunsByContactEmail result",
-      count: runs.length,
-      fromEmail: input.fromEmail,
-    });
+    const runs = await this.customerRepo.findActiveRunsByContactEmail(input.fromEmail);
 
     if (runs.length === 0) {
       this.logger.warn({
@@ -72,17 +50,9 @@ export class HandleEmailReceivedUseCase {
     }
 
     for (const run of runs) {
-      this.logger.log({ msg: "stopping run", runId: run.runId, businessId: run.businessId });
-      try {
-        await this.runRepo.stopRun(run.runId, run.businessId, STOPPED_REASONS.CLIENT_REPLIED);
-      } catch (err) {
-        this.logger.log({ msg: "stopRun threw", error: err instanceof Error ? err.message : String(err), runId: run.runId });
-        throw err;
-      }
-      this.logger.log({ msg: "run stopped, fetching business", runId: run.runId });
+      await this.runRepo.stopRun(run.runId, run.businessId, STOPPED_REASONS.CLIENT_REPLIED);
 
       const business = await this.businessRepo.findWithOwner(run.businessId);
-      this.logger.log({ msg: "business fetched", runId: run.runId, found: !!business });
 
       if (business) {
         try {
@@ -105,6 +75,7 @@ export class HandleEmailReceivedUseCase {
 
     this.logger.log({
       msg: "Sequence runs stopped due to customer reply",
+      event: "client_replied",
       fromEmail: input.fromEmail,
       stoppedCount: runs.length,
     });

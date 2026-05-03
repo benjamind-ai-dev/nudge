@@ -105,13 +105,11 @@ export class ResendEventsProcessor extends WorkerHost {
 
       case "email.received": {
         const from = event.data.from;
-        this.logger.log({ msg: "email.received dispatching", from });
         if (!from) {
           this.logger.warn({ msg: "email.received missing data.from — skipping" });
           break;
         }
         const senderEmail = from.includes("<") ? from.split("<")[1].replace(">", "").trim() : from.trim();
-        this.logger.log({ msg: "email.received parsed sender", senderEmail });
         await this.handleReceived.execute({ fromEmail: senderEmail });
         break;
       }
