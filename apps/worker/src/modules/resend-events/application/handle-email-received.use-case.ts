@@ -45,7 +45,17 @@ export class HandleEmailReceivedUseCase {
       fromEmail: input.fromEmail,
     });
 
-    const runs = await this.customerRepo.findActiveRunsByContactEmail(input.fromEmail);
+    let runs;
+    try {
+      runs = await this.customerRepo.findActiveRunsByContactEmail(input.fromEmail);
+    } catch (err) {
+      this.logger.error({
+        msg: "findActiveRunsByContactEmail threw",
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      throw err;
+    }
 
     if (runs.length === 0) {
       this.logger.warn({
