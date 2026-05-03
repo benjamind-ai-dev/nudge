@@ -8,12 +8,14 @@ import { HandleEmailClickedUseCase } from "./application/handle-email-clicked.us
 import { HandleEmailBouncedUseCase } from "./application/handle-email-bounced.use-case";
 import { HandleEmailComplainedUseCase } from "./application/handle-email-complained.use-case";
 import { HandleEmailFailedUseCase } from "./application/handle-email-failed.use-case";
+import { HandleEmailReceivedUseCase } from "./application/handle-email-received.use-case";
 
 interface ResendEvent {
   type: string;
   created_at: string;
   data: {
     email_id?: string;
+    from?: string;
   };
 }
 
@@ -29,6 +31,7 @@ export class ResendEventsProcessor extends WorkerHost {
     private readonly handleBounced: HandleEmailBouncedUseCase,
     private readonly handleComplained: HandleEmailComplainedUseCase,
     private readonly handleFailed: HandleEmailFailedUseCase,
+    private readonly handleReceived: HandleEmailReceivedUseCase,
   ) {
     super();
   }
@@ -43,6 +46,11 @@ export class ResendEventsProcessor extends WorkerHost {
     });
 
     for (const rawEvent of events) {
+      if (rawEvent?.type === "email.received") {
+        await this.dispatchEvent(rawEvent, "");
+        continue;
+      }
+
       const emailId = rawEvent?.data?.email_id;
 
       if (!emailId) {
@@ -94,6 +102,17 @@ export class ResendEventsProcessor extends WorkerHost {
       case "email.failed":
         await this.handleFailed.execute({ externalMessageId: emailId });
         break;
+
+      case "email.received": {
+        const from = event.data.from;
+        if (!from) {
+          this.logger.warn({ msg: "email.received missing data.from — skipping" });
+          break;
+        }
+        const senderEmail = from.includes("<") ? from.split("<")[1].replace(">", "").trim() : from.trim();
+        await this.handleReceived.execute({ fromEmail: senderEmail });
+        break;
+      }
 
       default:
         this.logger.warn({

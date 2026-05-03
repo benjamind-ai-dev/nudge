@@ -5,6 +5,7 @@ import type { HandleEmailClickedUseCase } from "./application/handle-email-click
 import type { HandleEmailBouncedUseCase } from "./application/handle-email-bounced.use-case";
 import type { HandleEmailComplainedUseCase } from "./application/handle-email-complained.use-case";
 import type { HandleEmailFailedUseCase } from "./application/handle-email-failed.use-case";
+import type { HandleEmailReceivedUseCase } from "./application/handle-email-received.use-case";
 import type { Job } from "bullmq";
 import type { ResendEventsJobData } from "@nudge/shared";
 
@@ -16,6 +17,7 @@ function makeUseCases() {
     bounced: { execute: jest.fn().mockResolvedValue(undefined) } as unknown as HandleEmailBouncedUseCase,
     complained: { execute: jest.fn().mockResolvedValue(undefined) } as unknown as HandleEmailComplainedUseCase,
     failed: { execute: jest.fn().mockResolvedValue(undefined) } as unknown as HandleEmailFailedUseCase,
+    received: { execute: jest.fn().mockResolvedValue(undefined) } as unknown as HandleEmailReceivedUseCase,
   };
 }
 
@@ -26,7 +28,7 @@ function makeJob(events: unknown[]): Job<ResendEventsJobData> {
 describe("ResendEventsProcessor", () => {
   it("calls HandleEmailDeliveredUseCase for email.delivered", async () => {
     const uc = makeUseCases();
-    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed);
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
 
     await processor.process(makeJob([{ type: "email.delivered", created_at: "2024-01-01T00:00:00.000Z", data: { email_id: "re_abc" } }]));
 
@@ -35,7 +37,7 @@ describe("ResendEventsProcessor", () => {
 
   it("calls HandleEmailOpenedUseCase for email.opened", async () => {
     const uc = makeUseCases();
-    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed);
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
     const createdAt = "2024-01-01T12:00:00.000Z";
 
     await processor.process(makeJob([{ type: "email.opened", created_at: createdAt, data: { email_id: "re_abc" } }]));
@@ -45,7 +47,7 @@ describe("ResendEventsProcessor", () => {
 
   it("calls HandleEmailClickedUseCase for email.clicked", async () => {
     const uc = makeUseCases();
-    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed);
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
     const createdAt = "2024-01-01T12:05:00.000Z";
 
     await processor.process(makeJob([{ type: "email.clicked", created_at: createdAt, data: { email_id: "re_abc" } }]));
@@ -55,7 +57,7 @@ describe("ResendEventsProcessor", () => {
 
   it("calls HandleEmailBouncedUseCase for email.bounced", async () => {
     const uc = makeUseCases();
-    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed);
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
 
     await processor.process(makeJob([{ type: "email.bounced", created_at: "2024-01-01T00:00:00.000Z", data: { email_id: "re_abc" } }]));
 
@@ -64,7 +66,7 @@ describe("ResendEventsProcessor", () => {
 
   it("calls HandleEmailComplainedUseCase for email.complained", async () => {
     const uc = makeUseCases();
-    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed);
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
 
     await processor.process(makeJob([{ type: "email.complained", created_at: "2024-01-01T00:00:00.000Z", data: { email_id: "re_abc" } }]));
 
@@ -73,16 +75,34 @@ describe("ResendEventsProcessor", () => {
 
   it("calls HandleEmailFailedUseCase for email.failed", async () => {
     const uc = makeUseCases();
-    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed);
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
 
     await processor.process(makeJob([{ type: "email.failed", created_at: "2024-01-01T00:00:00.000Z", data: { email_id: "re_abc" } }]));
 
     expect(uc.failed.execute).toHaveBeenCalledWith({ externalMessageId: "re_abc" });
   });
 
+  it("calls HandleEmailReceivedUseCase for email.received", async () => {
+    const uc = makeUseCases();
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
+
+    await processor.process(makeJob([{ type: "email.received", created_at: "2024-01-01T00:00:00.000Z", data: { from: "customer@acme.com" } }]));
+
+    expect(uc.received.execute).toHaveBeenCalledWith({ fromEmail: "customer@acme.com" });
+  });
+
+  it("parses display-name format from email.received", async () => {
+    const uc = makeUseCases();
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
+
+    await processor.process(makeJob([{ type: "email.received", created_at: "2024-01-01T00:00:00.000Z", data: { from: "John Smith <john@acme.com>" } }]));
+
+    expect(uc.received.execute).toHaveBeenCalledWith({ fromEmail: "john@acme.com" });
+  });
+
   it("skips events with unknown type without throwing", async () => {
     const uc = makeUseCases();
-    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed);
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
 
     await expect(processor.process(makeJob([{ type: "email.unknown_future_type", created_at: "2024-01-01T00:00:00.000Z", data: { email_id: "re_abc" } }]))).resolves.not.toThrow();
 
@@ -92,7 +112,7 @@ describe("ResendEventsProcessor", () => {
 
   it("skips events with missing data.email_id without throwing", async () => {
     const uc = makeUseCases();
-    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed);
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
 
     await expect(processor.process(makeJob([{ type: "email.delivered", created_at: "2024-01-01T00:00:00.000Z", data: {} }]))).resolves.not.toThrow();
 
@@ -101,7 +121,7 @@ describe("ResendEventsProcessor", () => {
 
   it("processes all events in a batch", async () => {
     const uc = makeUseCases();
-    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed);
+    const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
 
     await processor.process(makeJob([
       { type: "email.delivered", created_at: "2024-01-01T00:00:00.000Z", data: { email_id: "re_1" } },
