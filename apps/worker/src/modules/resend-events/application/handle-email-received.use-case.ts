@@ -39,6 +39,12 @@ export class HandleEmailReceivedUseCase {
   ) {}
 
   async execute(input: HandleEmailReceivedInput): Promise<void> {
+    this.logger.log({
+      msg: "Handling email.received event",
+      event: "email_received_handling",
+      fromEmail: input.fromEmail,
+    });
+
     const runs = await this.customerRepo.findActiveRunsByContactEmail(input.fromEmail);
 
     if (runs.length === 0) {
