@@ -57,6 +57,12 @@ export class HandleEmailReceivedUseCase {
       throw err;
     }
 
+    this.logger.log({
+      msg: "findActiveRunsByContactEmail result",
+      count: runs.length,
+      fromEmail: input.fromEmail,
+    });
+
     if (runs.length === 0) {
       this.logger.warn({
         msg: "No active runs found for reply sender — skipping",
