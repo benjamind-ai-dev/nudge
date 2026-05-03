@@ -72,9 +72,17 @@ export class HandleEmailReceivedUseCase {
     }
 
     for (const run of runs) {
-      await this.runRepo.stopRun(run.runId, run.businessId, STOPPED_REASONS.CLIENT_REPLIED);
+      this.logger.log({ msg: "stopping run", runId: run.runId, businessId: run.businessId });
+      try {
+        await this.runRepo.stopRun(run.runId, run.businessId, STOPPED_REASONS.CLIENT_REPLIED);
+      } catch (err) {
+        this.logger.log({ msg: "stopRun threw", error: err instanceof Error ? err.message : String(err), runId: run.runId });
+        throw err;
+      }
+      this.logger.log({ msg: "run stopped, fetching business", runId: run.runId });
 
       const business = await this.businessRepo.findWithOwner(run.businessId);
+      this.logger.log({ msg: "business fetched", runId: run.runId, found: !!business });
 
       if (business) {
         try {
