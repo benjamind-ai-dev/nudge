@@ -1,20 +1,16 @@
 export class NoActiveSequenceError extends Error {
   constructor(
-    public readonly tierId: string,
-    public readonly tierName: string,
+    public readonly customerId: string,
     public readonly businessId: string,
   ) {
-    super(`No active sequence for tier "${tierName}" (${tierId}), business ${businessId}`);
+    super(`No sequence configured for customer ${customerId} in business ${businessId}`);
     this.name = "NoActiveSequenceError";
   }
 }
 
-export class NoTierError extends Error {
-  constructor(
-    public readonly customerId: string,
-    public readonly businessId: string,
-  ) {
-    super(`Customer ${customerId} has no tier and business ${businessId} has no default tier`);
-    this.name = "NoTierError";
+export class NoStepsError extends Error {
+  constructor(public readonly sequenceId: string) {
+    super(`Sequence ${sequenceId} has no steps`);
+    this.name = "NoStepsError";
   }
 }

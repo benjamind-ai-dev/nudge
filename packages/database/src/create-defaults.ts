@@ -312,7 +312,6 @@ export async function createDefaultTiersAndSequences(
         businessId,
         relationshipTierId: standardTier.id,
         name: "Standard Follow-Up",
-        isActive: true,
       },
     });
 
@@ -321,7 +320,6 @@ export async function createDefaultTiersAndSequences(
         businessId,
         relationshipTierId: vipTier.id,
         name: "VIP Follow-Up",
-        isActive: true,
       },
     });
 
@@ -347,6 +345,16 @@ export async function createDefaultTiersAndSequences(
         bodyTemplate: step.bodyTemplate,
         isOwnerAlert: step.isOwnerAlert,
       })),
+    });
+
+    await tx.relationshipTier.update({
+      where: { id: standardTier.id },
+      data: { sequenceId: standardSequence.id },
+    });
+
+    await tx.relationshipTier.update({
+      where: { id: vipTier.id },
+      data: { sequenceId: vipSequence.id },
     });
   });
 }

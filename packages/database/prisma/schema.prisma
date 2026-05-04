@@ -115,6 +115,7 @@ model Customer {
   contactEmail       String?   @map("contact_email") @db.VarChar(255)
   contactPhone       String?   @map("contact_phone") @db.VarChar(50)
   relationshipTierId String?   @map("relationship_tier_id") @db.Uuid
+  sequenceId         String?   @map("sequence_id") @db.Uuid
   paymentTerms       String?   @map("payment_terms") @db.VarChar(50)
   avgDaysToPay       Decimal?  @map("avg_days_to_pay") @db.Decimal(8, 2)
   totalOutstanding   Int       @default(0) @map("total_outstanding")
@@ -125,6 +126,7 @@ model Customer {
 
   business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
   relationshipTier RelationshipTier? @relation(fields: [relationshipTierId], references: [id], onDelete: SetNull)
+  sequence         Sequence?         @relation("CustomerSequenceOverride", fields: [sequenceId], references: [id], onDelete: SetNull)
   invoices         Invoice[]
   messages         Message[]
 
@@ -175,6 +177,7 @@ model Invoice {
 model RelationshipTier {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   businessId  String   @map("business_id") @db.Uuid
+  sequenceId  String?  @map("sequence_id") @db.Uuid
   name        String   @db.VarChar(100)
   description String?  @db.Text
   isDefault   Boolean  @default(false) @map("is_default")
@@ -183,8 +186,9 @@ model RelationshipTier {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   business  Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sequence  Sequence?  @relation("TierDefaultSequence", fields: [sequenceId], references: [id], onDelete: SetNull)
   customers Customer[]
-  sequences Sequence[]
+  sequences Sequence[] @relation("SequenceTierMembership")
 
   @@map("relationship_tiers")
 }
@@ -195,16 +199,17 @@ model RelationshipTier {
 model Sequence {
   id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   businessId         String   @map("business_id") @db.Uuid
-  relationshipTierId String   @map("relationship_tier_id") @db.Uuid
+  relationshipTierId String?  @map("relationship_tier_id") @db.Uuid
   name               String   @db.VarChar(255)
-  isActive           Boolean  @default(true) @map("is_active")
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  business         Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  relationshipTier RelationshipTier @relation(fields: [relationshipTierId], references: [id], onDelete: Cascade)
-  steps            SequenceStep[]
-  runs             SequenceRun[]
+  business                 Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  relationshipTier         RelationshipTier? @relation("SequenceTierMembership", fields: [relationshipTierId], references: [id], onDelete: SetNull)
+  tiersUsingAsDefault      RelationshipTier[] @relation("TierDefaultSequence")
+  customersUsingAsOverride Customer[]         @relation("CustomerSequenceOverride")
+  steps                    SequenceStep[]
+  runs                     SequenceRun[]
 
   @@map("sequences")
 }

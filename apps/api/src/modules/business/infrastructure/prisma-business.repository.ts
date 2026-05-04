@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaClient } from "@nudge/database";
+import { PrismaClient, createDefaultTiersAndSequences } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import {
   type BusinessRepository,
@@ -101,6 +101,9 @@ export class PrismaBusinessRepository implements BusinessRepository {
       },
       select: BUSINESS_WITH_CONNECTIONS_SELECT,
     });
+
+    await createDefaultTiersAndSequences(this.prisma, row.id);
+
     return toBusinessWithConnections(row);
   }
 
