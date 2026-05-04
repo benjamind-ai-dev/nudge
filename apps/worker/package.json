@@ -11,6 +11,7 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.74",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
@@ -18,10 +19,11 @@
     "@nudge/connections-domain": "workspace:*",
     "@nudge/database": "workspace:*",
     "@nudge/shared": "workspace:*",
+    "ai": "^6.0.174",
     "bullmq": "^5.31.0",
     "date-fns": "^4.1.0",
-    "handlebars": "^4.7.8",
     "date-fns-tz": "^3.2.0",
+    "handlebars": "^4.7.8",
     "intuit-oauth": "^4.2.3",
     "ioredis": "^5.4.0",
     "nestjs-pino": "^4.6.1",
