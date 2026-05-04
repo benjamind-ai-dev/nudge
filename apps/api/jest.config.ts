@@ -8,8 +8,6 @@ const config: Config = {
     "^.+\\.ts$": "ts-jest",
   },
   testEnvironment: "node",
-  maxWorkers: 2,
-  workerIdleMemoryLimit: "512MB",
 };
 
 export default config;
