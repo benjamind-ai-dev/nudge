@@ -121,6 +121,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @nudge/database db:push
       - run: pnpm turbo test --filter=@nudge/api --filter=@nudge/worker
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
 
   test-web:
     name: Test Web & Shared
