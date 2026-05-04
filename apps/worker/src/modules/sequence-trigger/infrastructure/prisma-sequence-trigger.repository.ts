@@ -78,17 +78,16 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
     return tier;
   }
 
-  async findActiveSequenceForTier(tierId: string): Promise<TierWithSequence | null> {
+  async findActiveSequenceForTier(tierId: string, businessId: string): Promise<TierWithSequence | null> {
     const sequence = await this.prisma.sequence.findFirst({
       where: {
         relationshipTierId: tierId,
-        isActive: true,
+        businessId: businessId,
       },
       select: {
         id: true,
-        relationshipTier: {
-          select: { id: true, name: true },
-        },
+        relationshipTierId: true,
+        name: true,
         steps: {
           select: { id: true, delayDays: true },
           orderBy: { stepOrder: "asc" },
@@ -101,9 +100,19 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
       return null;
     }
 
+    // Get the tier name separately since we have the tierId
+    const tier = await this.prisma.relationshipTier.findFirst({
+      where: { id: tierId, businessId: businessId },
+      select: { name: true },
+    });
+
+    if (!tier) {
+      return null;
+    }
+
     return {
-      tierId: sequence.relationshipTier.id,
-      tierName: sequence.relationshipTier.name,
+      tierId: tierId,
+      tierName: tier.name,
       sequenceId: sequence.id,
       firstStepId: sequence.steps[0].id,
       firstStepDelayDays: sequence.steps[0].delayDays,

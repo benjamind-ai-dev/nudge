@@ -19,7 +19,7 @@ export interface TierWithSequence {
 export interface SequenceTriggerRepository {
   findOverdueInvoicesWithoutRun(limit: number, offset: number): Promise<OverdueInvoiceRow[]>;
   findDefaultTier(businessId: string): Promise<{ id: string; name: string } | null>;
-  findActiveSequenceForTier(tierId: string): Promise<TierWithSequence | null>;
+  findActiveSequenceForTier(tierId: string, businessId: string): Promise<TierWithSequence | null>;
   createSequenceRun(data: {
     invoiceId: string;
     sequenceId: string;

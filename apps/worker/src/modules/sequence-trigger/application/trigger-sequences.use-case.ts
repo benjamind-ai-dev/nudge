@@ -88,7 +88,7 @@ export class TriggerSequencesUseCase {
 
   private async processInvoice(invoice: OverdueInvoiceRow): Promise<boolean> {
     const tierId = await this.resolveTierId(invoice);
-    const tierData = await this.repo.findActiveSequenceForTier(tierId);
+    const tierData = await this.repo.findActiveSequenceForTier(tierId, invoice.businessId);
 
     if (!tierData) {
       const defaultTier = await this.repo.findDefaultTier(invoice.businessId);

@@ -312,7 +312,6 @@ export async function createDefaultTiersAndSequences(
         businessId,
         relationshipTierId: standardTier.id,
         name: "Standard Follow-Up",
-        isActive: true,
       },
     });
 
@@ -321,7 +320,6 @@ export async function createDefaultTiersAndSequences(
         businessId,
         relationshipTierId: vipTier.id,
         name: "VIP Follow-Up",
-        isActive: true,
       },
     });
 
