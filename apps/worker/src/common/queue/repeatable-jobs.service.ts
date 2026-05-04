@@ -18,6 +18,8 @@ export class RepeatableJobsService implements OnModuleInit {
     private readonly tokenRefreshQueue: Queue,
     @InjectQueue(QUEUE_NAMES.DAYS_RECALC)
     private readonly daysRecalcQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.WEEKLY_SUMMARY)
+    private readonly weeklySummaryQueue: Queue,
   ) {}
 
   async onModuleInit() {
@@ -61,6 +63,20 @@ export class RepeatableJobsService implements OnModuleInit {
       },
     );
     this.logger.log("Registered days-recalc: daily at midnight UTC");
+
+    await this.weeklySummaryQueue.upsertJobScheduler(
+      "weekly-summary-dispatch-scheduler",
+      { pattern: "0 * * * *" },
+      {
+        name: JOB_NAMES.WEEKLY_SUMMARY_DISPATCH,
+        opts: {
+          attempts: 1,
+          removeOnComplete: { count: 100 },
+          removeOnFail: { count: 50 },
+        },
+      },
+    );
+    this.logger.log("Registered weekly-summary-dispatch: hourly");
 
     this.logger.log("All repeatable jobs registered");
   }

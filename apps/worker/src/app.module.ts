@@ -16,6 +16,7 @@ import { DeadLetterMonitorModule } from "./modules/dead-letter-monitor/dead-lett
 import { DaysRecalcModule } from "./modules/days-recalc/days-recalc.module";
 import { StripeEventsModule } from "./modules/stripe-events/stripe-events.module";
 import { ResendEventsModule } from "./modules/resend-events/resend-events.module";
+import { WeeklySummaryModule } from "./modules/weekly-summary/weekly-summary.module";
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ResendEventsModule } from "./modules/resend-events/resend-events.module
     XeroWebhookSyncModule,
     SequenceTriggerModule,
     MessageSendModule,
+    WeeklySummaryModule,
     DeadLetterMonitorModule,
     DaysRecalcModule,
     StripeEventsModule,
