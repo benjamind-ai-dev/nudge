@@ -8,7 +8,7 @@
     "dev": "nest start --watch",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test": "jest --passWithNoTests --testPathIgnorePatterns=src/modules/sequence-trigger && jest --passWithNoTests src/modules/sequence-trigger"
+    "test": "jest --passWithNoTests --runInBand"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
