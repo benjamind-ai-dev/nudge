@@ -316,8 +316,8 @@ model WeeklySummary {
   aiInputTokens    Int?      @map("ai_input_tokens")
   aiOutputTokens   Int?      @map("ai_output_tokens")
   metrics          Json
-  recipientEmails  String[]  @map("recipient_emails")
-  resendMessageIds String[]  @map("resend_message_ids")
+  recipientEmails  String[]  @default([]) @map("recipient_emails")
+  resendMessageIds String[]  @default([]) @map("resend_message_ids")
   errorMessage     String?   @map("error_message") @db.Text
   sentAt           DateTime? @map("sent_at") @db.Timestamptz
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -325,7 +325,7 @@ model WeeklySummary {
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
-  @@unique([businessId, weekStartsAt])
-  @@index([status, createdAt])
+  @@unique([businessId, weekStartsAt], map: "idx_weekly_summaries_business_week")
+  @@index([status, createdAt], map: "idx_weekly_summaries_status")
   @@map("weekly_summaries")
 }
