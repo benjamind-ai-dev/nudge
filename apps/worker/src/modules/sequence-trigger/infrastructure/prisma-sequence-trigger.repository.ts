@@ -4,8 +4,8 @@ import { SEQUENCE_RUN_STATUSES, STOPPED_REASONS } from "@nudge/shared";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   OverdueInvoiceRow,
+  SequenceFirstStep,
   SequenceTriggerRepository,
-  TierWithSequence,
 } from "../domain/sequence-trigger.repository";
 
 @Injectable()
@@ -31,9 +31,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
         },
         business: {
           connections: {
-            some: {
-              status: "connected",
-            },
+            some: { status: "connected" },
           },
         },
       },
@@ -45,13 +43,15 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
         businessId: true,
         customer: {
           select: {
+            sequenceId: true,
             relationshipTierId: true,
+            relationshipTier: {
+              select: { sequenceId: true },
+            },
           },
         },
         business: {
-          select: {
-            timezone: true,
-          },
+          select: { timezone: true },
         },
       },
       take: limit,
@@ -63,60 +63,30 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
       invoiceId: row.id,
       invoiceNumber: row.invoiceNumber,
       customerId: row.customerId,
+      customerSequenceId: row.customer.sequenceId,
       customerTierId: row.customer.relationshipTierId,
+      customerTierSequenceId: row.customer.relationshipTier?.sequenceId ?? null,
       dueDate: row.dueDate,
       businessId: row.businessId,
       businessTimezone: row.business.timezone,
     }));
   }
 
-  async findDefaultTier(businessId: string): Promise<{ id: string; name: string } | null> {
+  async findDefaultTierSequenceId(businessId: string): Promise<string | null> {
     const tier = await this.prisma.relationshipTier.findFirst({
       where: { businessId, isDefault: true },
-      select: { id: true, name: true },
+      select: { sequenceId: true },
     });
-    return tier;
+    return tier?.sequenceId ?? null;
   }
 
-  async findActiveSequenceForTier(tierId: string, businessId: string): Promise<TierWithSequence | null> {
-    const sequence = await this.prisma.sequence.findFirst({
-      where: {
-        relationshipTierId: tierId,
-        businessId: businessId,
-      },
-      select: {
-        id: true,
-        relationshipTierId: true,
-        name: true,
-        steps: {
-          select: { id: true, delayDays: true },
-          orderBy: { stepOrder: "asc" },
-          take: 1,
-        },
-      },
+  async findSequenceFirstStep(sequenceId: string): Promise<SequenceFirstStep | null> {
+    const step = await this.prisma.sequenceStep.findFirst({
+      where: { sequenceId },
+      select: { id: true, delayDays: true },
+      orderBy: { stepOrder: "asc" },
     });
-
-    if (!sequence || sequence.steps.length === 0) {
-      return null;
-    }
-
-    // Get the tier name separately since we have the tierId
-    const tier = await this.prisma.relationshipTier.findFirst({
-      where: { id: tierId, businessId: businessId },
-      select: { name: true },
-    });
-
-    if (!tier) {
-      return null;
-    }
-
-    return {
-      tierId: tierId,
-      tierName: tier.name,
-      sequenceId: sequence.id,
-      firstStepId: sequence.steps[0].id,
-      firstStepDelayDays: sequence.steps[0].delayDays,
-    };
+    return step ? { firstStepId: step.id, firstStepDelayDays: step.delayDays } : null;
   }
 
   async createSequenceRun(data: {
@@ -134,9 +104,6 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
           select: { status: true },
         });
 
-        // Guard: only create runs for invoices in a contributing status. If the
-        // invoice was paid/voided/etc. between the trigger query and now (concurrent
-        // sync committed an applyChange), abort to avoid dunning a paid invoice.
         if (
           !invoice ||
           (invoice.status !== "open" &&
@@ -154,9 +121,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
           select: { id: true },
         });
 
-        if (existing) {
-          return null;
-        }
+        if (existing) return null;
 
         return tx.sequenceRun.create({
           data: {
@@ -173,10 +138,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
 
       return run ? { created: true, runId: run.id } : { created: false, runId: null };
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes("Unique constraint")
-      ) {
+      if (error instanceof Error && error.message.includes("Unique constraint")) {
         return { created: false, runId: null };
       }
       throw error;
