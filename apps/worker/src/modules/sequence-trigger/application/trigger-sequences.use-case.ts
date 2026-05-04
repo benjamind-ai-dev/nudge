@@ -38,7 +38,7 @@ export class TriggerSequencesUseCase {
 
     while (hasMore) {
       const invoices = await this.repo.findOverdueInvoicesWithoutRun(BATCH_SIZE, offset);
-      hasMore = invoices.length > 0;
+      hasMore = invoices.length === BATCH_SIZE;
       offset += invoices.length;
 
       for (const invoice of invoices) {

@@ -154,6 +154,6 @@ describe("TriggerSequencesUseCase", () => {
     const result = await useCase.execute();
 
     expect(result.invoicesProcessed).toBe(101);
-    expect(repo.findOverdueInvoicesWithoutRun).toHaveBeenCalledTimes(3);
+    expect(repo.findOverdueInvoicesWithoutRun).toHaveBeenCalledTimes(2);
   });
 });
