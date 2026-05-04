@@ -9,6 +9,8 @@ const config: Config = {
   },
   testEnvironment: "node",
   setupFiles: ["<rootDir>/../jest.setup.ts"],
+  maxWorkers: 2,
+  workerIdleMemoryLimit: "512MB",
 };
 
 export default config;
