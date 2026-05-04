@@ -19,6 +19,7 @@ import { BillingModule } from "./modules/billing/billing.module";
 import { StripeWebhookModule } from "./modules/stripe-webhook/stripe-webhook.module";
 import { ClerkWebhookModule } from "./modules/clerk-webhook/clerk-webhook.module";
 import { ResendWebhookModule } from "./modules/resend-webhook/resend-webhook.module";
+import { SequencesModule } from "./modules/sequences/sequences.module";
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { ResendWebhookModule } from "./modules/resend-webhook/resend-webhook.mod
     StripeWebhookModule,
     ClerkWebhookModule,
     ResendWebhookModule,
+    SequencesModule,
   ],
 })
 export class AppModule {}
