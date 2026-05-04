@@ -20,6 +20,9 @@ import { StripeWebhookModule } from "./modules/stripe-webhook/stripe-webhook.mod
 import { ClerkWebhookModule } from "./modules/clerk-webhook/clerk-webhook.module";
 import { ResendWebhookModule } from "./modules/resend-webhook/resend-webhook.module";
 import { SequencesModule } from "./modules/sequences/sequences.module";
+import { RelationshipTiersModule } from "./modules/relationship-tiers/relationship-tiers.module";
+import { CustomersModule } from "./modules/customers/customers.module";
+import { InvoicesModule } from "./modules/invoices/invoices.module";
 
 @Module({
   imports: [
@@ -74,6 +77,9 @@ import { SequencesModule } from "./modules/sequences/sequences.module";
     ClerkWebhookModule,
     ResendWebhookModule,
     SequencesModule,
+    RelationshipTiersModule,
+    CustomersModule,
+    InvoicesModule,
   ],
 })
 export class AppModule {}
