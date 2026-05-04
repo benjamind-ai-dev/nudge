@@ -5,9 +5,6 @@ import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import { PrismaMetricsRepository } from "./prisma-metrics.repository";
 
 const WEEK_STARTS_AT = "2026-05-04";
-const weekStart = new Date("2026-05-04T00:00:00Z");
-const weekEnd = new Date("2026-05-11T00:00:00Z");
-const priorWeekStart = new Date("2026-04-27T00:00:00Z");
 
 describe("PrismaMetricsRepository (integration)", () => {
   let prisma: PrismaClient;
