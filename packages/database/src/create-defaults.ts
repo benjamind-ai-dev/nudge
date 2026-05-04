@@ -346,5 +346,15 @@ export async function createDefaultTiersAndSequences(
         isOwnerAlert: step.isOwnerAlert,
       })),
     });
+
+    await tx.relationshipTier.update({
+      where: { id: standardTier.id },
+      data: { sequenceId: standardSequence.id },
+    });
+
+    await tx.relationshipTier.update({
+      where: { id: vipTier.id },
+      data: { sequenceId: vipSequence.id },
+    });
   });
 }
