@@ -72,6 +72,7 @@ model Business {
   relationshipTiers RelationshipTier[]
   sequences         Sequence[]
   messages          Message[]
+  weeklySummaries   WeeklySummary[]
 
   @@map("businesses")
 }
@@ -300,4 +301,31 @@ model Message {
   @@index([businessId, sentAt], map: "idx_messages_business_sent")
   @@index([externalMessageId], map: "idx_messages_external")
   @@map("messages")
+}
+
+// ---------------------------------------------------------------------------
+// 4.12 weekly_summaries
+// ---------------------------------------------------------------------------
+model WeeklySummary {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId       String    @map("business_id") @db.Uuid
+  weekStartsAt     DateTime  @map("week_starts_at") @db.Date
+  status           String    @db.VarChar(20)
+  aiParagraph      String?   @map("ai_paragraph") @db.Text
+  aiModel          String?   @map("ai_model") @db.VarChar(50)
+  aiInputTokens    Int?      @map("ai_input_tokens")
+  aiOutputTokens   Int?      @map("ai_output_tokens")
+  metrics          Json
+  recipientEmails  String[]  @map("recipient_emails")
+  resendMessageIds String[]  @map("resend_message_ids")
+  errorMessage     String?   @map("error_message") @db.Text
+  sentAt           DateTime? @map("sent_at") @db.Timestamptz
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, weekStartsAt])
+  @@index([status, createdAt])
+  @@map("weekly_summaries")
 }
