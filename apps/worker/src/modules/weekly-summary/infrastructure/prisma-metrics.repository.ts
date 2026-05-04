@@ -152,18 +152,15 @@ export class PrismaMetricsRepository implements MetricsRepository {
       ]),
     );
 
-    const avg = (
-      rows: { issuedDate: Date | null; paidAt: Date | null }[],
-    ): number | null => {
-      if (rows.length === 0) return null;
-      const total = rows.reduce((acc, r) => {
-        if (!r.issuedDate || !r.paidAt) return acc;
-        const days =
-          (r.paidAt.getTime() - r.issuedDate.getTime()) /
-          (1000 * 60 * 60 * 24);
-        return acc + days;
-      }, 0);
-      return Math.round(total / rows.length);
+    const avg = (rows: { issuedDate: Date | null; paidAt: Date | null }[]): number | null => {
+      let total = 0;
+      let validCount = 0;
+      for (const r of rows) {
+        if (!r.issuedDate || !r.paidAt) continue;
+        total += (r.paidAt.getTime() - r.issuedDate.getTime()) / 86_400_000;
+        validCount += 1;
+      }
+      return validCount === 0 ? null : Math.round(total / validCount);
     };
 
     return {

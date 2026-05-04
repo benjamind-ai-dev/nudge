@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { format } from "date-fns";
+import { Prisma } from "@nudge/database";
 import {
   WEEKLY_SUMMARY_REPOSITORY,
   type WeeklySummaryRepository,
@@ -9,7 +10,7 @@ import {
   METRICS_REPOSITORY,
   type MetricsRepository,
 } from "../domain/metrics.repository";
-import { isMetricsEmpty, type BusinessMetrics } from "../domain/business-metrics";
+import { isMetricsEmpty } from "../domain/business-metrics";
 import { BuildSummaryPromptUseCase } from "./build-summary-prompt.use-case";
 import {
   AI_SUMMARY_CLIENT,
@@ -19,19 +20,11 @@ import {
   SUMMARY_EMAIL_SENDER,
   type SummaryEmailSender,
 } from "./ports/summary-email.sender";
+import {
+  SUMMARY_RENDERER,
+  type SummaryRenderer,
+} from "./ports/summary-renderer";
 import type { Env } from "../../../common/config/env.schema";
-
-export interface SummaryRenderer {
-  render(input: {
-    businessName: string;
-    weekStartsAt: string;
-    aiParagraph: string | null;
-    metrics: BusinessMetrics;
-    dashboardUrl: string;
-  }): { html: string; text: string };
-}
-
-export const SUMMARY_RENDERER = Symbol("SUMMARY_RENDERER");
 
 @Injectable()
 export class GenerateWeeklySummaryUseCase {
@@ -56,14 +49,17 @@ export class GenerateWeeklySummaryUseCase {
     let summary;
     try {
       summary = await this.repo.insertPending(input);
-    } catch {
-      this.logger.log({
-        msg: "Skipping duplicate weekly summary dispatch",
-        event: "weekly_summary_duplicate",
-        businessId: input.businessId,
-        weekStartsAt: input.weekStartsAt,
-      });
-      return;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        this.logger.log({
+          msg: "Skipping duplicate weekly summary dispatch",
+          event: "weekly_summary_duplicate",
+          businessId: input.businessId,
+          weekStartsAt: input.weekStartsAt,
+        });
+        return;
+      }
+      throw err;
     }
 
     const business = await this.metrics.loadBusiness(input.businessId);

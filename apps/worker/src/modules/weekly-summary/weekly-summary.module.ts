@@ -12,10 +12,8 @@ import {
   WEEKLY_SUMMARY_PRODUCER,
   DispatchWeeklySummariesUseCase,
 } from "./application/dispatch-weekly-summaries.use-case";
-import {
-  GenerateWeeklySummaryUseCase,
-  SUMMARY_RENDERER,
-} from "./application/generate-weekly-summary.use-case";
+import { GenerateWeeklySummaryUseCase } from "./application/generate-weekly-summary.use-case";
+import { SUMMARY_RENDERER } from "./application/ports/summary-renderer";
 import { ComputeBusinessMetricsUseCase } from "./application/compute-business-metrics.use-case";
 import { BuildSummaryPromptUseCase } from "./application/build-summary-prompt.use-case";
 

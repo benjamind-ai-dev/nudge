@@ -1,3 +1,4 @@
+import { Prisma } from "@nudge/database";
 import { GenerateWeeklySummaryUseCase } from "./generate-weekly-summary.use-case";
 import { BuildSummaryPromptUseCase } from "./build-summary-prompt.use-case";
 import { WeeklySummary } from "../domain/weekly-summary.entity";
@@ -191,10 +192,12 @@ describe("GenerateWeeklySummaryUseCase", () => {
     ).rejects.toThrow("resend boom");
   });
 
-  it("idempotency collision: returns silently when insertPending throws", async () => {
+  it("idempotency collision: returns silently when insertPending throws P2002", async () => {
     const m = makeMocks();
-    const dupErr = new Error("duplicate") as Error & { code?: string };
-    dupErr.code = "P2002";
+    const dupErr = new Prisma.PrismaClientKnownRequestError("dup", {
+      code: "P2002",
+      clientVersion: "test",
+    });
     m.weeklyRepo.insertPending.mockRejectedValueOnce(dupErr);
 
     await makeUseCase(m).execute({ businessId: "b1", weekStartsAt: "2026-05-04" });
@@ -202,5 +205,14 @@ describe("GenerateWeeklySummaryUseCase", () => {
     expect(m.ai.generate).not.toHaveBeenCalled();
     expect(m.sender.send).not.toHaveBeenCalled();
     expect(m.weeklyRepo.save).not.toHaveBeenCalled();
+  });
+
+  it("propagates non-P2002 errors from insertPending (allows BullMQ retry)", async () => {
+    const m = makeMocks();
+    m.weeklyRepo.insertPending.mockRejectedValueOnce(new Error("connection lost"));
+
+    await expect(
+      makeUseCase(m).execute({ businessId: "b1", weekStartsAt: "2026-05-04" }),
+    ).rejects.toThrow("connection lost");
   });
 });

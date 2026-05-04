@@ -42,6 +42,7 @@ export function isMetricsEmpty(m: BusinessMetrics): boolean {
   return (
     m.recoveredThisWeekCents === 0 &&
     m.currentlyOverdueCount === 0 &&
-    m.activeSequencesCount === 0
+    m.activeSequencesCount === 0 &&
+    m.flaggedRuns.length === 0
   );
 }

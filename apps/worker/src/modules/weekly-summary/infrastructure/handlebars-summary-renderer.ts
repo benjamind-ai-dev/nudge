@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import Handlebars from "handlebars";
 import type { BusinessMetrics } from "../domain/business-metrics";
-import type { SummaryRenderer } from "../application/generate-weekly-summary.use-case";
+import type { SummaryRenderer } from "../application/ports/summary-renderer";
 
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "weekly-summary.hbs");
 
