@@ -80,3 +80,4 @@ Detailed coding rules are in `.claude/rules/` and are loaded automatically:
 - `naming.rule.md` — File, class, variable, database, and route naming
 - `forbidden.rule.md` — Banned patterns and libraries
 - `testing.rule.md` — Test frameworks, conventions, what to test where
+- `pr-size.rule.md` — Per-PR file cap (≤16 target, ≤20 hard) and Part-N split process
