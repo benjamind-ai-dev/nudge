@@ -219,17 +219,18 @@ model Sequence {
 // 4.9 sequence_steps
 // ---------------------------------------------------------------------------
 model SequenceStep {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sequenceId      String   @map("sequence_id") @db.Uuid
-  stepOrder       Int      @map("step_order")
-  delayDays       Int      @map("delay_days")
-  channel         String   @db.VarChar(20)
-  subjectTemplate String?  @map("subject_template") @db.Text
-  bodyTemplate    String   @map("body_template") @db.Text
-  smsBodyTemplate String?  @map("sms_body_template") @db.Text
-  isOwnerAlert    Boolean  @default(false) @map("is_owner_alert")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sequenceId         String   @map("sequence_id") @db.Uuid
+  stepOrder          Int      @map("step_order")
+  delayDays          Int      @map("delay_days")
+  channel            String   @db.VarChar(20)
+  subjectTemplate    String?  @map("subject_template") @db.Text
+  bodyTemplate       String   @map("body_template") @db.Text
+  smsBodyTemplate    String?  @map("sms_body_template") @db.Text
+  isOwnerAlert       Boolean  @default(false) @map("is_owner_alert")
+  includePaymentLink Boolean  @default(true) @map("include_payment_link")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   sequence    Sequence      @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
   currentRuns SequenceRun[] @relation("CurrentStep")
