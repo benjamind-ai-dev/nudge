@@ -61,4 +61,80 @@ describe("HandleEmailReceivedUseCase", () => {
     expect(sent.html).toMatch(/href="mailto:billing%40acme\.com\?[^"]*pay\.example\.com%2Fabc123/);
     expect(sent.html).toContain("Send Payment Link");
   });
+
+  it("sends alert without mailto button when paymentLinkUrl is null", async () => {
+    const run: ActiveRunForCustomer = { ...baseRun, paymentLinkUrl: null };
+    const customerRepo = makeCustomerRepo([run]);
+    const runRepo = makeRunRepo();
+    const businessRepo = makeBusinessRepo();
+    const emailService = makeEmailService();
+
+    const useCase = new HandleEmailReceivedUseCase(customerRepo, runRepo, businessRepo, emailService);
+    await useCase.execute({ fromEmail: "billing@acme.com" });
+
+    expect(emailService.send).toHaveBeenCalledTimes(1);
+    const sent = emailService.send.mock.calls[0][0];
+    expect(sent.html).not.toContain("mailto:");
+    expect(sent.html).not.toContain("Send Payment Link");
+    expect(sent.html).toContain("$1,250.00");
+    expect(sent.html).toContain("Invoice INV-1001");
+  });
+
+  it("omits invoice number text when invoiceNumber is null but still shows balance", async () => {
+    const run: ActiveRunForCustomer = { ...baseRun, invoiceNumber: null };
+    const customerRepo = makeCustomerRepo([run]);
+    const runRepo = makeRunRepo();
+    const businessRepo = makeBusinessRepo();
+    const emailService = makeEmailService();
+
+    const useCase = new HandleEmailReceivedUseCase(customerRepo, runRepo, businessRepo, emailService);
+    await useCase.execute({ fromEmail: "billing@acme.com" });
+
+    const sent = emailService.send.mock.calls[0][0];
+    expect(sent.html).not.toContain("Invoice ");
+    expect(sent.html).toContain("$1,250.00");
+    expect(sent.html).toContain("Send Payment Link");
+  });
+
+  it("does nothing when there are no active runs", async () => {
+    const customerRepo = makeCustomerRepo([]);
+    const runRepo = makeRunRepo();
+    const businessRepo = makeBusinessRepo();
+    const emailService = makeEmailService();
+
+    const useCase = new HandleEmailReceivedUseCase(customerRepo, runRepo, businessRepo, emailService);
+    await useCase.execute({ fromEmail: "stranger@nowhere.com" });
+
+    expect(runRepo.stopRun).not.toHaveBeenCalled();
+    expect(emailService.send).not.toHaveBeenCalled();
+  });
+
+  it("does not throw when alert email send fails — run is still stopped", async () => {
+    const customerRepo = makeCustomerRepo();
+    const runRepo = makeRunRepo();
+    const businessRepo = makeBusinessRepo();
+    const emailService: jest.Mocked<EmailService> = {
+      send: jest.fn().mockRejectedValue(new Error("Resend down")),
+    };
+
+    const useCase = new HandleEmailReceivedUseCase(customerRepo, runRepo, businessRepo, emailService);
+    await expect(useCase.execute({ fromEmail: "billing@acme.com" })).resolves.not.toThrow();
+
+    expect(runRepo.stopRun).toHaveBeenCalledWith("run-uuid", "biz-uuid", "client_replied");
+  });
+
+  it("escapes HTML-special characters in companyName", async () => {
+    const run: ActiveRunForCustomer = { ...baseRun, companyName: "Smith & <Co>" };
+    const customerRepo = makeCustomerRepo([run]);
+    const runRepo = makeRunRepo();
+    const businessRepo = makeBusinessRepo();
+    const emailService = makeEmailService();
+
+    const useCase = new HandleEmailReceivedUseCase(customerRepo, runRepo, businessRepo, emailService);
+    await useCase.execute({ fromEmail: "billing@acme.com" });
+
+    const sent = emailService.send.mock.calls[0][0];
+    expect(sent.html).toContain("Smith &amp; &lt;Co&gt;");
+    expect(sent.html).not.toMatch(/<Co>/);
+  });
 });
