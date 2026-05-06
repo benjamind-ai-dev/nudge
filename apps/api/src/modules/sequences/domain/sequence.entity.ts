@@ -9,6 +9,7 @@ export interface SequenceStep {
   bodyTemplate: string;
   smsBodyTemplate: string | null;
   isOwnerAlert: boolean;
+  includePaymentLink: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

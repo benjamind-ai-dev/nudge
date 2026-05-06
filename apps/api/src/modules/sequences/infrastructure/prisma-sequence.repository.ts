@@ -20,6 +20,7 @@ const STEP_SELECT = {
   bodyTemplate: true,
   smsBodyTemplate: true,
   isOwnerAlert: true,
+  includePaymentLink: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -33,6 +34,7 @@ function toStep(row: {
   bodyTemplate: string;
   smsBodyTemplate: string | null;
   isOwnerAlert: boolean;
+  includePaymentLink: boolean;
   createdAt: Date;
   updatedAt: Date;
 }): SequenceStep {
@@ -45,6 +47,7 @@ function toStep(row: {
     bodyTemplate: row.bodyTemplate,
     smsBodyTemplate: row.smsBodyTemplate,
     isOwnerAlert: row.isOwnerAlert,
+    includePaymentLink: row.includePaymentLink,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -162,6 +165,7 @@ export class PrismaSequenceRepository implements SequenceRepository {
         bodyTemplate: data.bodyTemplate,
         smsBodyTemplate: data.smsBodyTemplate ?? null,
         isOwnerAlert: data.isOwnerAlert ?? false,
+        ...(data.includePaymentLink !== undefined && { includePaymentLink: data.includePaymentLink }),
       },
       select: STEP_SELECT,
     });
@@ -184,6 +188,7 @@ export class PrismaSequenceRepository implements SequenceRepository {
         ...(data.bodyTemplate !== undefined && { bodyTemplate: data.bodyTemplate }),
         ...(data.smsBodyTemplate !== undefined && { smsBodyTemplate: data.smsBodyTemplate }),
         ...(data.isOwnerAlert !== undefined && { isOwnerAlert: data.isOwnerAlert }),
+        ...(data.includePaymentLink !== undefined && { includePaymentLink: data.includePaymentLink }),
       },
     });
     const updated = await this.prisma.sequenceStep.findFirst({

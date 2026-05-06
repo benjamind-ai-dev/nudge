@@ -25,6 +25,7 @@ export const addStepSchema = z.object({
   bodyTemplate: z.string().min(1),
   smsBodyTemplate: z.string().nullable().optional(),
   isOwnerAlert: z.boolean().optional(),
+  includePaymentLink: z.boolean().optional(),
 });
 export type AddStepDto = z.infer<typeof addStepSchema>;
 
@@ -36,6 +37,7 @@ export const updateStepSchema = z.object({
   bodyTemplate: z.string().min(1).optional(),
   smsBodyTemplate: z.string().nullable().optional(),
   isOwnerAlert: z.boolean().optional(),
+  includePaymentLink: z.boolean().optional(),
 });
 export type UpdateStepDto = z.infer<typeof updateStepSchema>;
 

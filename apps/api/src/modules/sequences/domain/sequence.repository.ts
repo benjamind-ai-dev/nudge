@@ -19,6 +19,7 @@ export interface CreateStepData {
   bodyTemplate: string;
   smsBodyTemplate?: string | null;
   isOwnerAlert?: boolean;
+  includePaymentLink?: boolean;
 }
 
 export interface UpdateStepData {
@@ -29,6 +30,7 @@ export interface UpdateStepData {
   bodyTemplate?: string;
   smsBodyTemplate?: string | null;
   isOwnerAlert?: boolean;
+  includePaymentLink?: boolean;
 }
 
 export interface SequenceRepository {
