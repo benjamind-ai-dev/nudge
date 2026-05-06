@@ -33,6 +33,7 @@ const createMockRun = (overrides: Partial<RunReadyToSend> = {}): RunReadyToSend 
   stepBodyTemplate: "Hi {{customer.contact_name}}, your invoice is overdue.",
   stepSmsBodyTemplate: null,
   stepIsOwnerAlert: false,
+  stepIncludePaymentLink: true,
   ...overrides,
 });
 

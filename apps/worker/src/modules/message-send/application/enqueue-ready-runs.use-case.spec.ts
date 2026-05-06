@@ -35,6 +35,7 @@ const createMockRun = (id: string, businessId = "biz-1"): RunReadyToSend => ({
   stepBodyTemplate: "Body",
   stepSmsBodyTemplate: null,
   stepIsOwnerAlert: false,
+  stepIncludePaymentLink: true,
 });
 
 describe("EnqueueReadyRunsUseCase", () => {
