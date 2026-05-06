@@ -257,6 +257,10 @@ export class SendMessageUseCase {
       body = `${body}\n\n${run.businessEmailSignature}`;
     }
 
+    if (run.stepIncludePaymentLink && run.paymentLinkUrl) {
+      body = `${body}\n\n${renderPaymentLinkButton(run.paymentLinkUrl)}`;
+    }
+
     const messageId = randomUUID();
 
     // Write "queued" record first to prevent double-send on retry.
@@ -414,4 +418,22 @@ export class SendMessageUseCase {
     const withDelay = addDays(now, delayDays);
     return nextBusinessHour(withDelay, timezone);
   }
+}
+
+function renderPaymentLinkButton(paymentLinkUrl: string): string {
+  return `<p style="margin:24px 0;text-align:center;">
+    <a href="${escapeHtml(paymentLinkUrl)}"
+       style="background:#111;color:#fff;text-decoration:none;padding:14px 28px;border-radius:6px;display:inline-block;font-weight:600;font-size:16px;">
+      Pay Invoice
+    </a>
+  </p>`;
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

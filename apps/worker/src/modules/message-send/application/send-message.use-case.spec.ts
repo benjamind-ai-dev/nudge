@@ -430,4 +430,21 @@ describe("SendMessageUseCase", () => {
     expect(smsService.send).toHaveBeenCalled();
     expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
   });
+
+  it("appends a Pay Invoice HTML button when the step toggle is on and the invoice has a payment link", async () => {
+    const run = createMockRun({
+      paymentLinkUrl: "https://pay.example.com/inv-1",
+      stepIncludePaymentLink: true,
+    });
+    repo.findRunById.mockResolvedValue(run);
+    repo.findNextStep.mockResolvedValue(null);
+    templateService.render.mockReturnValue("Hi Sarah, please pay your invoice.");
+
+    await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(emailService.send).toHaveBeenCalledTimes(1);
+    const sent = emailService.send.mock.calls[0][0];
+    expect(sent.html).toContain("Hi Sarah, please pay your invoice.");
+    expect(sent.html).toMatch(/<a [^>]*href="https:\/\/pay\.example\.com\/inv-1"[^>]*>\s*Pay Invoice\s*<\/a>/);
+  });
 });
