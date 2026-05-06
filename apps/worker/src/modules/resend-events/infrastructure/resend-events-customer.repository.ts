@@ -27,6 +27,10 @@ export class PrismaResendEventsCustomerRepository
         invoice: {
           select: {
             businessId: true,
+            invoiceNumber: true,
+            balanceDueCents: true,
+            currency: true,
+            paymentLinkUrl: true,
             customer: { select: { companyName: true } },
           },
         },
@@ -37,6 +41,10 @@ export class PrismaResendEventsCustomerRepository
       runId: run.id,
       businessId: run.invoice.businessId,
       companyName: run.invoice.customer.companyName,
+      invoiceNumber: run.invoice.invoiceNumber,
+      balanceDueCents: run.invoice.balanceDueCents,
+      currency: run.invoice.currency,
+      paymentLinkUrl: run.invoice.paymentLinkUrl,
     }));
   }
 }

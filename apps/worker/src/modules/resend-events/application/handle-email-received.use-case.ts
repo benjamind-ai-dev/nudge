@@ -1,8 +1,9 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { STOPPED_REASONS } from "@nudge/shared";
+import { STOPPED_REASONS, formatCents } from "@nudge/shared";
 import {
   type ResendEventsCustomerRepository,
   RESEND_EVENTS_CUSTOMER_REPOSITORY,
+  type ActiveRunForCustomer,
 } from "../domain/resend-events-customer.repository";
 import {
   type ResendEventsSequenceRunRepository,
@@ -60,7 +61,7 @@ export class HandleEmailReceivedUseCase {
             from: ALERTS_FROM,
             to: business.ownerEmail,
             subject: `${run.companyName} replied to your follow-up`,
-            html: `<p><strong>${run.companyName}</strong> replied to your follow-up email from <strong>${input.fromEmail}</strong>. Their sequence has been stopped.</p><p>Log in to Nudge to view the reply and take next steps.</p>`,
+            html: this.renderReplyAlertHtml(run, input.fromEmail),
           });
         } catch (err) {
           this.logger.error({
@@ -80,4 +81,50 @@ export class HandleEmailReceivedUseCase {
       stoppedCount: runs.length,
     });
   }
+
+  private renderReplyAlertHtml(run: ActiveRunForCustomer, fromEmail: string): string {
+    const balance = formatCents(run.balanceDueCents);
+    const invoiceLine = run.invoiceNumber
+      ? `Invoice ${escapeHtml(run.invoiceNumber)} — <strong>${balance}</strong> due`
+      : `<strong>${balance}</strong> due`;
+
+    const ctaButton = run.paymentLinkUrl
+      ? `<p style="margin:24px 0;">
+           <a href="${buildMailtoForward(fromEmail, run.invoiceNumber, run.paymentLinkUrl)}"
+              style="background:#111;color:#fff;text-decoration:none;padding:12px 20px;border-radius:6px;display:inline-block;font-weight:600;">
+             Send Payment Link →
+           </a>
+         </p>`
+      : "";
+
+    return `
+      <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;color:#111;">
+        <p><strong>${escapeHtml(run.companyName)}</strong> replied to your follow-up email from <strong>${escapeHtml(fromEmail)}</strong>. Their sequence has been stopped.</p>
+        <p>${invoiceLine}</p>
+        ${ctaButton}
+      </div>
+    `.trim();
+  }
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildMailtoForward(
+  toEmail: string,
+  invoiceNumber: string | null,
+  paymentLinkUrl: string,
+): string {
+  const subject = invoiceNumber
+    ? `Payment link for invoice ${invoiceNumber}`
+    : `Payment link for your invoice`;
+  const body = `Hi,\n\nHere is the payment link for your invoice:\n${paymentLinkUrl}\n\nThanks!`;
+  const params = new URLSearchParams({ subject, body });
+  return `mailto:${toEmail}?${params.toString()}`;
 }
