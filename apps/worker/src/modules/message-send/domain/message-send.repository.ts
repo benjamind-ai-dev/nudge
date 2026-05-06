@@ -42,6 +42,7 @@ export interface RunReadyToSend {
   stepBodyTemplate: string;
   stepSmsBodyTemplate: string | null;
   stepIsOwnerAlert: boolean;
+  stepIncludePaymentLink: boolean;
 }
 
 export interface NextStep {

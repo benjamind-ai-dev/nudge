@@ -22,8 +22,6 @@ I hope this message finds you well. This is a quick reminder that invoice {{invo
 
 If you've already sent payment, please disregard this note — we appreciate it! Otherwise, we'd be grateful if you could arrange payment at your earliest convenience.
 
-You can view and pay your invoice here: {{invoice.payment_link}}
-
 Thank you for your business.
 
 Best regards,
@@ -41,8 +39,6 @@ Best regards,
 I wanted to follow up regarding invoice {{invoice.invoice_number}} for {{invoice.amount}}, which is now {{invoice.days_overdue}} days past the due date of {{invoice.due_date}}.
 
 We understand things can slip through the cracks, so just a polite nudge to see if we can get this resolved. The outstanding balance is {{invoice.balance_due}}.
-
-Pay online here: {{invoice.payment_link}}
 
 If there are any questions or issues with this invoice, please don't hesitate to reach out — happy to help.
 
@@ -62,8 +58,6 @@ I'm reaching out again regarding the outstanding balance of {{invoice.balance_du
 
 We'd like to resolve this promptly and keep everything in good standing. Could you please let us know the status of this payment or arrange to settle the balance?
 
-Pay now: {{invoice.payment_link}}
-
 If you're experiencing any difficulties, we're happy to discuss options. Please reply to this message or give us a call.
 
 Thank you,
@@ -82,8 +76,6 @@ This is an important notice regarding invoice {{invoice.invoice_number}} for {{i
 
 We value our relationship with {{customer.company_name}} and want to avoid any further escalation. Please arrange payment as soon as possible or contact us immediately to discuss a resolution.
 
-Pay here: {{invoice.payment_link}}
-
 If payment has already been made, please reply with confirmation so we can update our records.
 
 Regards,
@@ -101,8 +93,6 @@ Regards,
 This is a final notice regarding the overdue balance of {{invoice.balance_due}} on invoice {{invoice.invoice_number}}, which is now {{invoice.days_overdue}} days past due.
 
 Despite multiple attempts to reach you, this invoice remains unpaid. We must receive payment or hear from you within the next 15 days to avoid further action, which may include suspending services or referring this matter for collections.
-
-Please pay immediately: {{invoice.payment_link}}
 
 We would much prefer to resolve this directly. If there are circumstances preventing payment, please contact us right away so we can work together on a solution.
 
@@ -151,8 +141,6 @@ Thank you for your continued partnership — we truly value working with {{custo
 
 Just a gentle heads-up that invoice {{invoice.invoice_number}} for {{invoice.amount}} was due on {{invoice.due_date}}. No rush if it's already in process — we just wanted to make sure it's on your radar.
 
-For your convenience, you can view and pay here: {{invoice.payment_link}}
-
 Please don't hesitate to reach out if you need anything at all.
 
 Warm regards,
@@ -170,8 +158,6 @@ Warm regards,
 I hope you're doing well. I'm personally following up on invoice {{invoice.invoice_number}} for {{invoice.amount}}, which was due on {{invoice.due_date}}. The current balance is {{invoice.balance_due}}.
 
 I completely understand that timing doesn't always work out perfectly, and I wanted to check in to see if there's anything on your end we should be aware of. If there's a preferred payment timeline that works better for {{customer.company_name}}, I'm happy to discuss.
-
-Pay at your convenience here: {{invoice.payment_link}}
 
 Looking forward to hearing from you.
 
@@ -191,8 +177,6 @@ I wanted to circle back regarding invoice {{invoice.invoice_number}}, which has 
 
 Given our strong relationship with {{customer.company_name}}, I want to make sure there isn't an issue we can help with. Whether it's a billing question, a dispute on the invoice, or simply a matter of timing, we're here to work with you.
 
-You can settle the balance here: {{invoice.payment_link}}
-
 Please let me know how you'd like to proceed — I'm happy to accommodate whatever works best for your team.
 
 Warm regards,
@@ -211,8 +195,6 @@ I'm reaching out once more about invoice {{invoice.invoice_number}} with an outs
 
 I have not heard back regarding my previous messages and want to assure you that we're committed to finding a resolution that works for both sides. If there are any concerns or if you'd like to arrange a payment plan, I'm here to help.
 
-Payment link: {{invoice.payment_link}}
-
 Your partnership means a great deal to us, and I'd love to get this sorted out together.
 
 Sincerely,
@@ -230,8 +212,6 @@ Sincerely,
 I'm writing with some urgency regarding the outstanding balance of {{invoice.balance_due}} on invoice {{invoice.invoice_number}}, now {{invoice.days_overdue}} days past due.
 
 We have great respect for {{customer.company_name}} and the relationship we've built together, which is why I'd like to resolve this matter directly rather than involve any formal process. However, I do need to hear from you soon so we can agree on a path forward.
-
-Please pay here: {{invoice.payment_link}}
 
 If there is any reason payment has been delayed, or if you'd like to discuss alternative arrangements, please reply to this email or call me directly. I'm confident we can find a solution.
 
