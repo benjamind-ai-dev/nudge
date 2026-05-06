@@ -20,16 +20,26 @@ export class PrismaAccountProvisionRepository implements AccountProvisionReposit
   }
 
   async create(params: CreateAccountParams): Promise<void> {
-    await this.prisma.account.create({
-      data: {
-        name: params.name,
-        email: params.email,
-        plan: params.plan,
-        status: params.status,
-        maxBusinesses: params.maxBusinesses,
-        clerkId: params.clerkId,
-        trialEndsAt: params.trialEndsAt,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      const account = await tx.account.create({
+        data: {
+          name: params.name,
+          email: params.email,
+          plan: params.plan,
+          status: params.status,
+          maxBusinesses: params.maxBusinesses,
+          clerkId: params.clerkId,
+          trialEndsAt: params.trialEndsAt,
+        },
+      });
+      await tx.user.create({
+        data: {
+          accountId: account.id,
+          email: params.email,
+          name: params.name,
+          role: "owner",
+        },
+      });
     });
   }
 }
