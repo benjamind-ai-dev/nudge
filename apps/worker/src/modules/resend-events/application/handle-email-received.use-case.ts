@@ -90,7 +90,7 @@ export class HandleEmailReceivedUseCase {
 
     const ctaButton = run.paymentLinkUrl
       ? `<p style="margin:24px 0;">
-           <a href="${buildMailtoForward(fromEmail, run.invoiceNumber, run.paymentLinkUrl)}"
+           <a href="${escapeHtml(buildMailtoForward(fromEmail, run.invoiceNumber, run.paymentLinkUrl))}"
               style="background:#111;color:#fff;text-decoration:none;padding:12px 20px;border-radius:6px;display:inline-block;font-weight:600;">
              Send Payment Link →
            </a>
@@ -126,5 +126,5 @@ function buildMailtoForward(
     : `Payment link for your invoice`;
   const body = `Hi,\n\nHere is the payment link for your invoice:\n${paymentLinkUrl}\n\nThanks!`;
   const params = new URLSearchParams({ subject, body });
-  return `mailto:${toEmail}?${params.toString()}`;
+  return `mailto:${encodeURIComponent(toEmail)}?${params.toString()}`;
 }

@@ -58,7 +58,7 @@ describe("HandleEmailReceivedUseCase", () => {
     expect(sent.subject).toContain("Acme Corp");
     expect(sent.html).toContain("Invoice INV-1001");
     expect(sent.html).toContain("$1,250.00");
-    expect(sent.html).toMatch(/href="mailto:billing@acme\.com\?[^"]*pay\.example\.com%2Fabc123/);
+    expect(sent.html).toMatch(/href="mailto:billing%40acme\.com\?[^"]*pay\.example\.com%2Fabc123/);
     expect(sent.html).toContain("Send Payment Link");
   });
 });
