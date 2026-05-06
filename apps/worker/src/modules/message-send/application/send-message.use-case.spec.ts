@@ -447,4 +447,56 @@ describe("SendMessageUseCase", () => {
     expect(sent.html).toContain("Hi Sarah, please pay your invoice.");
     expect(sent.html).toMatch(/<a [^>]*href="https:\/\/pay\.example\.com\/inv-1"[^>]*>\s*Pay Invoice\s*<\/a>/);
   });
+
+  it("does not append the button when the step toggle is off", async () => {
+    const run = createMockRun({
+      paymentLinkUrl: "https://pay.example.com/inv-1",
+      stepIncludePaymentLink: false,
+    });
+    repo.findRunById.mockResolvedValue(run);
+    repo.findNextStep.mockResolvedValue(null);
+    templateService.render.mockReturnValue("Body without button.");
+
+    await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    const sent = emailService.send.mock.calls[0][0];
+    expect(sent.html).toContain("Body without button.");
+    expect(sent.html).not.toContain("Pay Invoice");
+    expect(sent.html).not.toContain("<a href=");
+  });
+
+  it("does not append the button when paymentLinkUrl is null, but still sends the email", async () => {
+    const run = createMockRun({
+      paymentLinkUrl: null,
+      stepIncludePaymentLink: true,
+    });
+    repo.findRunById.mockResolvedValue(run);
+    repo.findNextStep.mockResolvedValue(null);
+    templateService.render.mockReturnValue("Body with no link.");
+
+    await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(emailService.send).toHaveBeenCalledTimes(1);
+    const sent = emailService.send.mock.calls[0][0];
+    expect(sent.html).toContain("Body with no link.");
+    expect(sent.html).not.toContain("Pay Invoice");
+  });
+
+  it("HTML-escapes special characters in the payment link URL", async () => {
+    const run = createMockRun({
+      paymentLinkUrl: 'https://pay.example.com/abc?x="y"&z=<1>',
+      stepIncludePaymentLink: true,
+    });
+    repo.findRunById.mockResolvedValue(run);
+    repo.findNextStep.mockResolvedValue(null);
+    templateService.render.mockReturnValue("Body.");
+
+    await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    const sent = emailService.send.mock.calls[0][0];
+    expect(sent.html).toContain("&quot;y&quot;");
+    expect(sent.html).toContain("&amp;z=");
+    expect(sent.html).toContain("&lt;1&gt;");
+    expect(sent.html).not.toMatch(/href="[^"]*"y"/);
+  });
 });
