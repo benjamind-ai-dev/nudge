@@ -257,7 +257,11 @@ export class SendMessageUseCase {
       body = `${body}\n\n${run.businessEmailSignature}`;
     }
 
-    if (run.stepIncludePaymentLink && run.paymentLinkUrl) {
+    if (
+      run.stepIncludePaymentLink &&
+      run.paymentLinkUrl &&
+      !run.stepIsOwnerAlert
+    ) {
       body = `${body}\n\n${renderPaymentLinkButton(run.paymentLinkUrl)}`;
     }
 

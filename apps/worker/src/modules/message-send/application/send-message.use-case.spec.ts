@@ -499,4 +499,25 @@ describe("SendMessageUseCase", () => {
     expect(sent.html).toContain("&lt;1&gt;");
     expect(sent.html).not.toMatch(/href="[^"]*"y"/);
   });
+
+  it("does not append the button on owner-alert steps even when toggle is on and URL is set", async () => {
+    const run = createMockRun({
+      paymentLinkUrl: "https://pay.example.com/inv-1",
+      stepIncludePaymentLink: true,
+      stepIsOwnerAlert: true,
+      // Owner alerts route to businessSenderEmail; the existing factory's
+      // businessSenderEmail field is already populated, no override needed.
+    });
+    repo.findRunById.mockResolvedValue(run);
+    repo.findNextStep.mockResolvedValue(null);
+    templateService.render.mockReturnValue("Internal alert body.");
+
+    await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+    expect(emailService.send).toHaveBeenCalledTimes(1);
+    const sent = emailService.send.mock.calls[0][0];
+    expect(sent.html).toContain("Internal alert body.");
+    expect(sent.html).not.toContain("Pay Invoice");
+    expect(sent.to).toBe("bob@bobsplumbing.com"); // businessSenderEmail from factory — confirms it routed to owner
+  });
 });
