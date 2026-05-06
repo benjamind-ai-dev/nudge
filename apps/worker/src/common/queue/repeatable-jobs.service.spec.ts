@@ -11,6 +11,7 @@ describe("RepeatableJobsService", () => {
   const mockMessageSendQueue = { upsertJobScheduler: jest.fn().mockResolvedValue(undefined) };
   const mockTokenRefreshQueue = { upsertJobScheduler: jest.fn().mockResolvedValue(undefined) };
   const mockDaysRecalcQueue = { upsertJobScheduler: jest.fn().mockResolvedValue(undefined) };
+  const mockWeeklySummaryQueue = { upsertJobScheduler: jest.fn().mockResolvedValue(undefined) };
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -21,6 +22,7 @@ describe("RepeatableJobsService", () => {
         { provide: getQueueToken(QUEUE_NAMES.MESSAGE_SEND), useValue: mockMessageSendQueue },
         { provide: getQueueToken(QUEUE_NAMES.TOKEN_REFRESH), useValue: mockTokenRefreshQueue },
         { provide: getQueueToken(QUEUE_NAMES.DAYS_RECALC), useValue: mockDaysRecalcQueue },
+        { provide: getQueueToken(QUEUE_NAMES.WEEKLY_SUMMARY), useValue: mockWeeklySummaryQueue },
       ],
     }).compile();
 
@@ -80,6 +82,23 @@ describe("RepeatableJobsService", () => {
         opts: {
           attempts: 2,
           backoff: { type: "fixed", delay: 60_000 },
+        },
+      },
+    );
+  });
+
+  it("should register weekly-summary-dispatch hourly", async () => {
+    await service.onModuleInit();
+
+    expect(mockWeeklySummaryQueue.upsertJobScheduler).toHaveBeenCalledWith(
+      "weekly-summary-dispatch-scheduler",
+      { pattern: "0 * * * *" },
+      {
+        name: "weekly-summary-dispatch",
+        opts: {
+          attempts: 1,
+          removeOnComplete: { count: 100 },
+          removeOnFail: { count: 50 },
         },
       },
     );
