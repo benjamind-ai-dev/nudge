@@ -23,6 +23,7 @@ import { SequencesModule } from "./modules/sequences/sequences.module";
 import { RelationshipTiersModule } from "./modules/relationship-tiers/relationship-tiers.module";
 import { CustomersModule } from "./modules/customers/customers.module";
 import { InvoicesModule } from "./modules/invoices/invoices.module";
+import { DevModule } from "./modules/dev/dev.module";
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { InvoicesModule } from "./modules/invoices/invoices.module";
     RelationshipTiersModule,
     CustomersModule,
     InvoicesModule,
+    DevModule,
   ],
 })
 export class AppModule {}
