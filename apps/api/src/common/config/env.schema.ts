@@ -34,6 +34,11 @@ export const envSchema = z.object({
   XERO_WEBHOOK_KEY: z.string().min(1),
   ENCRYPTION_KEY: z.string().length(64),
   FRONTEND_URL: z.string().url(),
+  DEV_MODE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  DEV_API_KEY: z.string().min(16).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
