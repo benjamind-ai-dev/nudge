@@ -10,6 +10,8 @@ export interface CreateSequenceData {
 
 export interface UpdateSequenceData {
   name?: string;
+  isActive?: boolean;
+  relationshipTierId?: string | null;
 }
 
 export interface CreateStepData {

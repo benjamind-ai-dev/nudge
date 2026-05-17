@@ -21,7 +21,10 @@ export interface SequenceSummary {
   id: string;
   businessId: string;
   name: string;
+  isActive: boolean;
   stepCount: number;
+  activeRuns: number;
+  relationshipTier: { id: string; name: string } | null;
   createdAt: Date;
   updatedAt: Date;
 }

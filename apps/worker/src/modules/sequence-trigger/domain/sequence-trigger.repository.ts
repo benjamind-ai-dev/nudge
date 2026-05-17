@@ -3,8 +3,10 @@ export interface OverdueInvoiceRow {
   invoiceNumber: string | null;
   customerId: string;
   customerSequenceId: string | null;
+  customerSequenceIsActive: boolean | null;
   customerTierId: string | null;
   customerTierSequenceId: string | null;
+  customerTierSequenceIsActive: boolean | null;
   dueDate: Date;
   businessId: string;
   businessTimezone: string;

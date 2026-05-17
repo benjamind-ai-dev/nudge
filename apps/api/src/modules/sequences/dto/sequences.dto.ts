@@ -34,7 +34,9 @@ export type ReplaceSequenceDto = z.infer<typeof replaceSequenceSchema>;
 
 export const updateSequenceSchema = z.object({
   businessId: z.string().uuid(),
-  name: z.string().min(1).max(255),
+  name: z.string().min(1).max(255).optional(),
+  isActive: z.boolean().optional(),
+  relationshipTierId: z.string().uuid().nullable().optional(),
 });
 export type UpdateSequenceDto = z.infer<typeof updateSequenceSchema>;
 

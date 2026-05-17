@@ -83,9 +83,19 @@ export class TriggerSequencesUseCase {
   }
 
   private async processInvoice(invoice: OverdueInvoiceRow): Promise<boolean> {
+    const activeCustomerSequenceId =
+      invoice.customerSequenceId !== null && invoice.customerSequenceIsActive === true
+        ? invoice.customerSequenceId
+        : null;
+
+    const activeTierSequenceId =
+      invoice.customerTierSequenceId !== null && invoice.customerTierSequenceIsActive === true
+        ? invoice.customerTierSequenceId
+        : null;
+
     const sequenceId =
-      invoice.customerSequenceId ??
-      invoice.customerTierSequenceId ??
+      activeCustomerSequenceId ??
+      activeTierSequenceId ??
       (await this.repo.findDefaultTierSequenceId(invoice.businessId));
 
     if (!sequenceId) {

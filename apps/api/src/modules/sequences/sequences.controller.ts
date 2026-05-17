@@ -117,10 +117,15 @@ export class SequencesController {
     @Body(new ZodValidationPipe(updateSequenceSchema)) dto: UpdateSequenceDto,
   ) {
     try {
-      const result = await this.updateSequence.execute(id, dto.businessId, dto.name);
+      const result = await this.updateSequence.execute(id, dto.businessId, {
+        name: dto.name,
+        isActive: dto.isActive,
+        relationshipTierId: dto.relationshipTierId,
+      });
       return { data: result };
     } catch (error) {
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof RelationshipTierNotFoundError) throw new NotFoundException(error.message);
       throw error;
     }
   }

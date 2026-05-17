@@ -44,9 +44,15 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
         customer: {
           select: {
             sequenceId: true,
+            sequence: {
+              select: { isActive: true },
+            },
             relationshipTierId: true,
             relationshipTier: {
-              select: { sequenceId: true },
+              select: {
+                sequenceId: true,
+                sequence: { select: { isActive: true } },
+              },
             },
           },
         },
@@ -64,8 +70,10 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
       invoiceNumber: row.invoiceNumber,
       customerId: row.customerId,
       customerSequenceId: row.customer.sequenceId,
+      customerSequenceIsActive: row.customer.sequence?.isActive ?? null,
       customerTierId: row.customer.relationshipTierId,
       customerTierSequenceId: row.customer.relationshipTier?.sequenceId ?? null,
+      customerTierSequenceIsActive: row.customer.relationshipTier?.sequence?.isActive ?? null,
       dueDate: row.dueDate,
       businessId: row.businessId,
       businessTimezone: row.business.timezone,
@@ -74,7 +82,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
 
   async findDefaultTierSequenceId(businessId: string): Promise<string | null> {
     const tier = await this.prisma.relationshipTier.findFirst({
-      where: { businessId, isDefault: true },
+      where: { businessId, isDefault: true, sequence: { isActive: true } },
       select: { sequenceId: true },
     });
     return tier?.sequenceId ?? null;
