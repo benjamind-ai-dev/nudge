@@ -178,39 +178,17 @@ describe("TriggerSequencesUseCase", () => {
     expect(repo.findSequenceFirstStep).not.toHaveBeenCalledWith("direct-seq");
   });
 
-  it("falls through to default tier when both customer and tier sequences are inactive", async () => {
+  it("stops with no_active_sequence when customer's tier sequence is paused — does NOT fall through to business default", async () => {
     const invoice = mkInvoice({
-      customerSequenceId: "direct-seq",
-      customerSequenceIsActive: false,
+      customerSequenceId: null,
       customerTierSequenceId: "tier-seq",
       customerTierSequenceIsActive: false,
     });
 
+    const findDefaultTierSequenceId = jest.fn().mockResolvedValue("default-seq");
     const repo = createMockRepo({
       findOverdueInvoicesWithoutRun: jest.fn().mockResolvedValue([invoice]),
-      findDefaultTierSequenceId: jest.fn().mockResolvedValue("default-seq"),
-    });
-
-    const useCase = new TriggerSequencesUseCase(repo);
-    await useCase.execute();
-
-    expect(repo.findDefaultTierSequenceId).toHaveBeenCalledWith("biz-1");
-    expect(repo.findSequenceFirstStep).toHaveBeenCalledWith("default-seq");
-    expect(repo.findSequenceFirstStep).not.toHaveBeenCalledWith("direct-seq");
-    expect(repo.findSequenceFirstStep).not.toHaveBeenCalledWith("tier-seq");
-  });
-
-  it("skips invoice when all three sequences are inactive or absent", async () => {
-    const invoice = mkInvoice({
-      customerSequenceId: "direct-seq",
-      customerSequenceIsActive: false,
-      customerTierSequenceId: "tier-seq",
-      customerTierSequenceIsActive: false,
-    });
-
-    const repo = createMockRepo({
-      findOverdueInvoicesWithoutRun: jest.fn().mockResolvedValue([invoice]),
-      findDefaultTierSequenceId: jest.fn().mockResolvedValue(null),
+      findDefaultTierSequenceId,
     });
 
     const useCase = new TriggerSequencesUseCase(repo);
@@ -218,6 +196,29 @@ describe("TriggerSequencesUseCase", () => {
 
     expect(result.skipped).toHaveLength(1);
     expect(result.skipped[0].reason).toBe("no_active_sequence");
+    expect(findDefaultTierSequenceId).not.toHaveBeenCalled();
+    expect(repo.findSequenceFirstStep).not.toHaveBeenCalled();
     expect(repo.createSequenceRun).not.toHaveBeenCalled();
+  });
+
+  it("stops with no_active_sequence when override is paused AND tier sequence is paused — no fallback", async () => {
+    const invoice = mkInvoice({
+      customerSequenceId: "direct-seq",
+      customerSequenceIsActive: false,
+      customerTierSequenceId: "tier-seq",
+      customerTierSequenceIsActive: false,
+    });
+
+    const findDefaultTierSequenceId = jest.fn().mockResolvedValue("default-seq");
+    const repo = createMockRepo({
+      findOverdueInvoicesWithoutRun: jest.fn().mockResolvedValue([invoice]),
+      findDefaultTierSequenceId,
+    });
+
+    const useCase = new TriggerSequencesUseCase(repo);
+    const result = await useCase.execute();
+
+    expect(result.skipped[0].reason).toBe("no_active_sequence");
+    expect(findDefaultTierSequenceId).not.toHaveBeenCalled();
   });
 });
