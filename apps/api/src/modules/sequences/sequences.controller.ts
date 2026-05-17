@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   ConflictException,
   Controller,
@@ -9,6 +10,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
@@ -22,16 +24,29 @@ import { AddStepUseCase } from "./application/add-step.use-case";
 import { UpdateStepUseCase } from "./application/update-step.use-case";
 import { DeleteStepUseCase } from "./application/delete-step.use-case";
 import { ReorderStepsUseCase } from "./application/reorder-steps.use-case";
-import { SequenceInUseError, SequenceNotFoundError, SequenceStepNotFoundError } from "./domain/sequence.errors";
+import { ReplaceSequenceUseCase } from "./application/replace-sequence.use-case";
+import { PreviewStepUseCase } from "./application/preview-step.use-case";
+import {
+  SequenceHasActiveRunsError,
+  SequenceInUseError,
+  SequenceNotFoundError,
+  SequenceStepNotFoundError,
+  SequenceLimitReachedError,
+  StepLimitReachedError,
+  InvalidStepOrderError,
+} from "./domain/sequence.errors";
+import { RelationshipTierNotFoundError } from "../relationship-tiers/domain/relationship-tier.errors";
 import {
   addStepSchema,
   businessIdQuerySchema,
   createSequenceSchema,
+  replaceSequenceSchema,
   reorderStepsSchema,
   updateSequenceSchema,
   updateStepSchema,
   type AddStepDto,
   type CreateSequenceDto,
+  type ReplaceSequenceDto,
   type ReorderStepsDto,
   type UpdateSequenceDto,
   type UpdateStepDto,
@@ -45,10 +60,12 @@ export class SequencesController {
     private readonly createSequence: CreateSequenceUseCase,
     private readonly updateSequence: UpdateSequenceUseCase,
     private readonly deleteSequence: DeleteSequenceUseCase,
+    private readonly replaceSequence: ReplaceSequenceUseCase,
     private readonly addStep: AddStepUseCase,
     private readonly updateStep: UpdateStepUseCase,
     private readonly deleteStep: DeleteStepUseCase,
     private readonly reorderSteps: ReorderStepsUseCase,
+    private readonly previewStep: PreviewStepUseCase,
   ) {}
 
   @Get()
@@ -81,8 +98,16 @@ export class SequencesController {
     @AccountId() _accountId: string,
     @Body(new ZodValidationPipe(createSequenceSchema)) dto: CreateSequenceDto,
   ) {
-    const result = await this.createSequence.execute(dto.businessId, dto.name);
-    return { data: result };
+    try {
+      const result = await this.createSequence.execute(dto.businessId, { name: dto.name, relationshipTierId: dto.relationshipTierId, steps: dto.steps });
+      return { data: result };
+    } catch (error) {
+      if (error instanceof SequenceLimitReachedError) throw new BadRequestException(error.message);
+      if (error instanceof StepLimitReachedError) throw new BadRequestException(error.message);
+      if (error instanceof InvalidStepOrderError) throw new BadRequestException(error.message);
+      if (error instanceof RelationshipTierNotFoundError) throw new NotFoundException(error.message);
+      throw error;
+    }
   }
 
   @Patch(":id")
@@ -180,6 +205,47 @@ export class SequencesController {
       return { data: null };
     } catch (error) {
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
+      throw error;
+    }
+  }
+
+  @Put(":id")
+  async replace(
+    @AccountId() _accountId: string,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(replaceSequenceSchema)) dto: ReplaceSequenceDto,
+  ) {
+    try {
+      const result = await this.replaceSequence.execute(id, dto.businessId, {
+        name: dto.name,
+        relationshipTierId: dto.relationshipTierId,
+        steps: dto.steps,
+      });
+      return { data: result };
+    } catch (error) {
+      if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof SequenceHasActiveRunsError) throw new BadRequestException(error.message);
+      if (error instanceof StepLimitReachedError) throw new BadRequestException(error.message);
+      if (error instanceof InvalidStepOrderError) throw new BadRequestException(error.message);
+      if (error instanceof RelationshipTierNotFoundError) throw new NotFoundException(error.message);
+      throw error;
+    }
+  }
+
+  @Post(":id/steps/:stepId/preview")
+  @HttpCode(200)
+  async previewSequenceStep(
+    @AccountId() _accountId: string,
+    @Param("id") sequenceId: string,
+    @Param("stepId") stepId: string,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
+  ) {
+    try {
+      const result = await this.previewStep.execute(sequenceId, stepId, businessId);
+      return { data: result };
+    } catch (error) {
+      if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof SequenceStepNotFoundError) throw new NotFoundException(error.message);
       throw error;
     }
   }
