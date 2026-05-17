@@ -83,10 +83,25 @@ export class TriggerSequencesUseCase {
   }
 
   private async processInvoice(invoice: OverdueInvoiceRow): Promise<boolean> {
-    const sequenceId =
-      invoice.customerSequenceId ??
-      invoice.customerTierSequenceId ??
-      (await this.repo.findDefaultTierSequenceId(invoice.businessId));
+    let sequenceId: string | null = null;
+
+    if (invoice.customerSequenceId !== null && invoice.customerSequenceIsActive === true) {
+      sequenceId = invoice.customerSequenceId;
+    }
+
+    // Tier sequence: if the customer's tier HAS a sequence wired but it's paused,
+    // stop here. Don't silently demote the customer to the business default.
+    if (sequenceId === null && invoice.customerTierSequenceId !== null) {
+      if (invoice.customerTierSequenceIsActive === true) {
+        sequenceId = invoice.customerTierSequenceId;
+      } else {
+        throw new NoActiveSequenceError(invoice.customerId, invoice.businessId);
+      }
+    }
+
+    if (sequenceId === null) {
+      sequenceId = await this.repo.findDefaultTierSequenceId(invoice.businessId);
+    }
 
     if (!sequenceId) {
       throw new NoActiveSequenceError(invoice.customerId, invoice.businessId);

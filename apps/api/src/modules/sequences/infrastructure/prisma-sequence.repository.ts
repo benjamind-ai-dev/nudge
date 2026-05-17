@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaClient } from "@nudge/database";
+import { SEQUENCE_RUN_STATUSES } from "@nudge/shared";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   SequenceRepository,
@@ -24,6 +25,25 @@ const STEP_SELECT = {
   includePaymentLink: true,
   createdAt: true,
   updatedAt: true,
+} as const;
+
+// RelationshipTier has a sortOrder field — sort by sortOrder ASC NULLS LAST, then name ASC
+const SUMMARY_SELECT = {
+  id: true,
+  businessId: true,
+  name: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+  _count: {
+    select: {
+      steps: true,
+      runs: { where: { status: SEQUENCE_RUN_STATUSES.ACTIVE } },
+    },
+  },
+  relationshipTier: {
+    select: { id: true, name: true },
+  },
 } as const;
 
 function toStep(row: {
@@ -54,6 +74,31 @@ function toStep(row: {
   };
 }
 
+function toSummary(row: {
+  id: string;
+  businessId: string;
+  name: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  _count: { steps: number; runs: number };
+  relationshipTier: { id: string; name: string } | null;
+}): SequenceSummary {
+  return {
+    id: row.id,
+    businessId: row.businessId,
+    name: row.name,
+    isActive: row.isActive,
+    stepCount: row._count.steps,
+    activeRuns: row._count.runs,
+    relationshipTier: row.relationshipTier
+      ? { id: row.relationshipTier.id, name: row.relationshipTier.name }
+      : null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 @Injectable()
 export class PrismaSequenceRepository implements SequenceRepository {
   constructor(@Inject(PRISMA_CLIENT) private readonly prisma: PrismaClient) {}
@@ -61,48 +106,28 @@ export class PrismaSequenceRepository implements SequenceRepository {
   async findAllByBusiness(businessId: string): Promise<SequenceSummary[]> {
     const rows = await this.prisma.sequence.findMany({
       where: { businessId },
-      select: {
-        id: true,
-        businessId: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { steps: true } },
-      },
-      orderBy: { createdAt: "asc" },
+      select: SUMMARY_SELECT,
+      // Sort by relationship tier sortOrder ASC NULLS LAST, then name ASC
+      orderBy: [
+        { relationshipTier: { sortOrder: "asc" } },
+        { name: "asc" },
+      ],
     });
-    return rows.map((r) => ({
-      id: r.id,
-      businessId: r.businessId,
-      name: r.name,
-      stepCount: r._count.steps,
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
-    }));
+    return rows.map(toSummary);
   }
 
   async findById(id: string, businessId: string): Promise<SequenceWithSteps | null> {
     const row = await this.prisma.sequence.findFirst({
       where: { id, businessId },
       select: {
-        id: true,
-        businessId: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { steps: true } },
+        ...SUMMARY_SELECT,
         steps: { select: STEP_SELECT, orderBy: { stepOrder: "asc" } },
       },
     });
     if (!row) return null;
     return {
-      id: row.id,
-      businessId: row.businessId,
-      name: row.name,
-      stepCount: row._count.steps,
+      ...toSummary(row),
       steps: row.steps.map(toStep),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
     };
   }
 
@@ -113,16 +138,9 @@ export class PrismaSequenceRepository implements SequenceRepository {
         name: data.name,
         ...(data.relationshipTierId !== undefined && { relationshipTierId: data.relationshipTierId }),
       },
-      select: {
-        id: true,
-        businessId: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { steps: true } },
-      },
+      select: SUMMARY_SELECT,
     });
-    return { id: row.id, businessId: row.businessId, name: row.name, stepCount: 0, createdAt: row.createdAt, updatedAt: row.updatedAt };
+    return toSummary(row);
   }
 
   async createWithSteps(data: CreateSequenceData & { steps: CreateStepData[] }): Promise<SequenceWithSteps> {
@@ -145,23 +163,13 @@ export class PrismaSequenceRepository implements SequenceRepository {
         },
       },
       select: {
-        id: true,
-        businessId: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { steps: true } },
+        ...SUMMARY_SELECT,
         steps: { select: STEP_SELECT, orderBy: { stepOrder: "asc" } },
       },
     });
     return {
-      id: row.id,
-      businessId: row.businessId,
-      name: row.name,
-      stepCount: row._count.steps,
+      ...toSummary(row),
       steps: row.steps.map(toStep),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
     };
   }
 
@@ -171,7 +179,7 @@ export class PrismaSequenceRepository implements SequenceRepository {
 
   async countActiveRuns(sequenceId: string, businessId: string): Promise<number> {
     return this.prisma.sequenceRun.count({
-      where: { sequenceId, status: "active", sequence: { businessId } },
+      where: { sequenceId, status: SEQUENCE_RUN_STATUSES.ACTIVE, sequence: { businessId } },
     });
   }
 
@@ -200,25 +208,15 @@ export class PrismaSequenceRepository implements SequenceRepository {
           },
         },
         select: {
-          id: true,
-          businessId: true,
-          name: true,
-          createdAt: true,
-          updatedAt: true,
-          _count: { select: { steps: true } },
+          ...SUMMARY_SELECT,
           steps: { select: STEP_SELECT, orderBy: { stepOrder: "asc" } },
         },
       });
     });
 
     return {
-      id: row.id,
-      businessId: row.businessId,
-      name: row.name,
-      stepCount: row._count.steps,
+      ...toSummary(row),
       steps: row.steps.map(toStep),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
     };
   }
 
@@ -235,17 +233,14 @@ export class PrismaSequenceRepository implements SequenceRepository {
     if (!existing) throw new SequenceNotFoundError(id);
     const row = await this.prisma.sequence.update({
       where: { id },
-      data: { ...(data.name !== undefined && { name: data.name }) },
-      select: {
-        id: true,
-        businessId: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { steps: true } },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+        ...(data.relationshipTierId !== undefined && { relationshipTierId: data.relationshipTierId }),
       },
+      select: SUMMARY_SELECT,
     });
-    return { id: row.id, businessId: row.businessId, name: row.name, stepCount: row._count.steps, createdAt: row.createdAt, updatedAt: row.updatedAt };
+    return toSummary(row);
   }
 
   async delete(id: string, businessId: string): Promise<void> {
