@@ -6,13 +6,18 @@ const createMockRepo = (overrides: Partial<SequenceRepository> = {}): SequenceRe
   findAllByBusiness: jest.fn(),
   findById: jest.fn(),
   create: jest.fn(),
+  createWithSteps: jest.fn(),
   update: jest.fn(),
   delete: jest.fn().mockResolvedValue(undefined),
   isReferencedByTierOrCustomer: jest.fn().mockResolvedValue(false),
+  countByBusiness: jest.fn().mockResolvedValue(0),
+  countActiveRuns: jest.fn().mockResolvedValue(0),
+  replaceSteps: jest.fn(),
   addStep: jest.fn(),
   updateStep: jest.fn(),
   deleteStep: jest.fn(),
   reorderSteps: jest.fn(),
+  findSenderName: jest.fn().mockResolvedValue(null),
   ...overrides,
 });
 

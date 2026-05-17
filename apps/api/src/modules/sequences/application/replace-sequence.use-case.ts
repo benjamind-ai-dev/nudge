@@ -1,65 +1,53 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { SEQUENCE_REPOSITORY, type SequenceRepository, type CreateStepData } from "../domain/sequence.repository";
 import { RELATIONSHIP_TIER_REPOSITORY, type RelationshipTierRepository } from "../../relationship-tiers/domain/relationship-tier.repository";
+import { MAX_STEPS_PER_SEQUENCE, type SequenceWithSteps } from "../domain/sequence.entity";
 import {
-  MAX_SEQUENCES_PER_BUSINESS,
-  MAX_STEPS_PER_SEQUENCE,
-  type SequenceSummary,
-  type SequenceWithSteps,
-} from "../domain/sequence.entity";
-import {
-  SequenceLimitReachedError,
+  SequenceNotFoundError,
+  SequenceHasActiveRunsError,
   StepLimitReachedError,
   InvalidStepOrderError,
 } from "../domain/sequence.errors";
 import { RelationshipTierNotFoundError } from "../../relationship-tiers/domain/relationship-tier.errors";
 
-export interface CreateSequenceInput {
+export interface ReplaceSequenceInput {
   name: string;
   relationshipTierId?: string | null;
-  steps?: CreateStepData[];
+  steps: CreateStepData[];
 }
 
 @Injectable()
-export class CreateSequenceUseCase {
+export class ReplaceSequenceUseCase {
   constructor(
     @Inject(SEQUENCE_REPOSITORY) private readonly repo: SequenceRepository,
     @Inject(RELATIONSHIP_TIER_REPOSITORY) private readonly tierRepo: RelationshipTierRepository,
   ) {}
 
-  async execute(businessId: string, input: CreateSequenceInput): Promise<SequenceSummary | SequenceWithSteps> {
-    const count = await this.repo.countByBusiness(businessId);
-    if (count >= MAX_SEQUENCES_PER_BUSINESS) {
-      throw new SequenceLimitReachedError();
-    }
-
-    const steps = input.steps ?? [];
-
-    if (steps.length > MAX_STEPS_PER_SEQUENCE) {
+  async execute(id: string, businessId: string, input: ReplaceSequenceInput): Promise<SequenceWithSteps> {
+    if (input.steps.length > MAX_STEPS_PER_SEQUENCE) {
       throw new StepLimitReachedError();
     }
 
-    if (steps.length > 0) {
-      this.validateStepOrder(steps);
+    this.validateStepOrder(input.steps);
+
+    const existing = await this.repo.findById(id, businessId);
+    if (!existing) {
+      throw new SequenceNotFoundError(id);
+    }
+
+    const activeRuns = await this.repo.countActiveRuns(id, businessId);
+    if (activeRuns > 0) {
+      throw new SequenceHasActiveRunsError(id);
     }
 
     if (input.relationshipTierId) {
       await this.assertTierBelongsToBusiness(input.relationshipTierId, businessId);
     }
 
-    if (steps.length > 0) {
-      return this.repo.createWithSteps({
-        businessId,
-        name: input.name,
-        relationshipTierId: input.relationshipTierId,
-        steps,
-      });
-    }
-
-    return this.repo.create({
-      businessId,
+    return this.repo.replaceSteps(id, businessId, {
       name: input.name,
       relationshipTierId: input.relationshipTierId,
+      steps: input.steps,
     });
   }
 

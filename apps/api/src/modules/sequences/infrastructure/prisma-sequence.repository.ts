@@ -7,6 +7,7 @@ import type {
   UpdateSequenceData,
   CreateStepData,
   UpdateStepData,
+  ReplaceSequenceData,
 } from "../domain/sequence.repository";
 import type { SequenceSummary, SequenceStep, SequenceWithSteps } from "../domain/sequence.entity";
 import { SequenceNotFoundError, SequenceStepNotFoundError } from "../domain/sequence.errors";
@@ -107,7 +108,11 @@ export class PrismaSequenceRepository implements SequenceRepository {
 
   async create(data: CreateSequenceData): Promise<SequenceSummary> {
     const row = await this.prisma.sequence.create({
-      data: { businessId: data.businessId, name: data.name },
+      data: {
+        businessId: data.businessId,
+        name: data.name,
+        ...(data.relationshipTierId !== undefined && { relationshipTierId: data.relationshipTierId }),
+      },
       select: {
         id: true,
         businessId: true,
@@ -118,6 +123,111 @@ export class PrismaSequenceRepository implements SequenceRepository {
       },
     });
     return { id: row.id, businessId: row.businessId, name: row.name, stepCount: 0, createdAt: row.createdAt, updatedAt: row.updatedAt };
+  }
+
+  async createWithSteps(data: CreateSequenceData & { steps: CreateStepData[] }): Promise<SequenceWithSteps> {
+    const row = await this.prisma.sequence.create({
+      data: {
+        businessId: data.businessId,
+        name: data.name,
+        ...(data.relationshipTierId !== undefined && { relationshipTierId: data.relationshipTierId }),
+        steps: {
+          create: data.steps.map((s) => ({
+            stepOrder: s.stepOrder,
+            delayDays: s.delayDays,
+            channel: s.channel,
+            subjectTemplate: s.subjectTemplate ?? null,
+            bodyTemplate: s.bodyTemplate,
+            smsBodyTemplate: s.smsBodyTemplate ?? null,
+            isOwnerAlert: s.isOwnerAlert ?? false,
+            includePaymentLink: s.includePaymentLink ?? true,
+          })),
+        },
+      },
+      select: {
+        id: true,
+        businessId: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: { select: { steps: true } },
+        steps: { select: STEP_SELECT, orderBy: { stepOrder: "asc" } },
+      },
+    });
+    return {
+      id: row.id,
+      businessId: row.businessId,
+      name: row.name,
+      stepCount: row._count.steps,
+      steps: row.steps.map(toStep),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  async countByBusiness(businessId: string): Promise<number> {
+    return this.prisma.sequence.count({ where: { businessId } });
+  }
+
+  async countActiveRuns(sequenceId: string, businessId: string): Promise<number> {
+    return this.prisma.sequenceRun.count({
+      where: { sequenceId, status: "active", sequence: { businessId } },
+    });
+  }
+
+  async replaceSteps(id: string, businessId: string, data: ReplaceSequenceData): Promise<SequenceWithSteps> {
+    const existing = await this.prisma.sequence.findFirst({ where: { id, businessId }, select: { id: true } });
+    if (!existing) throw new SequenceNotFoundError(id);
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.sequenceStep.deleteMany({ where: { sequenceId: id } });
+      return tx.sequence.update({
+        where: { id },
+        data: {
+          name: data.name,
+          ...(data.relationshipTierId !== undefined && { relationshipTierId: data.relationshipTierId }),
+          steps: {
+            create: data.steps.map((s) => ({
+              stepOrder: s.stepOrder,
+              delayDays: s.delayDays,
+              channel: s.channel,
+              subjectTemplate: s.subjectTemplate ?? null,
+              bodyTemplate: s.bodyTemplate,
+              smsBodyTemplate: s.smsBodyTemplate ?? null,
+              isOwnerAlert: s.isOwnerAlert ?? false,
+              includePaymentLink: s.includePaymentLink ?? true,
+            })),
+          },
+        },
+        select: {
+          id: true,
+          businessId: true,
+          name: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: { select: { steps: true } },
+          steps: { select: STEP_SELECT, orderBy: { stepOrder: "asc" } },
+        },
+      });
+    });
+
+    return {
+      id: row.id,
+      businessId: row.businessId,
+      name: row.name,
+      stepCount: row._count.steps,
+      steps: row.steps.map(toStep),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  async findSenderName(businessId: string): Promise<string | null> {
+    const row = await this.prisma.business.findFirst({
+      where: { id: businessId },
+      select: { senderName: true },
+    });
+    return row?.senderName ?? null;
   }
 
   async update(id: string, businessId: string, data: UpdateSequenceData): Promise<SequenceSummary> {

@@ -5,11 +5,32 @@ const channelSchema = z.enum(["email", "sms", "email_and_sms"]);
 export const businessIdQuerySchema = z.string().uuid();
 export type BusinessIdQuery = z.infer<typeof businessIdQuerySchema>;
 
+const stepSchema = z.object({
+  stepOrder: z.number().int().min(1),
+  delayDays: z.number().int().min(0),
+  channel: channelSchema,
+  subjectTemplate: z.string().nullable().optional(),
+  bodyTemplate: z.string().min(1),
+  smsBodyTemplate: z.string().nullable().optional(),
+  isOwnerAlert: z.boolean().optional(),
+  includePaymentLink: z.boolean().optional(),
+});
+
 export const createSequenceSchema = z.object({
   businessId: z.string().uuid(),
   name: z.string().min(1).max(255),
+  relationshipTierId: z.string().uuid().nullable().optional(),
+  steps: z.array(stepSchema).min(1).max(10).optional(),
 });
 export type CreateSequenceDto = z.infer<typeof createSequenceSchema>;
+
+export const replaceSequenceSchema = z.object({
+  businessId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  relationshipTierId: z.string().uuid().nullable().optional(),
+  steps: z.array(stepSchema).min(1).max(10),
+});
+export type ReplaceSequenceDto = z.infer<typeof replaceSequenceSchema>;
 
 export const updateSequenceSchema = z.object({
   businessId: z.string().uuid(),
