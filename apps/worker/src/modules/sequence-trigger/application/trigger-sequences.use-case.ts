@@ -7,7 +7,7 @@ import {
   type SequenceTriggerRepository,
 } from "../domain/sequence-trigger.repository";
 import { NoActiveSequenceError, NoStepsError } from "../domain/sequence-trigger.errors";
-import { nextBusinessHour } from "../../../common/utils/business-hours";
+import { nextBusinessHour } from "@nudge/shared";
 
 const BATCH_SIZE = 100;
 

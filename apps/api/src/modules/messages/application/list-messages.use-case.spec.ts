@@ -22,6 +22,10 @@ const mkItem = (over: Partial<MessageListItem> = {}): MessageListItem => ({
 const createMockRepo = (overrides: Partial<MessageRepository> = {}): MessageRepository => ({
   findManyByFilter: jest.fn().mockResolvedValue({ items: [], total: 0 } satisfies MessageListResult),
   findDetailById: jest.fn(),
+  findReplyContext: jest.fn().mockResolvedValue(null),
+  createReplyMessage: jest.fn().mockResolvedValue(undefined),
+  markMessageSent: jest.fn().mockResolvedValue(undefined),
+  resumeRun: jest.fn().mockResolvedValue(undefined),
   ...overrides,
 });
 
