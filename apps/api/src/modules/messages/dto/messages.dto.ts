@@ -22,3 +22,9 @@ export const getMessageQuerySchema = z.object({
   businessId: z.string().uuid(),
 });
 export type GetMessageQuery = z.infer<typeof getMessageQuerySchema>;
+
+export const sendReplyBodySchema = z.object({
+  body: z.string().trim().min(1, "Reply body must not be empty"),
+  resumeSequence: z.boolean(),
+});
+export type SendReplyBody = z.infer<typeof sendReplyBodySchema>;
