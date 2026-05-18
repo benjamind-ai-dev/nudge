@@ -41,6 +41,7 @@ export class SendReplyUseCase {
     private readonly repo: MessageRepository,
     @Inject(OUTBOUND_EMAIL_SERVICE)
     private readonly email: OutboundEmailService,
+    @Inject(ConfigService)
     config: ConfigService<Env, true> | ReplyEnv,
   ) {
     // Accept either the real ConfigService or a plain object so unit tests
