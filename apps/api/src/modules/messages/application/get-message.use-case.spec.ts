@@ -28,6 +28,10 @@ const mkDetail = (over: Partial<MessageDetail> = {}): MessageDetail => ({
 const createMockRepo = (overrides: Partial<MessageRepository> = {}): MessageRepository => ({
   findManyByFilter: jest.fn(),
   findDetailById: jest.fn().mockResolvedValue(null),
+  findReplyContext: jest.fn().mockResolvedValue(null),
+  createReplyMessage: jest.fn().mockResolvedValue(undefined),
+  markMessageSent: jest.fn().mockResolvedValue(undefined),
+  resumeRun: jest.fn().mockResolvedValue(undefined),
   ...overrides,
 });
 

@@ -7,9 +7,12 @@ import type {
   MessageListItem,
 } from "../domain/message.entity";
 import type {
+  CreateReplyMessageData,
   MessageListFilter,
   MessageListResult,
   MessageRepository,
+  ReplyContext,
+  UpdateMessageSentData,
 } from "../domain/message.repository";
 
 const LIST_SELECT = {
@@ -70,6 +73,111 @@ export class PrismaMessageRepository implements MessageRepository {
       select: DETAIL_SELECT,
     });
     return row ? this.toDetail(row) : null;
+  }
+
+  async findReplyContext(id: string, businessId: string): Promise<ReplyContext | null> {
+    const row = await this.prisma.message.findFirst({
+      where: { id, businessId },
+      select: {
+        id: true,
+        subject: true,
+        sequenceRunId: true,
+        customerId: true,
+        invoiceId: true,
+        businessId: true,
+        repliedAt: true,
+        customer: { select: { id: true, contactEmail: true } },
+        business: {
+          select: {
+            senderName: true,
+            emailSignature: true,
+            timezone: true,
+          },
+        },
+        sequenceRun: {
+          select: {
+            id: true,
+            status: true,
+            currentStepId: true,
+            currentStep: { select: { delayDays: true } },
+          },
+        },
+      },
+    });
+
+    if (!row) return null;
+
+    return {
+      message: {
+        id: row.id,
+        subject: row.subject,
+        sequenceRunId: row.sequenceRunId,
+        customerId: row.customerId,
+        invoiceId: row.invoiceId,
+        businessId: row.businessId,
+        repliedAt: row.repliedAt,
+      },
+      customer: {
+        id: row.customer.id,
+        contactEmail: row.customer.contactEmail,
+      },
+      business: {
+        senderName: row.business.senderName,
+        emailSignature: row.business.emailSignature,
+        timezone: row.business.timezone,
+      },
+      sequenceRun: {
+        id: row.sequenceRun.id,
+        status: row.sequenceRun.status,
+        currentStepId: row.sequenceRun.currentStepId,
+      },
+      currentStep: row.sequenceRun.currentStep
+        ? { delayDays: row.sequenceRun.currentStep.delayDays }
+        : null,
+    };
+  }
+
+  async createReplyMessage(data: CreateReplyMessageData): Promise<void> {
+    await this.prisma.message.create({
+      data: {
+        id: data.id,
+        sequenceRunId: data.sequenceRunId,
+        sequenceStepId: null,
+        invoiceId: data.invoiceId,
+        customerId: data.customerId,
+        businessId: data.businessId,
+        channel: "email",
+        recipientEmail: data.recipientEmail,
+        recipientPhone: null,
+        subject: data.subject,
+        body: data.body,
+        status: "queued",
+        externalMessageId: null,
+        sentAt: null,
+      },
+    });
+  }
+
+  async markMessageSent(data: UpdateMessageSentData): Promise<void> {
+    await this.prisma.message.updateMany({
+      where: { id: data.id, businessId: data.businessId },
+      data: {
+        status: "sent",
+        externalMessageId: data.externalMessageId,
+        sentAt: data.sentAt,
+      },
+    });
+  }
+
+  async resumeRun(runId: string, businessId: string, nextSendAt: Date): Promise<void> {
+    await this.prisma.sequenceRun.updateMany({
+      where: {
+        id: runId,
+        status: "paused",
+        invoice: { businessId },
+      },
+      data: { status: "active", pausedReason: null, nextSendAt },
+    });
   }
 
   private buildWhere(filter: MessageListFilter): Prisma.MessageWhereInput {
