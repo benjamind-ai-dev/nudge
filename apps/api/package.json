@@ -29,6 +29,7 @@
     "nestjs-pino": "^4.6.1",
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.0",
+    "resend": "^6.12.0",
     "rxjs": "^7.8.0",
     "stripe": "^22.0.1",
     "svix": "^1.92.2",
