@@ -23,6 +23,7 @@ import { SequencesModule } from "./modules/sequences/sequences.module";
 import { RelationshipTiersModule } from "./modules/relationship-tiers/relationship-tiers.module";
 import { CustomersModule } from "./modules/customers/customers.module";
 import { InvoicesModule } from "./modules/invoices/invoices.module";
+import { MessagesModule } from "./modules/messages/messages.module";
 import { DevModule } from "./modules/dev/dev.module";
 
 @Module({
@@ -81,6 +82,7 @@ import { DevModule } from "./modules/dev/dev.module";
     RelationshipTiersModule,
     CustomersModule,
     InvoicesModule,
+    MessagesModule,
     DevModule,
   ],
 })

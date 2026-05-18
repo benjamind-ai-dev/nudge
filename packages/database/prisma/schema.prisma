@@ -273,7 +273,7 @@ model SequenceRun {
 model Message {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sequenceRunId     String    @map("sequence_run_id") @db.Uuid
-  sequenceStepId    String    @map("sequence_step_id") @db.Uuid
+  sequenceStepId    String?   @map("sequence_step_id") @db.Uuid
   invoiceId         String    @map("invoice_id") @db.Uuid
   customerId        String    @map("customer_id") @db.Uuid
   businessId        String    @map("business_id") @db.Uuid
@@ -294,7 +294,7 @@ model Message {
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   sequenceRun  SequenceRun  @relation(fields: [sequenceRunId], references: [id], onDelete: Cascade)
-  sequenceStep SequenceStep @relation(fields: [sequenceStepId], references: [id], onDelete: Restrict)
+  sequenceStep SequenceStep? @relation(fields: [sequenceStepId], references: [id], onDelete: Restrict)
   invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
   business     Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
