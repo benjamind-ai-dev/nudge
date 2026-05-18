@@ -1,11 +1,10 @@
 import {
+  BadGatewayException,
   Body,
   ConflictException,
   Controller,
   Get,
   HttpCode,
-  HttpException,
-  HttpStatus,
   NotFoundException,
   Param,
   Post,
@@ -78,7 +77,7 @@ export class MessagesController {
       if (error instanceof MessageNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof NoReplyToRespondToError) throw new ConflictException(error.message);
       if (error instanceof CustomerHasNoEmailError) throw new UnprocessableEntityException(error.message);
-      if (error instanceof OutboundEmailSendError) throw new HttpException(error.message, HttpStatus.BAD_GATEWAY);
+      if (error instanceof OutboundEmailSendError) throw new BadGatewayException(error.message);
       throw error;
     }
   }

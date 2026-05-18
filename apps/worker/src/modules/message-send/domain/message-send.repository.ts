@@ -54,7 +54,7 @@ export interface NextStep {
 export interface CreateMessageData {
   id: string;
   sequenceRunId: string;
-  sequenceStepId: string;
+  sequenceStepId: string | null;
   invoiceId: string;
   customerId: string;
   businessId: string;
