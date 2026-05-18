@@ -13,7 +13,7 @@ import {
 import { TEMPLATE_SERVICE, type TemplateService, type TemplateData } from "../domain/template.service";
 import { EMAIL_SERVICE, type EmailService } from "../domain/email.service";
 import { SMS_SERVICE, type SmsService } from "../domain/sms.service";
-import { nextBusinessHour } from "../../../common/utils/business-hours";
+import { nextBusinessHour } from "@nudge/shared";
 import { Env } from "../../../common/config/env.schema";
 
 interface ChannelSendResult {
