@@ -4,7 +4,13 @@ import request from "supertest";
 import { MessagesController } from "./messages.controller";
 import { ListMessagesUseCase } from "./application/list-messages.use-case";
 import { GetMessageUseCase } from "./application/get-message.use-case";
-import { MessageNotFoundError } from "./domain/message.errors";
+import { SendReplyUseCase } from "./application/send-reply.use-case";
+import {
+  CustomerHasNoEmailError,
+  MessageNotFoundError,
+  NoReplyToRespondToError,
+  OutboundEmailSendError,
+} from "./domain/message.errors";
 import type { MessageDetail, MessageListItem } from "./domain/message.entity";
 
 const BIZ_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -39,16 +45,19 @@ describe("MessagesController", () => {
   let app: INestApplication;
   let listUseCase: { execute: jest.Mock };
   let getUseCase: { execute: jest.Mock };
+  let replyUseCase: { execute: jest.Mock };
 
   beforeEach(async () => {
     listUseCase = { execute: jest.fn() };
     getUseCase = { execute: jest.fn() };
+    replyUseCase = { execute: jest.fn() };
 
     const module = await Test.createTestingModule({
       controllers: [MessagesController],
       providers: [
         { provide: ListMessagesUseCase, useValue: listUseCase },
         { provide: GetMessageUseCase, useValue: getUseCase },
+        { provide: SendReplyUseCase, useValue: replyUseCase },
       ],
     }).compile();
 
@@ -151,6 +160,86 @@ describe("MessagesController", () => {
 
     it("returns 400 when businessId query param is missing", async () => {
       await request(app.getHttpServer()).get(`/v1/messages/${MSG_ID}`).expect(400);
+    });
+  });
+
+  describe("POST /v1/messages/:id/send-reply", () => {
+    const validBody = { body: "Thanks for flagging this.", resumeSequence: true };
+
+    it("returns 200 with the new message detail on success", async () => {
+      replyUseCase.execute.mockResolvedValue(detail);
+
+      const res = await request(app.getHttpServer())
+        .post(`/v1/messages/${MSG_ID}/send-reply`)
+        .query({ businessId: BIZ_ID })
+        .send(validBody)
+        .expect(200);
+
+      expect(res.body.data.id).toBe(MSG_ID);
+      expect(replyUseCase.execute).toHaveBeenCalledWith(MSG_ID, BIZ_ID, validBody);
+    });
+
+    it("returns 404 when MessageNotFoundError is thrown", async () => {
+      replyUseCase.execute.mockRejectedValue(new MessageNotFoundError(MSG_ID));
+
+      await request(app.getHttpServer())
+        .post(`/v1/messages/${MSG_ID}/send-reply`)
+        .query({ businessId: BIZ_ID })
+        .send(validBody)
+        .expect(404);
+    });
+
+    it("returns 409 when NoReplyToRespondToError is thrown", async () => {
+      replyUseCase.execute.mockRejectedValue(new NoReplyToRespondToError(MSG_ID));
+
+      await request(app.getHttpServer())
+        .post(`/v1/messages/${MSG_ID}/send-reply`)
+        .query({ businessId: BIZ_ID })
+        .send(validBody)
+        .expect(409);
+    });
+
+    it("returns 422 when CustomerHasNoEmailError is thrown", async () => {
+      replyUseCase.execute.mockRejectedValue(new CustomerHasNoEmailError("cust-1"));
+
+      await request(app.getHttpServer())
+        .post(`/v1/messages/${MSG_ID}/send-reply`)
+        .query({ businessId: BIZ_ID })
+        .send(validBody)
+        .expect(422);
+    });
+
+    it("returns 502 when OutboundEmailSendError is thrown", async () => {
+      replyUseCase.execute.mockRejectedValue(new OutboundEmailSendError(MSG_ID, new Error("Resend down")));
+
+      await request(app.getHttpServer())
+        .post(`/v1/messages/${MSG_ID}/send-reply`)
+        .query({ businessId: BIZ_ID })
+        .send(validBody)
+        .expect(502);
+    });
+
+    it("returns 400 when the body is empty", async () => {
+      await request(app.getHttpServer())
+        .post(`/v1/messages/${MSG_ID}/send-reply`)
+        .query({ businessId: BIZ_ID })
+        .send({ body: "   ", resumeSequence: false })
+        .expect(400);
+    });
+
+    it("returns 400 when resumeSequence is missing", async () => {
+      await request(app.getHttpServer())
+        .post(`/v1/messages/${MSG_ID}/send-reply`)
+        .query({ businessId: BIZ_ID })
+        .send({ body: "hi" })
+        .expect(400);
+    });
+
+    it("returns 400 when businessId query is missing", async () => {
+      await request(app.getHttpServer())
+        .post(`/v1/messages/${MSG_ID}/send-reply`)
+        .send(validBody)
+        .expect(400);
     });
   });
 });
