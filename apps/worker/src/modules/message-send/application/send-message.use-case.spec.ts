@@ -288,14 +288,14 @@ describe("SendMessageUseCase", () => {
     expect(repo.completeRun).not.toHaveBeenCalled();
   });
 
-  it("does NOT advance on createMessage race condition (queued row may mean email never sent)", async () => {
+  it("advances on createMessage race condition to break scheduler loop", async () => {
     const run = createMockRun();
     repo.findRunById.mockResolvedValue(run);
-    // P2002 from createMessage: a row exists for (run, step, channel) but we
-    // can't tell from this signal alone whether the row is status='sent' or
-    // a stale status='queued' from a crashed prior attempt. Conservatively
-    // do not advance — silently advancing past a stale-queued row would mean
-    // the customer never receives this follow-up.
+    // P2002 from createMessage: a row exists for (run, step, channel).
+    // Since we no longer delete and resend queued messages, we must advance
+    // to prevent infinite re-enqueuing. The trade-off is that if the message
+    // was queued but never sent (crash before Resend call), we skip the step.
+    // This is better than infinite duplicate sends.
     repo.createMessage.mockResolvedValue({ created: false });
     repo.findNextStep.mockResolvedValue(null);
 
@@ -304,18 +304,17 @@ describe("SendMessageUseCase", () => {
     expect(result.sent).toBe(false);
     expect(result.skippedReason).toBe("all_duplicates");
     expect(result.messagesSent).toBe(0);
-    expect(repo.completeRun).not.toHaveBeenCalled();
-    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
+    expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
   });
 
-  it("does NOT advance when one channel is confirmed-sent and another is a race-condition duplicate", async () => {
-    // The dangerous mixed case: SMS was confirmed sent (good, work done),
-    // but email hit a P2002 race — could be a stale 'queued' row, meaning
-    // the email never went out. We must not advance and silently lose it.
+  it("advances when one channel is confirmed-sent and another is a race-condition duplicate", async () => {
+    // Both channels have message records (one confirmed via messageExistsForRunStep,
+    // one via createMessage race). Since duplicates exist, we advance to break
+    // the scheduler loop.
     const run = createMockRun({ stepChannel: "email_and_sms" });
     repo.findRunById.mockResolvedValue(run);
-    // First call (email): not previously sent.
-    // Second call (sms): previously sent → confirmed.
+    // First call (email): not previously found by messageExistsForRunStep.
+    // Second call (sms): previously found → confirmed.
     repo.messageExistsForRunStep
       .mockResolvedValueOnce(false)
       .mockResolvedValueOnce(true);
@@ -329,8 +328,9 @@ describe("SendMessageUseCase", () => {
     expect(result.skippedReason).toBe("all_duplicates");
     expect(emailService.send).not.toHaveBeenCalled();
     expect(smsService.send).not.toHaveBeenCalled();
-    expect(repo.advanceRunToNextStep).not.toHaveBeenCalled();
-    expect(repo.completeRun).not.toHaveBeenCalled();
+    expect(repo.advanceRunToNextStep).toHaveBeenCalledWith(
+      "run-1", "biz-1", "step-2", expect.any(Date),
+    );
   });
 
   it("skips SMS for owner alert steps and does not advance when sms-only channel", async () => {

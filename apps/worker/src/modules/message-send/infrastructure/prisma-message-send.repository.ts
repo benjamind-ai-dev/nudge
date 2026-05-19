@@ -275,13 +275,16 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
   }
 
   async messageExistsForRunStep(runId: string, stepId: string, channel: string, businessId: string): Promise<boolean> {
+    // Check for ANY message for this run/step/channel, not just 'sent'.
+    // A 'queued' message means a previous attempt created the record and likely
+    // sent the email (we can't tell if Resend received it), so we treat it as
+    // "already processed" to prevent duplicate sends and break the retry loop.
     const count = await this.prisma.message.count({
       where: {
         sequenceRunId: runId,
         sequenceStepId: stepId,
         channel,
         businessId,
-        status: "sent",
       },
     });
 
@@ -314,43 +317,18 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        // A record already exists for this run/step/channel. Check its status:
-        // - "sent": genuine duplicate, skip
-        // - "queued": previous attempt failed mid-flight, delete stale record and retry
-        const existing = await this.prisma.message.findFirst({
-          where: {
-            sequenceRunId: data.sequenceRunId,
-            sequenceStepId: data.sequenceStepId,
-            channel: data.channel,
-            businessId: data.businessId,
-          },
-          select: { id: true, status: true },
+        // A record already exists for this run/step/channel.
+        // Always skip to prevent duplicate sends. A "queued" message could mean
+        // the email was already sent but the status update failed - we can't
+        // tell, so we err on the side of NOT sending duplicates.
+        this.logger.warn({
+          msg: "Message already exists for run/step/channel, skipping to prevent duplicate send",
+          event: "message_duplicate_skipped",
+          sequenceRunId: data.sequenceRunId,
+          sequenceStepId: data.sequenceStepId,
+          channel: data.channel,
         });
-
-        if (!existing || existing.status === "sent") {
-          return { created: false };
-        }
-
-        await this.prisma.message.delete({ where: { id: existing.id } });
-        await this.prisma.message.create({
-          data: {
-            id: data.id,
-            sequenceRunId: data.sequenceRunId,
-            sequenceStepId: data.sequenceStepId,
-            invoiceId: data.invoiceId,
-            customerId: data.customerId,
-            businessId: data.businessId,
-            channel: data.channel,
-            recipientEmail: data.recipientEmail,
-            recipientPhone: data.recipientPhone,
-            subject: data.subject,
-            body: data.body,
-            status: data.status,
-            externalMessageId: data.externalMessageId,
-            sentAt: data.sentAt,
-          },
-        });
-        return { created: true };
+        return { created: false };
       }
       throw error;
     }
