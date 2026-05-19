@@ -142,19 +142,18 @@ export class SendMessageUseCase {
             ? "all_duplicates"
             : "no_recipients";
 
-      // Advance only when EVERY duplicate we saw is a confirmed-sent
-      // duplicate (status='sent' row found) — that proves the prior attempt
-      // completed the actual delivery and only failed to mutate the run row,
-      // which is the well-known crash-between-send-and-advance case. Any
-      // raceConditionDuplicate keeps us in place: the existing row could be
-      // a stale 'queued' (email never went out) and silently advancing past
-      // it would drop a customer follow-up.
-      const allDuplicatesAreConfirmedSent =
-        previouslySentDuplicates > 0 && raceConditionDuplicates === 0;
+      // Advance when ANY duplicate is found (regardless of how it was detected).
+      // A duplicate means a message record exists for this run/step/channel.
+      // Since we no longer delete and resend queued messages, we must advance
+      // to break the scheduler loop - otherwise the run would be stuck forever.
+      // The trade-off: if a message was queued but never actually sent (crash
+      // before Resend call), we'll skip that step. This is better than the
+      // alternative of infinite duplicate sends.
+      const shouldAdvance = duplicatesSkipped > 0;
 
       this.logger.warn({
-        msg: allDuplicatesAreConfirmedSent
-          ? "All duplicates are confirmed-sent, advancing run to break scheduler loop"
+        msg: shouldAdvance
+          ? "Duplicate(s) found, advancing run to break scheduler loop"
           : "No messages sent, leaving run on current step",
         event: "send_message_all_skipped",
         runId: run.runId,
@@ -163,10 +162,10 @@ export class SendMessageUseCase {
         raceConditionDuplicates,
         channelsSkippedNoRecipient,
         skippedReason,
-        advancing: allDuplicatesAreConfirmedSent,
+        advancing: shouldAdvance,
       });
 
-      if (allDuplicatesAreConfirmedSent) {
+      if (shouldAdvance) {
         await this.advanceOrCompleteRun(run);
       }
 
