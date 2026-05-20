@@ -176,6 +176,14 @@ export class PrismaUserRepository implements UserRepository {
     return updated ? this.toDomain(updated) : null;
   }
 
+  async findOwnerByAccount(accountId: string): Promise<UserListItem | null> {
+    const row = await this.prisma.user.findFirst({
+      where: { accountId, role: "owner" },
+      select: ROW_SELECT,
+    });
+    return row ? this.toDomain(row) : null;
+  }
+
   private toDomain(row: Row): UserListItem {
     const parsed = userRoleSchema.safeParse(row.role);
     if (!parsed.success) {

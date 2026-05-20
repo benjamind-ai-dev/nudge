@@ -21,6 +21,7 @@ model Account {
   status               String    @db.VarChar(20)
   maxBusinesses        Int       @map("max_businesses")
   clerkId              String?   @unique @map("clerk_id") @db.VarChar(255)
+  clerkOrganizationId  String?   @unique @map("clerk_organization_id") @db.VarChar(255)
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

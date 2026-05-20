@@ -24,12 +24,31 @@ describe("PrismaAccountProvisionRepository (integration)", () => {
     await prisma.$disconnect();
   });
 
+  it("persists clerkOrganizationId on the account row", async () => {
+    const clerkId = `user_${randomUUID()}`;
+    const orgId = `org_${randomUUID()}`;
+
+    await repo.create({
+      clerkId,
+      clerkOrganizationId: orgId,
+      email: `owner-${randomUUID()}@example.com`,
+      name: "Owner",
+      plan: null,
+      status: "trial",
+      maxBusinesses: 1,
+      trialEndsAt: new Date(),
+    });
+    const row = await prisma.account.findUnique({ where: { clerkId } });
+    expect(row?.clerkOrganizationId).toBe(orgId);
+  });
+
   it("creates an Account and an owner User in a single transaction", async () => {
     const clerkId = `user_${randomUUID()}`;
     const email = `t-${randomUUID()}@example.com`;
 
     await repo.create({
       clerkId,
+      clerkOrganizationId: `org_${randomUUID()}`,
       email,
       name: "Test User",
       plan: null,
@@ -54,6 +73,7 @@ describe("PrismaAccountProvisionRepository (integration)", () => {
 
     await repo.create({
       clerkId: `user_${randomUUID()}`,
+      clerkOrganizationId: `org_${randomUUID()}`,
       email: sharedEmail,
       name: "First",
       plan: null,
@@ -66,6 +86,7 @@ describe("PrismaAccountProvisionRepository (integration)", () => {
     await expect(
       repo.create({
         clerkId: conflictClerkId,
+        clerkOrganizationId: `org_${randomUUID()}`,
         email: sharedEmail,
         name: "Second",
         plan: null,
@@ -83,6 +104,7 @@ describe("PrismaAccountProvisionRepository (integration)", () => {
     const clerkId = `user_${randomUUID()}`;
     await repo.create({
       clerkId,
+      clerkOrganizationId: `org_${randomUUID()}`,
       email: `t-${randomUUID()}@example.com`,
       name: "Owner",
       plan: null,

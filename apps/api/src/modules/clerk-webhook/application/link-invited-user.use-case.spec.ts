@@ -24,6 +24,7 @@ const makeRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
   deleteById: jest.fn(),
   linkClerkUserId: jest.fn().mockResolvedValue(mkUser({ clerkUserId: "user_clerk_x" })),
   setClerkInvitationId: jest.fn(),
+  findOwnerByAccount: jest.fn(),
   ...over,
 });
 
