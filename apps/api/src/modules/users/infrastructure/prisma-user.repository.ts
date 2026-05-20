@@ -7,6 +7,7 @@ import {
 } from "../../../common/auth-context/caller-context.types";
 import type { UserListItem } from "../domain/user.entity";
 import type { UserRepository } from "../domain/user.repository";
+import { EmailAlreadyInUseError } from "../domain/user.errors";
 
 const ROW_SELECT = {
   id: true,
@@ -80,6 +81,84 @@ export class PrismaUserRepository implements UserRepository {
       where: { id, accountId },
     });
     return result.count;
+  }
+
+  async findByEmailInAccount(
+    email: string,
+    accountId: string,
+  ): Promise<UserListItem | null> {
+    const row = await this.prisma.user.findFirst({
+      where: { email, accountId },
+      select: ROW_SELECT,
+    });
+    return row ? this.toDomain(row) : null;
+  }
+
+  async createPending(params: {
+    accountId: string;
+    email: string;
+    name: string;
+    role: Exclude<UserRole, "owner">;
+  }): Promise<UserListItem> {
+    try {
+      const row = await this.prisma.user.create({
+        data: {
+          accountId: params.accountId,
+          email: params.email,
+          name: params.name,
+          role: params.role,
+          clerkUserId: null,
+        },
+        select: ROW_SELECT,
+      });
+      return this.toDomain(row);
+    } catch (err) {
+      // Prisma unique-constraint violation: emit the domain error so the use case
+      // can translate it to a 409 without leaking cross-account info.
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code: string }).code === "P2002"
+      ) {
+        throw new EmailAlreadyInUseError(params.email);
+      }
+      throw err;
+    }
+  }
+
+  async deleteById(id: string, accountId: string): Promise<number> {
+    const result = await this.prisma.user.deleteMany({ where: { id, accountId } });
+    return result.count;
+  }
+
+  async linkClerkUserId(params: {
+    userId: string;
+    accountId: string;
+    clerkUserId: string;
+  }): Promise<UserListItem | null> {
+    // Read the pending row scoped to (id, accountId) first, then decide
+    // based on its current clerkUserId value.
+    const existing = await this.prisma.user.findFirst({
+      where: { id: params.userId, accountId: params.accountId },
+      select: ROW_SELECT,
+    });
+    if (!existing) return null;
+    if (existing.clerkUserId !== null && existing.clerkUserId !== params.clerkUserId) {
+      return null; // already linked to a DIFFERENT Clerk user — defensive
+    }
+    if (existing.clerkUserId === params.clerkUserId) {
+      return this.toDomain(existing); // idempotent no-op
+    }
+    await this.prisma.user.updateMany({
+      where: { id: params.userId, accountId: params.accountId, clerkUserId: null },
+      data: { clerkUserId: params.clerkUserId },
+    });
+    const updated = await this.prisma.user.findFirst({
+      where: { id: params.userId, accountId: params.accountId },
+      select: ROW_SELECT,
+    });
+    return updated ? this.toDomain(updated) : null;
   }
 
   private toDomain(row: Row): UserListItem {

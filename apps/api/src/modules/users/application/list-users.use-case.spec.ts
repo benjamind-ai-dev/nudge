@@ -16,8 +16,12 @@ const mkUser = (over: Partial<UserListItem> = {}): UserListItem => ({
 const mkRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
   findManyByAccount: jest.fn().mockResolvedValue([]),
   findByIdInAccount: jest.fn(),
+  findByEmailInAccount: jest.fn(),
   updateRole: jest.fn(),
   delete: jest.fn(),
+  createPending: jest.fn(),
+  deleteById: jest.fn(),
+  linkClerkUserId: jest.fn(),
   ...over,
 });
 

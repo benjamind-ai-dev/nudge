@@ -1,6 +1,8 @@
 import {
+  BadGatewayException,
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   Delete,
   ForbiddenException,
@@ -9,6 +11,7 @@ import {
   NotFoundException,
   Param,
   Patch,
+  Post,
   UnauthorizedException,
 } from "@nestjs/common";
 import { AccountId } from "../../common/decorators/account-id.decorator";
@@ -17,15 +20,20 @@ import { CallerContextService } from "../../common/auth-context/caller-context.s
 import { ListUsersUseCase } from "./application/list-users.use-case";
 import { UpdateUserRoleUseCase } from "./application/update-user-role.use-case";
 import { DeleteUserUseCase } from "./application/delete-user.use-case";
+import { InviteUserUseCase } from "./application/invite-user.use-case";
 import {
   CannotChangeOwnRoleError,
   CannotChangeOwnerRoleError,
   CannotRemoveOwnerError,
   CannotRemoveSelfError,
+  EmailAlreadyInUseError,
+  InviteSendFailedError,
   UserNotFoundError,
 } from "./domain/user.errors";
 import {
+  inviteUserSchema,
   updateUserRoleSchema,
+  type InviteUserDto,
   type UpdateUserRoleDto,
 } from "./dto/users.dto";
 
@@ -36,6 +44,7 @@ export class UsersController {
     private readonly listUsers: ListUsersUseCase,
     private readonly updateUserRole: UpdateUserRoleUseCase,
     private readonly deleteUser: DeleteUserUseCase,
+    private readonly inviteUser: InviteUserUseCase,
   ) {}
 
   @Get()
@@ -46,6 +55,48 @@ export class UsersController {
     }
     const data = await this.listUsers.execute(caller.accountId);
     return { data };
+  }
+
+  @Post("invite")
+  async invite(
+    @AccountId() clerkUserId: string,
+    @Body(new ZodValidationPipe(inviteUserSchema)) dto: InviteUserDto,
+  ) {
+    const caller = await this.callerCtx.resolve(clerkUserId);
+    if (!caller) {
+      throw new UnauthorizedException("Caller context could not be resolved");
+    }
+    if (caller.role !== "owner" && caller.role !== "admin") {
+      throw new ForbiddenException("Only owners or admins can invite users");
+    }
+
+    try {
+      const { user, clerkInvitationId } = await this.inviteUser.execute({
+        callerAccountId: caller.accountId,
+        email: dto.email,
+        role: dto.role,
+        ...(dto.name !== undefined && { name: dto.name }),
+      });
+
+      return {
+        data: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          status: "pending" as const,
+          clerkInvitationId,
+        },
+      };
+    } catch (err) {
+      if (err instanceof EmailAlreadyInUseError) {
+        throw new ConflictException(err.message);
+      }
+      if (err instanceof InviteSendFailedError) {
+        throw new BadGatewayException(err.message);
+      }
+      throw err;
+    }
   }
 
   @Patch(":id")
