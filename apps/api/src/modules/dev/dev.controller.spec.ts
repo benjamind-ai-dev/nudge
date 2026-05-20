@@ -14,6 +14,10 @@ const allowingConfig = {
   get: (key: keyof Env) => (key === "DEV_MODE" ? true : key === "DEV_API_KEY" ? "secretsecretsecret" : undefined),
 } as unknown as ConfigService<Env, true>;
 
+const mockBackfillClerkOrgs = {
+  execute: jest.fn(),
+};
+
 describe("DevController.triggerWeeklySummary", () => {
   let controller: DevController;
 
@@ -27,6 +31,12 @@ describe("DevController.triggerWeeklySummary", () => {
         DevKeyGuard,
         { provide: ConfigService, useValue: allowingConfig },
         { provide: getQueueToken(QUEUE_NAMES.WEEKLY_SUMMARY), useValue: mockQueue },
+        {
+          provide: (
+            await import("./application/backfill-clerk-orgs.use-case")
+          ).BackfillClerkOrgsUseCase,
+          useValue: mockBackfillClerkOrgs,
+        },
       ],
     }).compile();
 
@@ -70,5 +80,23 @@ describe("DevController.triggerWeeklySummary", () => {
       { businessId: "22222222-2222-2222-2222-222222222222", weekStartsAt: expected },
       { attempts: 1 },
     );
+  });
+
+  it("backfillClerkOrgsEndpoint delegates to the use case and wraps the result", async () => {
+    mockBackfillClerkOrgs.execute.mockReset();
+    mockBackfillClerkOrgs.execute.mockResolvedValue({
+      scanned: 3,
+      succeeded: 2,
+      skipped: 1,
+      failed: 0,
+      failures: [],
+    });
+
+    const result = await controller.backfillClerkOrgsEndpoint();
+
+    expect(mockBackfillClerkOrgs.execute).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      data: { scanned: 3, succeeded: 2, skipped: 1, failed: 0, failures: [] },
+    });
   });
 });
