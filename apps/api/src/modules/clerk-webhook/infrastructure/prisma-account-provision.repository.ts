@@ -38,6 +38,7 @@ export class PrismaAccountProvisionRepository implements AccountProvisionReposit
           email: params.email,
           name: params.name,
           role: "owner",
+          clerkUserId: params.clerkId,
         },
       });
     });

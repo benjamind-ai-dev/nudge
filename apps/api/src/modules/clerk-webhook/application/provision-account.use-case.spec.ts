@@ -48,4 +48,14 @@ describe("ProvisionAccountUseCase", () => {
 
     expect(repo.create).not.toHaveBeenCalled();
   });
+
+  it("forwards clerkId so the owner User row gets clerk_user_id set", async () => {
+    const repo = makeRepo();
+    const useCase = new ProvisionAccountUseCase(repo);
+
+    await useCase.execute("user_xyz789", "carol@example.com", "Carol");
+
+    const args = (repo.create as jest.Mock).mock.calls[0][0];
+    expect(args.clerkId).toBe("user_xyz789");
+  });
 });
