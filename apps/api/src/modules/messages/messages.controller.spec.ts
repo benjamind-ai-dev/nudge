@@ -5,16 +5,19 @@ import { MessagesController } from "./messages.controller";
 import { ListMessagesUseCase } from "./application/list-messages.use-case";
 import { GetMessageUseCase } from "./application/get-message.use-case";
 import { SendReplyUseCase } from "./application/send-reply.use-case";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
 import {
   CustomerHasNoEmailError,
   MessageNotFoundError,
   NoReplyToRespondToError,
   OutboundEmailSendError,
 } from "./domain/message.errors";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 import type { MessageDetail, MessageListItem } from "./domain/message.entity";
 
 const BIZ_ID = "550e8400-e29b-41d4-a716-446655440000";
 const MSG_ID = "550e8400-e29b-41d4-a716-446655440001";
+const FOREIGN_BIZ_ID = "550e8400-e29b-41d4-a716-446655449999";
 
 const listItem: MessageListItem = {
   id: MSG_ID,
@@ -46,11 +49,13 @@ describe("MessagesController", () => {
   let listUseCase: { execute: jest.Mock };
   let getUseCase: { execute: jest.Mock };
   let replyUseCase: { execute: jest.Mock };
+  let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     listUseCase = { execute: jest.fn() };
     getUseCase = { execute: jest.fn() };
     replyUseCase = { execute: jest.fn() };
+    businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       controllers: [MessagesController],
@@ -58,6 +63,7 @@ describe("MessagesController", () => {
         { provide: ListMessagesUseCase, useValue: listUseCase },
         { provide: GetMessageUseCase, useValue: getUseCase },
         { provide: SendReplyUseCase, useValue: replyUseCase },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
 
@@ -241,5 +247,17 @@ describe("MessagesController", () => {
         .send(validBody)
         .expect(400);
     });
+  });
+
+  it("GET /v1/messages returns 404 when businessId belongs to a different account", async () => {
+    businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+      new BusinessNotFoundError(FOREIGN_BIZ_ID),
+    );
+
+    await request(app.getHttpServer())
+      .get(`/v1/messages?businessId=${FOREIGN_BIZ_ID}`)
+      .expect(404);
+
+    expect(listUseCase.execute).not.toHaveBeenCalled();
   });
 });

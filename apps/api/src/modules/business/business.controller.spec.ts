@@ -7,6 +7,8 @@ import { CreateBusinessUseCase } from "./application/create-business.use-case";
 import { UpdateBusinessSettingsUseCase } from "./application/update-business-settings.use-case";
 import { DeleteBusinessUseCase } from "./application/delete-business.use-case";
 import { TriggerManualSyncUseCase } from "./application/trigger-manual-sync.use-case";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { CallerContextService } from "../../common/auth-context/caller-context.service";
 import {
   BusinessNotFoundError,
   NoActiveConnectionError,
@@ -46,6 +48,8 @@ describe("BusinessController", () => {
   let updateUseCase: { execute: jest.Mock };
   let deleteUseCase: { execute: jest.Mock };
   let triggerSyncUseCase: { execute: jest.Mock };
+  let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
+  let callerCtx: { resolve: jest.Mock };
 
   beforeEach(async () => {
     getUseCase = { execute: jest.fn() };
@@ -53,6 +57,12 @@ describe("BusinessController", () => {
     updateUseCase = { execute: jest.fn() };
     deleteUseCase = { execute: jest.fn() };
     triggerSyncUseCase = { execute: jest.fn() };
+    businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
+    callerCtx = {
+      resolve: jest
+        .fn()
+        .mockResolvedValue({ userId: "user-1", accountId: ACCOUNT_ID, role: "owner" }),
+    };
 
     const module = await Test.createTestingModule({
       controllers: [BusinessController],
@@ -62,6 +72,8 @@ describe("BusinessController", () => {
         { provide: UpdateBusinessSettingsUseCase, useValue: updateUseCase },
         { provide: DeleteBusinessUseCase, useValue: deleteUseCase },
         { provide: TriggerManualSyncUseCase, useValue: triggerSyncUseCase },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
+        { provide: CallerContextService, useValue: callerCtx },
       ],
     }).compile();
 
@@ -92,12 +104,11 @@ describe("BusinessController", () => {
       .expect(404);
   });
 
-  it("POST /v1/businesses returns 201 with created business", async () => {
+  it("POST /v1/businesses returns 201 with created business and uses caller's accountId", async () => {
     createUseCase.execute.mockResolvedValue(businessWithConnections);
     await request(app.getHttpServer())
       .post("/v1/businesses")
       .send({
-        accountId: ACCOUNT_ID,
         name: "Acme Corp",
         accountingProvider: "quickbooks",
         senderName: "Acme Billing",
@@ -105,13 +116,30 @@ describe("BusinessController", () => {
         timezone: "America/New_York",
       })
       .expect(201, { data: businessWithConnections });
+    expect(createUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: ACCOUNT_ID, name: "Acme Corp" }),
+    );
+  });
+
+  it("POST /v1/businesses returns 401 when caller is not provisioned", async () => {
+    callerCtx.resolve.mockResolvedValueOnce(null);
+    await request(app.getHttpServer())
+      .post("/v1/businesses")
+      .send({
+        name: "Acme Corp",
+        accountingProvider: "quickbooks",
+        senderName: "Acme Billing",
+        senderEmail: "billing@acme.com",
+        timezone: "America/New_York",
+      })
+      .expect(401);
+    expect(createUseCase.execute).not.toHaveBeenCalled();
   });
 
   it("POST /v1/businesses returns 400 for invalid accountingProvider", async () => {
     await request(app.getHttpServer())
       .post("/v1/businesses")
       .send({
-        accountId: ACCOUNT_ID,
         name: "Acme Corp",
         accountingProvider: "sage",
         senderName: "Acme Billing",
@@ -125,7 +153,6 @@ describe("BusinessController", () => {
     await request(app.getHttpServer())
       .post("/v1/businesses")
       .send({
-        accountId: ACCOUNT_ID,
         name: "Acme Corp",
         accountingProvider: "quickbooks",
         senderName: "Acme Billing",
@@ -139,7 +166,6 @@ describe("BusinessController", () => {
     await request(app.getHttpServer())
       .post("/v1/businesses")
       .send({
-        accountId: ACCOUNT_ID,
         name: "Acme Corp",
         accountingProvider: "quickbooks",
         senderName: "Acme Billing",
@@ -203,6 +229,8 @@ describe("BusinessController", () => {
         { provide: UpdateBusinessSettingsUseCase, useValue: updateUseCase },
         { provide: DeleteBusinessUseCase, useValue: deleteUseCase },
         { provide: TriggerManualSyncUseCase, useValue: triggerSyncUseCase },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
+        { provide: CallerContextService, useValue: callerCtx },
       ],
     }).compile();
     const unauthApp = module.createNestApplication();
@@ -269,6 +297,8 @@ describe("BusinessController", () => {
         { provide: UpdateBusinessSettingsUseCase, useValue: updateUseCase },
         { provide: DeleteBusinessUseCase, useValue: deleteUseCase },
         { provide: TriggerManualSyncUseCase, useValue: triggerSyncUseCase },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
+        { provide: CallerContextService, useValue: callerCtx },
       ],
     }).compile();
     const unauthApp = module.createNestApplication();
@@ -278,5 +308,17 @@ describe("BusinessController", () => {
       .send({})
       .expect(401);
     await unauthApp.close();
+  });
+
+  it("GET /v1/businesses/:id returns 404 when business belongs to a different account", async () => {
+    businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+      new BusinessNotFoundError(BIZ_ID),
+    );
+
+    await request(app.getHttpServer())
+      .get(`/v1/businesses/${BIZ_ID}`)
+      .expect(404);
+
+    expect(getUseCase.execute).not.toHaveBeenCalled();
   });
 });

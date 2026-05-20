@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Query,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { AccountId } from "../../common/decorators/account-id.decorator";
@@ -20,6 +21,9 @@ import {
   InvalidStatusTransitionError,
   SequenceRunNotFoundError,
 } from "./domain/sequence-run.errors";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { CallerNotProvisionedError } from "../../common/auth-context/business-authorization.errors";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 import {
   actionQuerySchema,
   getSequenceRunQuerySchema,
@@ -41,26 +45,37 @@ export class SequenceRunsController {
     private readonly pauseSequenceRun: PauseSequenceRunUseCase,
     private readonly resumeSequenceRun: ResumeSequenceRunUseCase,
     private readonly stopSequenceRun: StopSequenceRunUseCase,
+    private readonly businessAuth: BusinessAuthorizationService,
   ) {}
 
   @Get()
   async list(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Query(new ZodValidationPipe(listSequenceRunsQuerySchema)) query: ListSequenceRunsQuery,
   ) {
-    return this.listSequenceRuns.execute(query);
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
+      return this.listSequenceRuns.execute(query);
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
+    }
   }
 
   @Get(":id")
   async get(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Query(new ZodValidationPipe(getSequenceRunQuerySchema)) query: GetSequenceRunQuery,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
       const data = await this.getSequenceRun.execute(id, query.businessId);
       return { data };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceRunNotFoundError) {
         throw new NotFoundException(error.message);
       }
@@ -71,15 +86,18 @@ export class SequenceRunsController {
   @Post(":id/pause")
   @HttpCode(200)
   async pause(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Query(new ZodValidationPipe(actionQuerySchema)) query: ActionQuery,
     @Body(new ZodValidationPipe(pauseBodySchema)) _body: PauseBody,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
       const data = await this.pauseSequenceRun.execute(id, query.businessId);
       return { data };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceRunNotFoundError) {
         throw new NotFoundException(error.message);
       }
@@ -93,14 +111,17 @@ export class SequenceRunsController {
   @Post(":id/resume")
   @HttpCode(200)
   async resume(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Query(new ZodValidationPipe(actionQuerySchema)) query: ActionQuery,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
       const data = await this.resumeSequenceRun.execute(id, query.businessId);
       return { data };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceRunNotFoundError) {
         throw new NotFoundException(error.message);
       }
@@ -114,15 +135,18 @@ export class SequenceRunsController {
   @Post(":id/stop")
   @HttpCode(200)
   async stop(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Query(new ZodValidationPipe(actionQuerySchema)) query: ActionQuery,
     @Body(new ZodValidationPipe(stopBodySchema)) _body: StopBody,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
       const data = await this.stopSequenceRun.execute(id, query.businessId);
       return { data };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceRunNotFoundError) {
         throw new NotFoundException(error.message);
       }

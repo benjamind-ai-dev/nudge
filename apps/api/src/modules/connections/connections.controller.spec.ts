@@ -4,18 +4,31 @@ import request from "supertest";
 import { ConnectionsController } from "./connections.controller";
 import { StartConnectionUseCase } from "../connections-common/application/start-connection.use-case";
 import { BusinessNotFoundError } from "../connections-common/domain/connection.errors";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { BusinessNotFoundError as CanonicalBusinessNotFoundError } from "../business/domain/business.errors";
+
+const FOREIGN_BIZ_ID = "550e8400-e29b-41d4-a716-446655440099";
 
 describe("ConnectionsController", () => {
   let app: INestApplication;
   let useCase: { execute: jest.Mock };
+  let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     useCase = { execute: jest.fn() };
+    businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
     const module = await Test.createTestingModule({
       controllers: [ConnectionsController],
-      providers: [{ provide: StartConnectionUseCase, useValue: useCase }],
+      providers: [
+        { provide: StartConnectionUseCase, useValue: useCase },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
+      ],
     }).compile();
     app = module.createNestApplication();
+    app.use((req: { auth: () => { userId: string } }, _res: unknown, next: () => void) => {
+      req.auth = () => ({ userId: "test-account-id" });
+      next();
+    });
     await app.init();
   });
 
@@ -76,5 +89,18 @@ describe("ConnectionsController", () => {
         provider: "xero",
       })
       .expect(404);
+  });
+
+  it("POST /v1/connections/authorize returns 404 when businessId belongs to a different account", async () => {
+    businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+      new CanonicalBusinessNotFoundError(FOREIGN_BIZ_ID),
+    );
+
+    await request(app.getHttpServer())
+      .post("/v1/connections/authorize")
+      .send({ businessId: FOREIGN_BIZ_ID, provider: "xero" })
+      .expect(404);
+
+    expect(useCase.execute).not.toHaveBeenCalled();
   });
 });
