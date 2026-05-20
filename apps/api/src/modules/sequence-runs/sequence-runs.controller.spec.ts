@@ -4,7 +4,13 @@ import request from "supertest";
 import { SequenceRunsController } from "./sequence-runs.controller";
 import { ListSequenceRunsUseCase } from "./application/list-sequence-runs.use-case";
 import { GetSequenceRunUseCase } from "./application/get-sequence-run.use-case";
-import { SequenceRunNotFoundError } from "./domain/sequence-run.errors";
+import { PauseSequenceRunUseCase } from "./application/pause-sequence-run.use-case";
+import { ResumeSequenceRunUseCase } from "./application/resume-sequence-run.use-case";
+import { StopSequenceRunUseCase } from "./application/stop-sequence-run.use-case";
+import {
+  InvalidStatusTransitionError,
+  SequenceRunNotFoundError,
+} from "./domain/sequence-run.errors";
 import type {
   SequenceRunDetail,
   SequenceRunListItem,
@@ -75,16 +81,25 @@ describe("SequenceRunsController", () => {
   let app: INestApplication;
   let listUseCase: { execute: jest.Mock };
   let getUseCase: { execute: jest.Mock };
+  let pauseUseCase: { execute: jest.Mock };
+  let resumeUseCase: { execute: jest.Mock };
+  let stopUseCase: { execute: jest.Mock };
 
   beforeEach(async () => {
     listUseCase = { execute: jest.fn() };
     getUseCase = { execute: jest.fn() };
+    pauseUseCase = { execute: jest.fn() };
+    resumeUseCase = { execute: jest.fn() };
+    stopUseCase = { execute: jest.fn() };
 
     const module = await Test.createTestingModule({
       controllers: [SequenceRunsController],
       providers: [
         { provide: ListSequenceRunsUseCase, useValue: listUseCase },
         { provide: GetSequenceRunUseCase, useValue: getUseCase },
+        { provide: PauseSequenceRunUseCase, useValue: pauseUseCase },
+        { provide: ResumeSequenceRunUseCase, useValue: resumeUseCase },
+        { provide: StopSequenceRunUseCase, useValue: stopUseCase },
       ],
     }).compile();
 
@@ -186,6 +201,154 @@ describe("SequenceRunsController", () => {
     it("returns 400 when businessId is missing", async () => {
       await request(app.getHttpServer())
         .get(`/v1/sequence-runs/${RUN_ID}`)
+        .expect(400);
+    });
+  });
+
+  describe("POST /v1/sequence-runs/:id/pause", () => {
+    it("returns 200 with updated run on success", async () => {
+      pauseUseCase.execute.mockResolvedValue({ ...detail, status: "paused", pausedReason: "manual_pause" });
+
+      const res = await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/pause`)
+        .query({ businessId: BIZ_ID })
+        .send({ reason: "manual_pause" })
+        .expect(200);
+
+      expect(res.body.data.status).toBe("paused");
+      expect(pauseUseCase.execute).toHaveBeenCalledWith(RUN_ID, BIZ_ID);
+    });
+
+    it("returns 400 when body reason is wrong", async () => {
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/pause`)
+        .query({ businessId: BIZ_ID })
+        .send({ reason: "something_else" })
+        .expect(400);
+    });
+
+    it("returns 400 when InvalidStatusTransitionError", async () => {
+      pauseUseCase.execute.mockRejectedValue(
+        new InvalidStatusTransitionError(RUN_ID, "paused", "pause"),
+      );
+
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/pause`)
+        .query({ businessId: BIZ_ID })
+        .send({ reason: "manual_pause" })
+        .expect(400);
+    });
+
+    it("returns 404 when SequenceRunNotFoundError", async () => {
+      pauseUseCase.execute.mockRejectedValue(new SequenceRunNotFoundError(RUN_ID));
+
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/pause`)
+        .query({ businessId: BIZ_ID })
+        .send({ reason: "manual_pause" })
+        .expect(404);
+    });
+
+    it("returns 400 when businessId is missing", async () => {
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/pause`)
+        .send({ reason: "manual_pause" })
+        .expect(400);
+    });
+  });
+
+  describe("POST /v1/sequence-runs/:id/resume", () => {
+    it("returns 200 with updated run on success", async () => {
+      resumeUseCase.execute.mockResolvedValue({ ...detail, status: "active" });
+
+      const res = await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/resume`)
+        .query({ businessId: BIZ_ID })
+        .expect(200);
+
+      expect(res.body.data.status).toBe("active");
+      expect(resumeUseCase.execute).toHaveBeenCalledWith(RUN_ID, BIZ_ID);
+    });
+
+    it("returns 400 when InvalidStatusTransitionError", async () => {
+      resumeUseCase.execute.mockRejectedValue(
+        new InvalidStatusTransitionError(RUN_ID, "active", "resume"),
+      );
+
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/resume`)
+        .query({ businessId: BIZ_ID })
+        .expect(400);
+    });
+
+    it("returns 404 when SequenceRunNotFoundError", async () => {
+      resumeUseCase.execute.mockRejectedValue(new SequenceRunNotFoundError(RUN_ID));
+
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/resume`)
+        .query({ businessId: BIZ_ID })
+        .expect(404);
+    });
+
+    it("returns 400 when businessId is missing", async () => {
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/resume`)
+        .expect(400);
+    });
+  });
+
+  describe("POST /v1/sequence-runs/:id/stop", () => {
+    it("returns 200 with stopped run on success", async () => {
+      stopUseCase.execute.mockResolvedValue({
+        ...detail,
+        status: "stopped",
+        stoppedReason: "manually_stopped",
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/stop`)
+        .query({ businessId: BIZ_ID })
+        .send({ reason: "manual_stop" })
+        .expect(200);
+
+      expect(res.body.data.status).toBe("stopped");
+      expect(stopUseCase.execute).toHaveBeenCalledWith(RUN_ID, BIZ_ID);
+    });
+
+    it("returns 400 when body reason is wrong", async () => {
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/stop`)
+        .query({ businessId: BIZ_ID })
+        .send({ reason: "manually_stopped" })
+        .expect(400);
+    });
+
+    it("returns 400 when InvalidStatusTransitionError (completed run)", async () => {
+      stopUseCase.execute.mockRejectedValue(
+        new InvalidStatusTransitionError(RUN_ID, "completed", "stop"),
+      );
+
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/stop`)
+        .query({ businessId: BIZ_ID })
+        .send({ reason: "manual_stop" })
+        .expect(400);
+    });
+
+    it("returns 404 when SequenceRunNotFoundError", async () => {
+      stopUseCase.execute.mockRejectedValue(new SequenceRunNotFoundError(RUN_ID));
+
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/stop`)
+        .query({ businessId: BIZ_ID })
+        .send({ reason: "manual_stop" })
+        .expect(404);
+    });
+
+    it("returns 400 when businessId is missing", async () => {
+      await request(app.getHttpServer())
+        .post(`/v1/sequence-runs/${RUN_ID}/stop`)
+        .send({ reason: "manual_stop" })
         .expect(400);
     });
   });

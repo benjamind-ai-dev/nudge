@@ -101,12 +101,87 @@ describe("PrismaSequenceTriggerRepository (integration)", () => {
 
   afterEach(async () => {
     await prisma.sequenceRun.deleteMany({ where: { sequenceId } });
+    await prisma.connection.deleteMany({ where: { businessId } });
     await prisma.sequence.deleteMany({ where: { businessId } });
     await prisma.invoice.deleteMany({ where: { businessId } });
     await prisma.customer.deleteMany({ where: { businessId } });
     await prisma.relationshipTier.deleteMany({ where: { businessId } });
     await prisma.business.deleteMany({ where: { id: businessId } });
     await prisma.account.deleteMany({ where: { id: accountId } });
+  });
+
+  describe("findOverdueInvoicesWithoutRun exclusion rules", () => {
+    async function mkOverdueInvoice() {
+      return prisma.invoice.create({
+        data: {
+          businessId,
+          customerId,
+          externalId: `inv-${randomUUID()}`,
+          provider: "quickbooks",
+          amountCents: 10_000,
+          amountPaidCents: 0,
+          balanceDueCents: 10_000,
+          currency: "USD",
+          dueDate: new Date("2026-01-01"),
+          status: "overdue",
+        },
+        select: { id: true },
+      });
+    }
+
+    async function attachConnection() {
+      await prisma.connection.create({
+        data: {
+          businessId,
+          provider: "quickbooks",
+          status: "connected",
+          accessToken: "x",
+          refreshToken: "y",
+          tokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+          realmId: `realm-${randomUUID()}`,
+        },
+      });
+    }
+
+    it("excludes invoices whose last run was manually_stopped", async () => {
+      await attachConnection();
+      const invoice = await mkOverdueInvoice();
+
+      await prisma.sequenceRun.create({
+        data: {
+          invoiceId: invoice.id,
+          sequenceId,
+          currentStepId: stepId,
+          status: "stopped",
+          stoppedReason: "manually_stopped",
+          startedAt: new Date("2026-01-01T09:00:00Z"),
+          completedAt: new Date("2026-01-02T09:00:00Z"),
+        },
+      });
+
+      const rows = await repo.findOverdueInvoicesWithoutRun(100, 0);
+      expect(rows.find((r) => r.invoiceId === invoice.id)).toBeUndefined();
+    });
+
+    it("INCLUDES invoices whose only previous run was stopped because payment_received", async () => {
+      await attachConnection();
+      const invoice = await mkOverdueInvoice();
+
+      await prisma.sequenceRun.create({
+        data: {
+          invoiceId: invoice.id,
+          sequenceId,
+          currentStepId: stepId,
+          status: "stopped",
+          stoppedReason: "payment_received",
+          startedAt: new Date("2026-01-01T09:00:00Z"),
+          completedAt: new Date("2026-01-02T09:00:00Z"),
+        },
+      });
+
+      const rows = await repo.findOverdueInvoicesWithoutRun(100, 0);
+      expect(rows.find((r) => r.invoiceId === invoice.id)).toBeDefined();
+    });
   });
 
   describe("createSequenceRun", () => {

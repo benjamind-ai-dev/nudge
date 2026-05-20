@@ -43,6 +43,10 @@ const createMockRepo = (
 ): SequenceRunRepository => ({
   findManyByFilter: jest.fn(),
   findDetailById: jest.fn().mockResolvedValue(null),
+  findActionContext: jest.fn(),
+  pause: jest.fn(),
+  resume: jest.fn(),
+  stop: jest.fn(),
   ...overrides,
 });
 
