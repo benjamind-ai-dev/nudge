@@ -23,17 +23,22 @@ describe("PrismaDisconnectRepository (integration)", () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(async () => {
-    // Clean order respects FK constraints.
-    await prisma.sequenceRun.deleteMany();
-    await prisma.message.deleteMany();
-    await prisma.invoice.deleteMany();
-    await prisma.customer.deleteMany();
-    await prisma.connection.deleteMany();
-    await prisma.business.deleteMany();
-    await prisma.account.deleteMany();
+  let seededAccountIds: string[] = [];
 
+  beforeEach(() => {
+    seededAccountIds = [];
     repo = new PrismaDisconnectRepository(prisma, config);
+  });
+
+  afterEach(async () => {
+    if (seededAccountIds.length === 0) return;
+    // Account FK is ON DELETE CASCADE for Business → Customer/Invoice/
+    // SequenceRun/Message/Connection, so deleting accounts cleans the rest.
+    // Scoped to this spec's rows to avoid wiping rows other parallel test
+    // files are mid-using (CI runs api+worker against the same DB).
+    await prisma.account.deleteMany({
+      where: { id: { in: seededAccountIds } },
+    });
   });
 
   async function seedBusinessWithConnection(provider: "quickbooks" | "xero") {
@@ -46,6 +51,7 @@ describe("PrismaDisconnectRepository (integration)", () => {
         maxBusinesses: 1,
       },
     });
+    seededAccountIds.push(account.id);
     const business = await prisma.business.create({
       data: {
         accountId: account.id,
