@@ -560,7 +560,9 @@ describe("PrismaInvoiceRepository (integration)", () => {
     it("rolls back the whole transaction when the customer is missing", async () => {
       const externalId = `inv-${randomUUID()}`;
       const before = await getCustomerOutstanding();
-      const sequenceRunsBefore = await prisma.sequenceRun.count();
+      const sequenceRunsBefore = await prisma.sequenceRun.count({
+        where: { sequence: { businessId } },
+      });
 
       const change = mkChange({
         invoice: mkCanonicalInvoice({
@@ -587,7 +589,9 @@ describe("PrismaInvoiceRepository (integration)", () => {
       expect(await getCustomerOutstanding()).toBe(before);
 
       // No new sequence runs were created (sanity).
-      const sequenceRunsAfter = await prisma.sequenceRun.count();
+      const sequenceRunsAfter = await prisma.sequenceRun.count({
+        where: { sequence: { businessId } },
+      });
       expect(sequenceRunsAfter).toBe(sequenceRunsBefore);
     });
   });
