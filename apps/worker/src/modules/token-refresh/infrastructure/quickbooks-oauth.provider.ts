@@ -72,6 +72,10 @@ export class QuickbooksOAuthProvider implements OAuthProvider {
     return metadata.realmId;
   }
 
+  async revokeTokens(refreshToken: string): Promise<void> {
+    await this.client().revoke({ refresh_token: refreshToken });
+  }
+
   async refreshTokens(refreshToken: string): Promise<ProviderTokens> {
     try {
       const authResponse = await this.client().refreshUsingToken(refreshToken);

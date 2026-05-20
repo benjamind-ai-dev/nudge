@@ -10,6 +10,7 @@ import {
   Post,
   UsePipes,
 } from "@nestjs/common";
+import { AccountId } from "../../common/decorators/account-id.decorator";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { GetBusinessUseCase } from "./application/get-business.use-case";
 import { CreateBusinessUseCase } from "./application/create-business.use-case";
@@ -76,7 +77,10 @@ export class BusinessController {
 
   @Delete(":id")
   @HttpCode(204)
-  async deleteById(@Param("id") id: string) {
+  async deleteById(
+    @AccountId() _accountId: string,
+    @Param("id") id: string,
+  ) {
     try {
       await this.deleteBusiness.execute(id);
     } catch (error) {

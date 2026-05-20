@@ -2,7 +2,7 @@ export const STOPPED_REASONS = {
   PAYMENT_RECEIVED: "payment_received",
   INVOICE_VOIDED: "invoice_voided",
   CLIENT_REPLIED: "client_replied",
-  MANUALLY_STOPPED: "manually_stopped",
+  MANUALLY_STOPPED: "manual_stop",
   SUBSCRIPTION_CANCELLED: "subscription_cancelled",
   EMAIL_BOUNCED: "email_bounced",
 } as const;

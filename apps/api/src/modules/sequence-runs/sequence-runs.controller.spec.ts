@@ -302,7 +302,7 @@ describe("SequenceRunsController", () => {
       stopUseCase.execute.mockResolvedValue({
         ...detail,
         status: "stopped",
-        stoppedReason: "manually_stopped",
+        stoppedReason: "manual_stop",
       });
 
       const res = await request(app.getHttpServer())
