@@ -25,6 +25,10 @@ export interface OAuthProvider {
     metadata: ProviderMetadata,
   ): Promise<string>;
   refreshTokens(refreshToken: string): Promise<ProviderTokens>;
+  // Best-effort token revocation. Implementations should call the upstream
+  // OAuth revocation endpoint and resolve on success. Failures should throw —
+  // the caller is responsible for deciding whether to swallow them.
+  revokeTokens(refreshToken: string): Promise<void>;
 }
 
 export const OAUTH_PROVIDERS = Symbol("OAUTH_PROVIDERS");

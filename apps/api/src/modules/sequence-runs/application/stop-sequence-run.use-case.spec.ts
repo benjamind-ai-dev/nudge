@@ -25,7 +25,7 @@ const mkDetail = (over: Partial<SequenceRunDetail> = {}): SequenceRunDetail => (
   id: "run-1",
   status: "stopped",
   pausedReason: null,
-  stoppedReason: "manually_stopped",
+  stoppedReason: "manual_stop",
   nextSendAt: null,
   startedAt: new Date("2026-05-15T09:00:00Z"),
   completedAt: NOW,
@@ -71,7 +71,7 @@ describe("StopSequenceRunUseCase", () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  it("stops an active run with manually_stopped reason", async () => {
+  it("stops an active run with manual_stop reason", async () => {
     const repo = createMockRepo({
       findActionContext: jest.fn().mockResolvedValue(mkContext({ status: "active" })),
       findDetailById: jest.fn().mockResolvedValue(mkDetail()),
@@ -80,7 +80,7 @@ describe("StopSequenceRunUseCase", () => {
 
     const result = await useCase.execute("run-1", "biz-1");
 
-    expect(repo.stop).toHaveBeenCalledWith("run-1", "biz-1", "manually_stopped", NOW);
+    expect(repo.stop).toHaveBeenCalledWith("run-1", "biz-1", "manual_stop", NOW);
     expect(result.status).toBe("stopped");
   });
 
@@ -93,7 +93,7 @@ describe("StopSequenceRunUseCase", () => {
 
     await useCase.execute("run-1", "biz-1");
 
-    expect(repo.stop).toHaveBeenCalledWith("run-1", "biz-1", "manually_stopped", NOW);
+    expect(repo.stop).toHaveBeenCalledWith("run-1", "biz-1", "manual_stop", NOW);
   });
 
   it("throws InvalidStatusTransitionError when run is completed", async () => {

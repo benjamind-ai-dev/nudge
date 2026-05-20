@@ -1,12 +1,14 @@
 const mockCreateToken = jest.fn();
 const mockAuthorizeUri = jest.fn();
 const mockRefresh = jest.fn();
+const mockRevoke = jest.fn();
 
 jest.mock("intuit-oauth", () => {
   const MockOAuthClient = jest.fn().mockImplementation(() => ({
     createToken: mockCreateToken,
     authorizeUri: mockAuthorizeUri,
     refreshUsingToken: mockRefresh,
+    revoke: mockRevoke,
   })) as jest.Mock & { scopes: Record<string, string> };
   MockOAuthClient.scopes = { Accounting: "com.intuit.quickbooks.accounting" };
   return MockOAuthClient;
@@ -37,6 +39,7 @@ describe("QuickbooksOAuthProvider", () => {
     mockCreateToken.mockReset();
     mockAuthorizeUri.mockReset();
     mockRefresh.mockReset();
+    mockRevoke.mockReset();
     provider = new QuickbooksOAuthProvider(config as never);
   });
 
@@ -179,6 +182,22 @@ describe("QuickbooksOAuthProvider", () => {
       await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
         RefreshFailedError,
       );
+    });
+  });
+
+  describe("revokeTokens", () => {
+    it("calls intuit-oauth revoke with the refresh token", async () => {
+      mockRevoke.mockResolvedValue(undefined);
+
+      await provider.revokeTokens("rt-abc");
+
+      expect(mockRevoke).toHaveBeenCalledWith({ refresh_token: "rt-abc" });
+    });
+
+    it("propagates the underlying library error", async () => {
+      mockRevoke.mockRejectedValue(new Error("network"));
+
+      await expect(provider.revokeTokens("rt-abc")).rejects.toThrow("network");
     });
   });
 });

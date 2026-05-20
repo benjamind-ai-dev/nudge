@@ -72,6 +72,22 @@ export class XeroOAuthProvider implements OAuthProvider {
     };
   }
 
+  async revokeTokens(refreshToken: string): Promise<void> {
+    // xero-node's revokeToken() reads from the client's internal _tokenSet,
+    // so we have to seed it first. The access_token isn't used by the revoke
+    // endpoint — only refresh_token is sent — but setTokenSet requires the
+    // field, so we pass an empty string. expires_at must be a number; 0 is
+    // accepted because revokeToken doesn't gate on expiry.
+    const xero = await this.client("");
+    await xero.setTokenSet({
+      access_token: "",
+      refresh_token: refreshToken,
+      expires_at: 0,
+      token_type: "Bearer",
+    });
+    await xero.revokeToken();
+  }
+
   async refreshTokens(refreshToken: string): Promise<ProviderTokens> {
     try {
       const xero = await this.client("");

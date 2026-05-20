@@ -41,6 +41,7 @@ import { PrismaConnectionRepository } from "./infrastructure/prisma-connection.r
   exports: [
     StartConnectionUseCase,
     CompleteConnectionUseCase,
+    OAUTH_PROVIDERS,
   ],
 })
 export class ConnectionsCommonModule {}

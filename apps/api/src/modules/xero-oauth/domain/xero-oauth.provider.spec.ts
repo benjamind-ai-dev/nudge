@@ -4,6 +4,7 @@ const mockUpdateTenants = jest.fn();
 const mockInitialize = jest.fn().mockResolvedValue(undefined);
 const mockSetTokenSet = jest.fn();
 const mockRefreshWithRefreshToken = jest.fn();
+const mockRevokeToken = jest.fn();
 
 jest.mock("xero-node", () => ({
   XeroClient: jest.fn().mockImplementation(() => ({
@@ -13,6 +14,7 @@ jest.mock("xero-node", () => ({
     updateTenants: mockUpdateTenants,
     setTokenSet: mockSetTokenSet,
     refreshWithRefreshToken: mockRefreshWithRefreshToken,
+    revokeToken: mockRevokeToken,
     tenants: [] as Array<{ tenantId: string; tenantName: string }>,
   })),
 }));
@@ -45,6 +47,7 @@ describe("XeroOAuthProvider", () => {
     mockInitialize.mockClear();
     mockSetTokenSet.mockReset();
     mockRefreshWithRefreshToken.mockReset();
+    mockRevokeToken.mockReset();
     (XeroClient as unknown as jest.Mock).mockClear();
     provider = new XeroOAuthProvider(config as never);
   });
@@ -268,6 +271,27 @@ describe("XeroOAuthProvider", () => {
       await expect(provider.refreshTokens("old")).rejects.toBeInstanceOf(
         RefreshFailedError,
       );
+    });
+  });
+
+  describe("revokeTokens", () => {
+    it("sets the token set with the refresh token then calls revokeToken", async () => {
+      mockSetTokenSet.mockResolvedValue(undefined);
+      mockRevokeToken.mockResolvedValue(undefined);
+
+      await provider.revokeTokens("rt-xyz");
+
+      expect(mockSetTokenSet).toHaveBeenCalledWith(
+        expect.objectContaining({ refresh_token: "rt-xyz" }),
+      );
+      expect(mockRevokeToken).toHaveBeenCalledTimes(1);
+    });
+
+    it("propagates errors from revokeToken", async () => {
+      mockSetTokenSet.mockResolvedValue(undefined);
+      mockRevokeToken.mockRejectedValue(new Error("xero down"));
+
+      await expect(provider.revokeTokens("rt-xyz")).rejects.toThrow("xero down");
     });
   });
 });

@@ -143,7 +143,7 @@ describe("PrismaSequenceTriggerRepository (integration)", () => {
       });
     }
 
-    it("excludes invoices whose last run was manually_stopped", async () => {
+    it("excludes invoices whose last run was manually stopped", async () => {
       await attachConnection();
       const invoice = await mkOverdueInvoice();
 
@@ -153,7 +153,7 @@ describe("PrismaSequenceTriggerRepository (integration)", () => {
           sequenceId,
           currentStepId: stepId,
           status: "stopped",
-          stoppedReason: "manually_stopped",
+          stoppedReason: "manual_stop",
           startedAt: new Date("2026-01-01T09:00:00Z"),
           completedAt: new Date("2026-01-02T09:00:00Z"),
         },

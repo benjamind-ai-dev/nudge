@@ -58,6 +58,11 @@ describe("BusinessController", () => {
     }).compile();
 
     app = module.createNestApplication();
+    // Stub Clerk auth — @AccountId() reads req.auth().userId.
+    app.use((req: { auth: () => { userId: string } }, _res: unknown, next: () => void) => {
+      req.auth = () => ({ userId: "user_test_123" });
+      next();
+    });
     await app.init();
   });
 
@@ -178,5 +183,24 @@ describe("BusinessController", () => {
     await request(app.getHttpServer())
       .delete(`/v1/businesses/${BIZ_ID}`)
       .expect(404);
+  });
+
+  it("DELETE /v1/businesses/:id returns 401 when unauthenticated", async () => {
+    // Build a separate app without the auth stub middleware.
+    const module = await Test.createTestingModule({
+      controllers: [BusinessController],
+      providers: [
+        { provide: GetBusinessUseCase, useValue: getUseCase },
+        { provide: CreateBusinessUseCase, useValue: createUseCase },
+        { provide: UpdateBusinessSettingsUseCase, useValue: updateUseCase },
+        { provide: DeleteBusinessUseCase, useValue: deleteUseCase },
+      ],
+    }).compile();
+    const unauthApp = module.createNestApplication();
+    await unauthApp.init();
+    await request(unauthApp.getHttpServer())
+      .delete(`/v1/businesses/${BIZ_ID}`)
+      .expect(401);
+    await unauthApp.close();
   });
 });

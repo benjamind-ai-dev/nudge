@@ -26,10 +26,6 @@ export class StopSequenceRunUseCase {
       throw new InvalidStatusTransitionError(id, ctx.status, "stop");
     }
 
-    // The API accepts the literal "manual_stop"; we persist
-    // STOPPED_REASONS.MANUALLY_STOPPED ("manually_stopped") — the existing
-    // codebase constant. Both worker's payment/void path and this API path
-    // converge on the same stored value.
     const reason = STOPPED_REASONS.MANUALLY_STOPPED;
     const completedAt = new Date();
     await this.repo.stop(id, businessId, reason, completedAt);

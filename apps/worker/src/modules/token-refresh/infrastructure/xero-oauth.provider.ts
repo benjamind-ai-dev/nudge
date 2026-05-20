@@ -72,6 +72,17 @@ export class XeroOAuthProvider implements OAuthProvider {
     };
   }
 
+  async revokeTokens(refreshToken: string): Promise<void> {
+    const xero = await this.client("");
+    await xero.setTokenSet({
+      access_token: "",
+      refresh_token: refreshToken,
+      expires_at: 0,
+      token_type: "Bearer",
+    });
+    await xero.revokeToken();
+  }
+
   async refreshTokens(refreshToken: string): Promise<ProviderTokens> {
     try {
       const xero = await this.client("");

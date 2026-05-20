@@ -72,6 +72,13 @@ export class QuickbooksOAuthProvider implements OAuthProvider {
     return metadata.realmId;
   }
 
+  async revokeTokens(refreshToken: string): Promise<void> {
+    // Intuit returns 200 on successful revocation. The library resolves the
+    // promise either way; network errors propagate. We deliberately do NOT
+    // classify errors here — best-effort handling lives in the caller.
+    await this.client().revoke({ refresh_token: refreshToken });
+  }
+
   async refreshTokens(refreshToken: string): Promise<ProviderTokens> {
     try {
       const authResponse = await this.client().refreshUsingToken(refreshToken);
