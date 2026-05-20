@@ -11,6 +11,7 @@ const mkUser = (over: Partial<{ id: string; clerkUserId: string | null }> = {}):
   role: "viewer" as const,
   lastLoginAt: null,
   clerkUserId: over.clerkUserId ?? null,
+  clerkInvitationId: null,
 });
 
 const makeRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
@@ -22,6 +23,7 @@ const makeRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
   createPending: jest.fn(),
   deleteById: jest.fn(),
   linkClerkUserId: jest.fn().mockResolvedValue(mkUser({ clerkUserId: "user_clerk_x" })),
+  setClerkInvitationId: jest.fn(),
   ...over,
 });
 

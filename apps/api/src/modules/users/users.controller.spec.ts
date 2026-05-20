@@ -6,14 +6,18 @@ import { ListUsersUseCase } from "./application/list-users.use-case";
 import { UpdateUserRoleUseCase } from "./application/update-user-role.use-case";
 import { DeleteUserUseCase } from "./application/delete-user.use-case";
 import { InviteUserUseCase } from "./application/invite-user.use-case";
+import { CancelInviteUseCase } from "./application/cancel-invite.use-case";
+import { ResendInviteUseCase } from "./application/resend-invite.use-case";
 import { CallerContextService } from "../../common/auth-context/caller-context.service";
 import {
+  CannotCancelAcceptedInviteError,
   CannotChangeOwnRoleError,
   CannotChangeOwnerRoleError,
   CannotRemoveOwnerError,
   CannotRemoveSelfError,
   EmailAlreadyInUseError,
   InviteSendFailedError,
+  PendingUserNotFoundError,
   UserNotFoundError,
 } from "./domain/user.errors";
 import type { UserListItem } from "./domain/user.entity";
@@ -44,6 +48,7 @@ const mkUser = (over: Partial<UserListItem> = {}): UserListItem => ({
   role: "admin",
   lastLoginAt: null,
   clerkUserId: "user_target_clerk",
+  clerkInvitationId: null,
   ...over,
 });
 
@@ -53,6 +58,8 @@ describe("UsersController", () => {
   let updateUseCase: { execute: jest.Mock };
   let deleteUseCase: { execute: jest.Mock };
   let inviteUseCase: { execute: jest.Mock };
+  let cancelInviteUseCase: { execute: jest.Mock };
+  let resendInviteUseCase: { execute: jest.Mock };
   let callerCtx: { resolve: jest.Mock };
 
   beforeEach(async () => {
@@ -60,6 +67,8 @@ describe("UsersController", () => {
     updateUseCase = { execute: jest.fn() };
     deleteUseCase = { execute: jest.fn() };
     inviteUseCase = { execute: jest.fn() };
+    cancelInviteUseCase = { execute: jest.fn() };
+    resendInviteUseCase = { execute: jest.fn() };
     callerCtx = { resolve: jest.fn().mockResolvedValue(ownerCtx) };
 
     const module = await Test.createTestingModule({
@@ -69,6 +78,8 @@ describe("UsersController", () => {
         { provide: UpdateUserRoleUseCase, useValue: updateUseCase },
         { provide: DeleteUserUseCase, useValue: deleteUseCase },
         { provide: InviteUserUseCase, useValue: inviteUseCase },
+        { provide: CancelInviteUseCase, useValue: cancelInviteUseCase },
+        { provide: ResendInviteUseCase, useValue: resendInviteUseCase },
         { provide: CallerContextService, useValue: callerCtx },
       ],
     }).compile();
@@ -335,6 +346,150 @@ describe("UsersController", () => {
     it("returns 502 on InviteSendFailedError", async () => {
       inviteUseCase.execute.mockRejectedValue(new InviteSendFailedError("x@example.com"));
       await request(app.getHttpServer()).post("/v1/users/invite").send(INVITE_BODY).expect(502);
+    });
+  });
+
+  describe("DELETE /v1/users/invites/:id", () => {
+    it("returns 204 on success", async () => {
+      cancelInviteUseCase.execute.mockResolvedValue(undefined);
+
+      await request(app.getHttpServer())
+        .delete(`/v1/users/invites/${TARGET_USER_ID}`)
+        .expect(204);
+
+      expect(cancelInviteUseCase.execute).toHaveBeenCalledWith({
+        callerAccountId: ACCOUNT_ID,
+        targetId: TARGET_USER_ID,
+      });
+    });
+
+    it("admin caller is allowed (204)", async () => {
+      callerCtx.resolve.mockResolvedValue(adminCtx);
+      cancelInviteUseCase.execute.mockResolvedValue(undefined);
+      await request(app.getHttpServer())
+        .delete(`/v1/users/invites/${TARGET_USER_ID}`)
+        .expect(204);
+    });
+
+    it("returns 401 when caller context cannot be resolved", async () => {
+      callerCtx.resolve.mockResolvedValue(null);
+      await request(app.getHttpServer())
+        .delete(`/v1/users/invites/${TARGET_USER_ID}`)
+        .expect(401);
+      expect(cancelInviteUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 when caller is viewer", async () => {
+      callerCtx.resolve.mockResolvedValue({ ...adminCtx, role: "viewer" });
+      await request(app.getHttpServer())
+        .delete(`/v1/users/invites/${TARGET_USER_ID}`)
+        .expect(403);
+    });
+
+    it("returns 404 on PendingUserNotFoundError", async () => {
+      cancelInviteUseCase.execute.mockRejectedValue(
+        new PendingUserNotFoundError(TARGET_USER_ID),
+      );
+      await request(app.getHttpServer())
+        .delete(`/v1/users/invites/${TARGET_USER_ID}`)
+        .expect(404);
+    });
+
+    it("returns 409 on CannotCancelAcceptedInviteError", async () => {
+      cancelInviteUseCase.execute.mockRejectedValue(
+        new CannotCancelAcceptedInviteError(TARGET_USER_ID),
+      );
+      await request(app.getHttpServer())
+        .delete(`/v1/users/invites/${TARGET_USER_ID}`)
+        .expect(409);
+    });
+  });
+
+  describe("POST /v1/users/invites/:id/resend", () => {
+    const resentUser = mkUser({
+      id: TARGET_USER_ID,
+      email: "t@example.com",
+      role: "viewer",
+      clerkUserId: null,
+      clerkInvitationId: "inv_new",
+    });
+
+    it("returns 200 with the resent invite body", async () => {
+      resendInviteUseCase.execute.mockResolvedValue({
+        user: resentUser,
+        clerkInvitationId: "inv_new",
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/v1/users/invites/${TARGET_USER_ID}/resend`)
+        .expect(200);
+
+      expect(res.body.data).toEqual(
+        expect.objectContaining({
+          id: TARGET_USER_ID,
+          email: "t@example.com",
+          role: "viewer",
+          status: "pending",
+          clerkInvitationId: "inv_new",
+        }),
+      );
+      expect(resendInviteUseCase.execute).toHaveBeenCalledWith({
+        callerAccountId: ACCOUNT_ID,
+        targetId: TARGET_USER_ID,
+      });
+    });
+
+    it("admin caller is allowed (200)", async () => {
+      callerCtx.resolve.mockResolvedValue(adminCtx);
+      resendInviteUseCase.execute.mockResolvedValue({
+        user: resentUser,
+        clerkInvitationId: "inv_new",
+      });
+      await request(app.getHttpServer())
+        .post(`/v1/users/invites/${TARGET_USER_ID}/resend`)
+        .expect(200);
+    });
+
+    it("returns 401 when caller context cannot be resolved", async () => {
+      callerCtx.resolve.mockResolvedValue(null);
+      await request(app.getHttpServer())
+        .post(`/v1/users/invites/${TARGET_USER_ID}/resend`)
+        .expect(401);
+      expect(resendInviteUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 when caller is viewer", async () => {
+      callerCtx.resolve.mockResolvedValue({ ...adminCtx, role: "viewer" });
+      await request(app.getHttpServer())
+        .post(`/v1/users/invites/${TARGET_USER_ID}/resend`)
+        .expect(403);
+    });
+
+    it("returns 404 on PendingUserNotFoundError", async () => {
+      resendInviteUseCase.execute.mockRejectedValue(
+        new PendingUserNotFoundError(TARGET_USER_ID),
+      );
+      await request(app.getHttpServer())
+        .post(`/v1/users/invites/${TARGET_USER_ID}/resend`)
+        .expect(404);
+    });
+
+    it("returns 409 on CannotCancelAcceptedInviteError", async () => {
+      resendInviteUseCase.execute.mockRejectedValue(
+        new CannotCancelAcceptedInviteError(TARGET_USER_ID),
+      );
+      await request(app.getHttpServer())
+        .post(`/v1/users/invites/${TARGET_USER_ID}/resend`)
+        .expect(409);
+    });
+
+    it("returns 502 on InviteSendFailedError", async () => {
+      resendInviteUseCase.execute.mockRejectedValue(
+        new InviteSendFailedError("t@example.com"),
+      );
+      await request(app.getHttpServer())
+        .post(`/v1/users/invites/${TARGET_USER_ID}/resend`)
+        .expect(502);
     });
   });
 });

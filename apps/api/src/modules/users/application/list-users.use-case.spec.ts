@@ -10,6 +10,7 @@ const mkUser = (over: Partial<UserListItem> = {}): UserListItem => ({
   role: "owner",
   lastLoginAt: null,
   clerkUserId: "user_alice",
+  clerkInvitationId: null,
   ...over,
 });
 
@@ -22,6 +23,7 @@ const mkRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
   createPending: jest.fn(),
   deleteById: jest.fn(),
   linkClerkUserId: jest.fn(),
+  setClerkInvitationId: jest.fn(),
   ...over,
 });
 

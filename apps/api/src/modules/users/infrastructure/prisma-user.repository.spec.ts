@@ -215,4 +215,69 @@ describe("PrismaUserRepository (invite methods)", () => {
     });
     expect(second).toBeNull();
   });
+
+  describe("clerkInvitationId persistence", () => {
+    it("createPending stores clerkInvitationId when provided", async () => {
+      const email = `pending-${randomUUID()}@example.com`;
+      const created = await repo.createPending({
+        accountId: ACCOUNT_ID,
+        email,
+        name: "Pending",
+        role: "viewer",
+        clerkInvitationId: "inv_init",
+      });
+      expect(created.clerkInvitationId).toBe("inv_init");
+    });
+
+    it("createPending defaults clerkInvitationId to null when omitted", async () => {
+      const email = `pending-${randomUUID()}@example.com`;
+      const created = await repo.createPending({
+        accountId: ACCOUNT_ID,
+        email,
+        name: "Pending",
+        role: "viewer",
+      });
+      expect(created.clerkInvitationId).toBeNull();
+    });
+
+    it("setClerkInvitationId updates the row and returns 1", async () => {
+      const email = `pending-${randomUUID()}@example.com`;
+      const created = await repo.createPending({
+        accountId: ACCOUNT_ID,
+        email,
+        name: "Pending",
+        role: "viewer",
+      });
+      const count = await repo.setClerkInvitationId(created.id, ACCOUNT_ID, "inv_new");
+      expect(count).toBe(1);
+      const refetched = await repo.findByIdInAccount(created.id, ACCOUNT_ID);
+      expect(refetched?.clerkInvitationId).toBe("inv_new");
+    });
+
+    it("setClerkInvitationId is tenant-scoped — returns 0 for wrong account", async () => {
+      const email = `pending-${randomUUID()}@example.com`;
+      const created = await repo.createPending({
+        accountId: ACCOUNT_ID,
+        email,
+        name: "Pending",
+        role: "viewer",
+      });
+      const count = await repo.setClerkInvitationId(created.id, OTHER_ACCOUNT_ID, "inv_x");
+      expect(count).toBe(0);
+    });
+
+    it("setClerkInvitationId(null) clears the column", async () => {
+      const email = `pending-${randomUUID()}@example.com`;
+      const created = await repo.createPending({
+        accountId: ACCOUNT_ID,
+        email,
+        name: "Pending",
+        role: "viewer",
+        clerkInvitationId: "inv_init",
+      });
+      await repo.setClerkInvitationId(created.id, ACCOUNT_ID, null);
+      const refetched = await repo.findByIdInAccount(created.id, ACCOUNT_ID);
+      expect(refetched?.clerkInvitationId).toBeNull();
+    });
+  });
 });

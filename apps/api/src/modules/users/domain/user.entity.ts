@@ -8,4 +8,5 @@ export interface UserListItem {
   role: UserRole;
   lastLoginAt: Date | null;
   clerkUserId: string | null;
+  clerkInvitationId: string | null;
 }

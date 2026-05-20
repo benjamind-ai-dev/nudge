@@ -18,12 +18,16 @@ export interface UserRepository {
   /**
    * Creates a pending user row (clerkUserId = null) and returns it.
    * Throws EmailAlreadyInUseError if Prisma P2002 fires on the global-unique email column.
+   * `clerkInvitationId` is optional — current invite flow sets it via setClerkInvitationId
+   * AFTER Clerk's createInvitation succeeds, so this param is unused at present. Reserved
+   * for future flows that might know the invitation id at create-time.
    */
   createPending(params: {
     accountId: string;
     email: string;
     name: string;
     role: Exclude<UserRole, "owner">;
+    clerkInvitationId?: string | null;
   }): Promise<UserListItem>;
 
   /**
@@ -42,4 +46,14 @@ export interface UserRepository {
     accountId: string;
     clerkUserId: string;
   }): Promise<UserListItem | null>;
+
+  /**
+   * Sets clerk_invitation_id on a (id, accountId)-scoped row. Returns the number of rows
+   * updated (0 or 1). Passing `null` clears the column. Account-scoped per tenancy guarantee.
+   */
+  setClerkInvitationId(
+    userId: string,
+    accountId: string,
+    clerkInvitationId: string | null,
+  ): Promise<number>;
 }

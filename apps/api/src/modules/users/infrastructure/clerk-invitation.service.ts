@@ -6,6 +6,7 @@ import type {
   ClerkInvitationService as IClerkInvitationService,
   CreateInvitationParams,
   CreateInvitationResult,
+  RevokeInvitationParams,
 } from "../domain/clerk-invitation.service";
 
 @Injectable()
@@ -36,6 +37,22 @@ export class ClerkInvitationService implements IClerkInvitationService {
         event: "clerk_invitation_error",
         accountId: params.accountId,
         userId: params.userId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  }
+
+  async revokeInvitation(params: RevokeInvitationParams): Promise<void> {
+    try {
+      // The Clerk Backend SDK v3 revokeInvitation() takes a plain string invitationId.
+      // The docs show an object form but the actual .d.ts is revokeInvitation(invitationId: string).
+      await this.client.invitations.revokeInvitation(params.clerkInvitationId);
+    } catch (err) {
+      this.logger.error({
+        msg: "Clerk revokeInvitation failed",
+        event: "clerk_invitation_revoke_error",
+        clerkInvitationId: params.clerkInvitationId,
         error: err instanceof Error ? err.message : String(err),
       });
       throw err;

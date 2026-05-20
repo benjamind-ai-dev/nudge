@@ -21,13 +21,17 @@ import { ListUsersUseCase } from "./application/list-users.use-case";
 import { UpdateUserRoleUseCase } from "./application/update-user-role.use-case";
 import { DeleteUserUseCase } from "./application/delete-user.use-case";
 import { InviteUserUseCase } from "./application/invite-user.use-case";
+import { CancelInviteUseCase } from "./application/cancel-invite.use-case";
+import { ResendInviteUseCase } from "./application/resend-invite.use-case";
 import {
+  CannotCancelAcceptedInviteError,
   CannotChangeOwnRoleError,
   CannotChangeOwnerRoleError,
   CannotRemoveOwnerError,
   CannotRemoveSelfError,
   EmailAlreadyInUseError,
   InviteSendFailedError,
+  PendingUserNotFoundError,
   UserNotFoundError,
 } from "./domain/user.errors";
 import {
@@ -45,6 +49,8 @@ export class UsersController {
     private readonly updateUserRole: UpdateUserRoleUseCase,
     private readonly deleteUser: DeleteUserUseCase,
     private readonly inviteUser: InviteUserUseCase,
+    private readonly cancelInvite: CancelInviteUseCase,
+    private readonly resendInvite: ResendInviteUseCase,
   ) {}
 
   @Get()
@@ -90,6 +96,78 @@ export class UsersController {
       };
     } catch (err) {
       if (err instanceof EmailAlreadyInUseError) {
+        throw new ConflictException(err.message);
+      }
+      if (err instanceof InviteSendFailedError) {
+        throw new BadGatewayException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Delete("invites/:id")
+  @HttpCode(204)
+  async cancelInviteEndpoint(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+  ) {
+    const caller = await this.callerCtx.resolve(clerkUserId);
+    if (!caller) {
+      throw new UnauthorizedException("Caller context could not be resolved");
+    }
+    if (caller.role !== "owner" && caller.role !== "admin") {
+      throw new ForbiddenException("Only owners or admins can cancel invites");
+    }
+
+    try {
+      await this.cancelInvite.execute({
+        callerAccountId: caller.accountId,
+        targetId: id,
+      });
+    } catch (err) {
+      if (err instanceof PendingUserNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      if (err instanceof CannotCancelAcceptedInviteError) {
+        throw new ConflictException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Post("invites/:id/resend")
+  @HttpCode(200)
+  async resendInviteEndpoint(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+  ) {
+    const caller = await this.callerCtx.resolve(clerkUserId);
+    if (!caller) {
+      throw new UnauthorizedException("Caller context could not be resolved");
+    }
+    if (caller.role !== "owner" && caller.role !== "admin") {
+      throw new ForbiddenException("Only owners or admins can resend invites");
+    }
+
+    try {
+      const { user, clerkInvitationId } = await this.resendInvite.execute({
+        callerAccountId: caller.accountId,
+        targetId: id,
+      });
+      return {
+        data: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          status: "pending" as const,
+          clerkInvitationId,
+        },
+      };
+    } catch (err) {
+      if (err instanceof PendingUserNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      if (err instanceof CannotCancelAcceptedInviteError) {
         throw new ConflictException(err.message);
       }
       if (err instanceof InviteSendFailedError) {
