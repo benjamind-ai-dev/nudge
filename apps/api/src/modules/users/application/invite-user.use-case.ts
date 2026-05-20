@@ -60,6 +60,27 @@ export class InviteUserUseCase {
         userId: pending.id,
         role: input.role,
       });
+
+      // Best-effort: persist the invitation id on the pending row. Failure to
+      // persist does NOT roll back the row — the invitation was sent and the row
+      // is usable; we just lose the historical pointer. Cancel/resend on this
+      // row will fall through to the "no prior invitation id" branch (skip revoke).
+      try {
+        await this.users.setClerkInvitationId(
+          pending.id,
+          input.callerAccountId,
+          clerkInvitationId,
+        );
+      } catch (setErr) {
+        this.logger.error({
+          msg: "Failed to persist clerkInvitationId on pending user row",
+          event: "invite_set_invitation_id_failed",
+          pendingUserId: pending.id,
+          clerkInvitationId,
+          error: setErr instanceof Error ? setErr.message : String(setErr),
+        });
+      }
+
       return { user: pending, clerkInvitationId };
     } catch (clerkErr) {
       // Best-effort rollback of the pending row.

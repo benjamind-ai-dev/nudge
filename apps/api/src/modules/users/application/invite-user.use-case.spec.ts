@@ -19,6 +19,7 @@ const mkUser = (
   role: over.role ?? "viewer",
   lastLoginAt: null,
   clerkUserId: over.clerkUserId ?? null,
+  clerkInvitationId: null,
 });
 
 const makeRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
@@ -30,11 +31,13 @@ const makeRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
   createPending: jest.fn().mockResolvedValue(mkUser({ id: "new_user_id" })),
   deleteById: jest.fn().mockResolvedValue(1),
   linkClerkUserId: jest.fn(),
+  setClerkInvitationId: jest.fn().mockResolvedValue(1),
   ...over,
 });
 
 const makeClerk = (over: Partial<ClerkInvitationService> = {}): ClerkInvitationService => ({
   createInvitation: jest.fn().mockResolvedValue({ clerkInvitationId: "inv_abc" }),
+  revokeInvitation: jest.fn().mockResolvedValue(undefined),
   ...over,
 });
 
@@ -140,5 +143,40 @@ describe("InviteUserUseCase", () => {
     await expect(
       useCase.execute({ callerAccountId: "acc_1", email: "x@example.com", role: "viewer" }),
     ).rejects.toBeInstanceOf(InviteSendFailedError);
+  });
+
+  it("persists clerkInvitationId on the pending row after Clerk createInvitation succeeds", async () => {
+    const repo = makeRepo();
+    const clerk = makeClerk();
+    const useCase = new InviteUserUseCase(repo, clerk);
+
+    await useCase.execute({
+      callerAccountId: "acc_1",
+      email: "x@example.com",
+      role: "viewer",
+    });
+
+    expect(repo.setClerkInvitationId).toHaveBeenCalledWith(
+      "new_user_id",
+      "acc_1",
+      "inv_abc",
+    );
+  });
+
+  it("setClerkInvitationId failure does NOT roll back and does NOT throw", async () => {
+    const repo = makeRepo({
+      setClerkInvitationId: jest.fn().mockRejectedValue(new Error("db hiccup")),
+    });
+    const clerk = makeClerk();
+    const useCase = new InviteUserUseCase(repo, clerk);
+
+    const result = await useCase.execute({
+      callerAccountId: "acc_1",
+      email: "x@example.com",
+      role: "viewer",
+    });
+
+    expect(result.clerkInvitationId).toBe("inv_abc");
+    expect(repo.deleteById).not.toHaveBeenCalled();
   });
 });

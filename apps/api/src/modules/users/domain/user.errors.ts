@@ -56,3 +56,10 @@ export class PendingUserNotFoundError extends Error {
     this.name = "PendingUserNotFoundError";
   }
 }
+
+export class CannotCancelAcceptedInviteError extends Error {
+  constructor(public readonly userId: string) {
+    super(`User ${userId} has already accepted their invitation`);
+    this.name = "CannotCancelAcceptedInviteError";
+  }
+}

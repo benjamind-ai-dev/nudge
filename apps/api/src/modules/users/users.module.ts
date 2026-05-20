@@ -7,6 +7,8 @@ import { ListUsersUseCase } from "./application/list-users.use-case";
 import { UpdateUserRoleUseCase } from "./application/update-user-role.use-case";
 import { DeleteUserUseCase } from "./application/delete-user.use-case";
 import { InviteUserUseCase } from "./application/invite-user.use-case";
+import { CancelInviteUseCase } from "./application/cancel-invite.use-case";
+import { ResendInviteUseCase } from "./application/resend-invite.use-case";
 import { UsersController } from "./users.controller";
 
 @Module({
@@ -16,6 +18,8 @@ import { UsersController } from "./users.controller";
     UpdateUserRoleUseCase,
     DeleteUserUseCase,
     InviteUserUseCase,
+    CancelInviteUseCase,
+    ResendInviteUseCase,
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: CLERK_INVITATION_SERVICE, useClass: ClerkInvitationService },
   ],

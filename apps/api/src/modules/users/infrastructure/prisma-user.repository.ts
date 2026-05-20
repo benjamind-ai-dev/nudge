@@ -17,6 +17,7 @@ const ROW_SELECT = {
   role: true,
   lastLoginAt: true,
   clerkUserId: true,
+  clerkInvitationId: true,
 } satisfies Prisma.UserSelect;
 
 type Row = Prisma.UserGetPayload<{ select: typeof ROW_SELECT }>;
@@ -99,6 +100,7 @@ export class PrismaUserRepository implements UserRepository {
     email: string;
     name: string;
     role: Exclude<UserRole, "owner">;
+    clerkInvitationId?: string | null;
   }): Promise<UserListItem> {
     try {
       const row = await this.prisma.user.create({
@@ -108,6 +110,7 @@ export class PrismaUserRepository implements UserRepository {
           name: params.name,
           role: params.role,
           clerkUserId: null,
+          clerkInvitationId: params.clerkInvitationId ?? null,
         },
         select: ROW_SELECT,
       });
@@ -129,6 +132,18 @@ export class PrismaUserRepository implements UserRepository {
 
   async deleteById(id: string, accountId: string): Promise<number> {
     const result = await this.prisma.user.deleteMany({ where: { id, accountId } });
+    return result.count;
+  }
+
+  async setClerkInvitationId(
+    userId: string,
+    accountId: string,
+    clerkInvitationId: string | null,
+  ): Promise<number> {
+    const result = await this.prisma.user.updateMany({
+      where: { id: userId, accountId },
+      data: { clerkInvitationId },
+    });
     return result.count;
   }
 
@@ -176,6 +191,7 @@ export class PrismaUserRepository implements UserRepository {
       role: parsed.data,
       lastLoginAt: row.lastLoginAt,
       clerkUserId: row.clerkUserId,
+      clerkInvitationId: row.clerkInvitationId,
     };
   }
 }

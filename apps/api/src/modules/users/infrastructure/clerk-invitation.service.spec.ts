@@ -1,12 +1,17 @@
 import { ClerkInvitationService } from "./clerk-invitation.service";
 
 const mockCreateInvitation = jest.fn();
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockCreateClerkClient = jest.fn<{ invitations: { createInvitation: jest.Mock } }, [any]>(
-  () => ({
-    invitations: { createInvitation: mockCreateInvitation },
-  }),
-);
+const mockRevokeInvitation = jest.fn();
+const mockCreateClerkClient = jest.fn<
+  { invitations: { createInvitation: jest.Mock; revokeInvitation: jest.Mock } },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [any]
+>(() => ({
+  invitations: {
+    createInvitation: mockCreateInvitation,
+    revokeInvitation: mockRevokeInvitation,
+  },
+}));
 
 jest.mock("@clerk/backend", () => ({
   createClerkClient: (opts: unknown) => mockCreateClerkClient(opts),
@@ -17,6 +22,7 @@ describe("ClerkInvitationService", () => {
 
   beforeEach(() => {
     mockCreateInvitation.mockReset();
+    mockRevokeInvitation.mockReset();
     mockCreateClerkClient.mockClear();
     const config = {
       get: jest.fn((key: string) => {
@@ -64,6 +70,20 @@ describe("ClerkInvitationService", () => {
         userId: "user_1",
         role: "admin",
       }),
+    ).rejects.toThrow("clerk down");
+  });
+
+  it("calls clerkClient.invitations.revokeInvitation with the string-form invitationId", async () => {
+    mockRevokeInvitation.mockResolvedValue({ id: "inv_abc" });
+    await service.revokeInvitation({ clerkInvitationId: "inv_abc" });
+    // The Clerk Backend SDK v3 revokeInvitation() takes a plain string (not object form)
+    expect(mockRevokeInvitation).toHaveBeenCalledWith("inv_abc");
+  });
+
+  it("propagates SDK errors from revokeInvitation", async () => {
+    mockRevokeInvitation.mockRejectedValue(new Error("clerk down"));
+    await expect(
+      service.revokeInvitation({ clerkInvitationId: "inv_abc" }),
     ).rejects.toThrow("clerk down");
   });
 });
