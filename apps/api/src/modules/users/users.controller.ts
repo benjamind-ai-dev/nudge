@@ -1,0 +1,120 @@
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Param,
+  Patch,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { AccountId } from "../../common/decorators/account-id.decorator";
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { CallerContextService } from "../../common/auth-context/caller-context.service";
+import { ListUsersUseCase } from "./application/list-users.use-case";
+import { UpdateUserRoleUseCase } from "./application/update-user-role.use-case";
+import { DeleteUserUseCase } from "./application/delete-user.use-case";
+import {
+  CannotChangeOwnRoleError,
+  CannotChangeOwnerRoleError,
+  CannotRemoveOwnerError,
+  CannotRemoveSelfError,
+  UserNotFoundError,
+} from "./domain/user.errors";
+import {
+  updateUserRoleSchema,
+  type UpdateUserRoleDto,
+} from "./dto/users.dto";
+
+@Controller("v1/users")
+export class UsersController {
+  constructor(
+    private readonly callerCtx: CallerContextService,
+    private readonly listUsers: ListUsersUseCase,
+    private readonly updateUserRole: UpdateUserRoleUseCase,
+    private readonly deleteUser: DeleteUserUseCase,
+  ) {}
+
+  @Get()
+  async list(@AccountId() clerkUserId: string) {
+    const caller = await this.callerCtx.resolve(clerkUserId);
+    if (!caller) {
+      throw new UnauthorizedException("Caller context could not be resolved");
+    }
+    const data = await this.listUsers.execute(caller.accountId);
+    return { data };
+  }
+
+  @Patch(":id")
+  async update(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateUserRoleSchema)) dto: UpdateUserRoleDto,
+  ) {
+    const caller = await this.callerCtx.resolve(clerkUserId);
+    if (!caller) {
+      throw new UnauthorizedException("Caller context could not be resolved");
+    }
+    if (caller.role !== "owner") {
+      throw new ForbiddenException("Only the account owner can change roles");
+    }
+
+    try {
+      const data = await this.updateUserRole.execute({
+        callerUserId: caller.userId,
+        accountId: caller.accountId,
+        targetId: id,
+        newRole: dto.role,
+      });
+      return { data };
+    } catch (err) {
+      if (err instanceof UserNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      if (
+        err instanceof CannotChangeOwnRoleError ||
+        err instanceof CannotChangeOwnerRoleError
+      ) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Delete(":id")
+  @HttpCode(204)
+  async remove(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+  ) {
+    const caller = await this.callerCtx.resolve(clerkUserId);
+    if (!caller) {
+      throw new UnauthorizedException("Caller context could not be resolved");
+    }
+    if (caller.role !== "owner") {
+      throw new ForbiddenException("Only the account owner can remove users");
+    }
+
+    try {
+      await this.deleteUser.execute({
+        callerUserId: caller.userId,
+        accountId: caller.accountId,
+        targetId: id,
+      });
+    } catch (err) {
+      if (err instanceof UserNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      if (
+        err instanceof CannotRemoveSelfError ||
+        err instanceof CannotRemoveOwnerError
+      ) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    }
+  }
+}
