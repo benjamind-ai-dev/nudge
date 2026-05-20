@@ -5,12 +5,15 @@ import { UsersController } from "./users.controller";
 import { ListUsersUseCase } from "./application/list-users.use-case";
 import { UpdateUserRoleUseCase } from "./application/update-user-role.use-case";
 import { DeleteUserUseCase } from "./application/delete-user.use-case";
+import { InviteUserUseCase } from "./application/invite-user.use-case";
 import { CallerContextService } from "../../common/auth-context/caller-context.service";
 import {
   CannotChangeOwnRoleError,
   CannotChangeOwnerRoleError,
   CannotRemoveOwnerError,
   CannotRemoveSelfError,
+  EmailAlreadyInUseError,
+  InviteSendFailedError,
   UserNotFoundError,
 } from "./domain/user.errors";
 import type { UserListItem } from "./domain/user.entity";
@@ -49,12 +52,14 @@ describe("UsersController", () => {
   let listUseCase: { execute: jest.Mock };
   let updateUseCase: { execute: jest.Mock };
   let deleteUseCase: { execute: jest.Mock };
+  let inviteUseCase: { execute: jest.Mock };
   let callerCtx: { resolve: jest.Mock };
 
   beforeEach(async () => {
     listUseCase = { execute: jest.fn() };
     updateUseCase = { execute: jest.fn() };
     deleteUseCase = { execute: jest.fn() };
+    inviteUseCase = { execute: jest.fn() };
     callerCtx = { resolve: jest.fn().mockResolvedValue(ownerCtx) };
 
     const module = await Test.createTestingModule({
@@ -63,6 +68,7 @@ describe("UsersController", () => {
         { provide: ListUsersUseCase, useValue: listUseCase },
         { provide: UpdateUserRoleUseCase, useValue: updateUseCase },
         { provide: DeleteUserUseCase, useValue: deleteUseCase },
+        { provide: InviteUserUseCase, useValue: inviteUseCase },
         { provide: CallerContextService, useValue: callerCtx },
       ],
     }).compile();
@@ -241,6 +247,94 @@ describe("UsersController", () => {
       await request(app.getHttpServer())
         .delete(`/v1/users/${TARGET_USER_ID}`)
         .expect(400);
+    });
+  });
+
+  describe("POST /v1/users/invite", () => {
+    const INVITE_BODY = { email: "new@example.com", role: "viewer" as const, name: "New" };
+
+    it("returns 201 on success", async () => {
+      inviteUseCase.execute.mockResolvedValue({
+        user: mkUser({ id: "new_user", email: INVITE_BODY.email, clerkUserId: null, role: "viewer" }),
+        clerkInvitationId: "inv_abc",
+      });
+
+      const res = await request(app.getHttpServer())
+        .post("/v1/users/invite")
+        .send(INVITE_BODY)
+        .expect(201);
+
+      expect(res.body.data).toEqual(
+        expect.objectContaining({
+          id: "new_user",
+          email: INVITE_BODY.email,
+          role: "viewer",
+          status: "pending",
+          clerkInvitationId: "inv_abc",
+        }),
+      );
+      expect(inviteUseCase.execute).toHaveBeenCalledWith({
+        callerAccountId: ACCOUNT_ID,
+        email: INVITE_BODY.email,
+        role: "viewer",
+        name: "New",
+      });
+    });
+
+    it("returns 201 with null clerkInvitationId on idempotent re-invite", async () => {
+      inviteUseCase.execute.mockResolvedValue({
+        user: mkUser({ id: "existing", clerkUserId: null }),
+        clerkInvitationId: null,
+      });
+      const res = await request(app.getHttpServer())
+        .post("/v1/users/invite")
+        .send(INVITE_BODY)
+        .expect(201);
+      expect(res.body.data.clerkInvitationId).toBeNull();
+    });
+
+    it("admin caller is allowed (201)", async () => {
+      callerCtx.resolve.mockResolvedValue(adminCtx);
+      inviteUseCase.execute.mockResolvedValue({
+        user: mkUser({ clerkUserId: null }),
+        clerkInvitationId: "inv_abc",
+      });
+      await request(app.getHttpServer()).post("/v1/users/invite").send(INVITE_BODY).expect(201);
+    });
+
+    it("returns 401 when caller context cannot be resolved", async () => {
+      callerCtx.resolve.mockResolvedValue(null);
+      await request(app.getHttpServer()).post("/v1/users/invite").send(INVITE_BODY).expect(401);
+      expect(inviteUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 when caller is viewer", async () => {
+      callerCtx.resolve.mockResolvedValue({ ...adminCtx, role: "viewer" });
+      await request(app.getHttpServer()).post("/v1/users/invite").send(INVITE_BODY).expect(403);
+    });
+
+    it("returns 400 on bad email", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/users/invite")
+        .send({ ...INVITE_BODY, email: "notanemail" })
+        .expect(400);
+    });
+
+    it("returns 400 when role=owner", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/users/invite")
+        .send({ ...INVITE_BODY, role: "owner" })
+        .expect(400);
+    });
+
+    it("returns 409 on EmailAlreadyInUseError", async () => {
+      inviteUseCase.execute.mockRejectedValue(new EmailAlreadyInUseError("x@example.com"));
+      await request(app.getHttpServer()).post("/v1/users/invite").send(INVITE_BODY).expect(409);
+    });
+
+    it("returns 502 on InviteSendFailedError", async () => {
+      inviteUseCase.execute.mockRejectedValue(new InviteSendFailedError("x@example.com"));
+      await request(app.getHttpServer()).post("/v1/users/invite").send(INVITE_BODY).expect(502);
     });
   });
 });
