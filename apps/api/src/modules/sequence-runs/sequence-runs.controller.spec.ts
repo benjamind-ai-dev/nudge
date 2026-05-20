@@ -15,9 +15,12 @@ import type {
   SequenceRunDetail,
   SequenceRunListItem,
 } from "./domain/sequence-run.entity";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 
 const BIZ_ID = "550e8400-e29b-41d4-a716-446655440000";
 const RUN_ID = "550e8400-e29b-41d4-a716-446655440001";
+const FOREIGN_BIZ_ID = "550e8400-e29b-41d4-a716-446655440099";
 
 const listItem: SequenceRunListItem = {
   id: RUN_ID,
@@ -84,6 +87,7 @@ describe("SequenceRunsController", () => {
   let pauseUseCase: { execute: jest.Mock };
   let resumeUseCase: { execute: jest.Mock };
   let stopUseCase: { execute: jest.Mock };
+  let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     listUseCase = { execute: jest.fn() };
@@ -91,6 +95,7 @@ describe("SequenceRunsController", () => {
     pauseUseCase = { execute: jest.fn() };
     resumeUseCase = { execute: jest.fn() };
     stopUseCase = { execute: jest.fn() };
+    businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       controllers: [SequenceRunsController],
@@ -100,6 +105,7 @@ describe("SequenceRunsController", () => {
         { provide: PauseSequenceRunUseCase, useValue: pauseUseCase },
         { provide: ResumeSequenceRunUseCase, useValue: resumeUseCase },
         { provide: StopSequenceRunUseCase, useValue: stopUseCase },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
 
@@ -350,6 +356,21 @@ describe("SequenceRunsController", () => {
         .post(`/v1/sequence-runs/${RUN_ID}/stop`)
         .send({ reason: "manual_stop" })
         .expect(400);
+    });
+  });
+
+  describe("cross-account authorization", () => {
+    it("GET /v1/sequence-runs returns 404 when businessId belongs to a different account", async () => {
+      businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+        new BusinessNotFoundError(FOREIGN_BIZ_ID),
+      );
+
+      await request(app.getHttpServer())
+        .get("/v1/sequence-runs")
+        .query({ businessId: FOREIGN_BIZ_ID })
+        .expect(404);
+
+      expect(listUseCase.execute).not.toHaveBeenCalled();
     });
   });
 });
