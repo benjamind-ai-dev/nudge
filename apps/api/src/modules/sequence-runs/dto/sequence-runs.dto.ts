@@ -14,3 +14,18 @@ export const getSequenceRunQuerySchema = z.object({
   businessId: z.string().uuid(),
 });
 export type GetSequenceRunQuery = z.infer<typeof getSequenceRunQuerySchema>;
+
+export const actionQuerySchema = z.object({
+  businessId: z.string().uuid(),
+});
+export type ActionQuery = z.infer<typeof actionQuerySchema>;
+
+export const pauseBodySchema = z.object({
+  reason: z.literal("manual_pause"),
+});
+export type PauseBody = z.infer<typeof pauseBodySchema>;
+
+export const stopBodySchema = z.object({
+  reason: z.literal("manual_stop"),
+});
+export type StopBody = z.infer<typeof stopBodySchema>;

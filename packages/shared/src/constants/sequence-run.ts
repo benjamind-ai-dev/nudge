@@ -12,6 +12,7 @@ export type StoppedReason =
 
 export const PAUSED_REASONS = {
   SPAM_COMPLAINT: "spam_complaint",
+  MANUAL_PAUSE: "manual_pause",
 } as const;
 
 export type PausedReason =

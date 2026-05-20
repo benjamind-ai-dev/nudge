@@ -26,6 +26,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
             OR: [
               { status: { in: [SEQUENCE_RUN_STATUSES.ACTIVE, SEQUENCE_RUN_STATUSES.PAUSED] } },
               { stoppedReason: STOPPED_REASONS.CLIENT_REPLIED },
+              { stoppedReason: STOPPED_REASONS.MANUALLY_STOPPED },
             ],
           },
         },

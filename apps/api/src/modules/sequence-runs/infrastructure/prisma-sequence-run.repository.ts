@@ -10,6 +10,7 @@ import type {
   SequenceRunMessageDetail,
 } from "../domain/sequence-run.entity";
 import type {
+  SequenceRunActionContext,
   SequenceRunListFilter,
   SequenceRunListResult,
   SequenceRunRepository,
@@ -151,6 +152,65 @@ export class PrismaSequenceRunRepository implements SequenceRunRepository {
       select: DETAIL_SELECT,
     });
     return row ? this.toDetail(row) : null;
+  }
+
+  async findActionContext(
+    id: string,
+    businessId: string,
+  ): Promise<SequenceRunActionContext | null> {
+    const row = await this.prisma.sequenceRun.findFirst({
+      where: { id, invoice: { businessId } },
+      select: {
+        id: true,
+        status: true,
+        invoice: {
+          select: {
+            invoiceNumber: true,
+            customer: { select: { companyName: true } },
+            business: { select: { timezone: true } },
+          },
+        },
+      },
+    });
+    if (!row) return null;
+    return {
+      id: row.id,
+      status: row.status as SequenceRunStatus,
+      invoice: {
+        invoiceNumber: row.invoice.invoiceNumber,
+        businessTimezone: row.invoice.business.timezone,
+      },
+      customer: { companyName: row.invoice.customer.companyName },
+    };
+  }
+
+  async pause(id: string, businessId: string, pausedReason: string): Promise<boolean> {
+    const result = await this.prisma.sequenceRun.updateMany({
+      where: { id, status: "active", invoice: { businessId } },
+      data: { status: "paused", pausedReason },
+    });
+    return result.count === 1;
+  }
+
+  async resume(id: string, businessId: string, nextSendAt: Date): Promise<boolean> {
+    const result = await this.prisma.sequenceRun.updateMany({
+      where: { id, status: "paused", invoice: { businessId } },
+      data: { status: "active", pausedReason: null, nextSendAt },
+    });
+    return result.count === 1;
+  }
+
+  async stop(
+    id: string,
+    businessId: string,
+    stoppedReason: string,
+    completedAt: Date,
+  ): Promise<boolean> {
+    const result = await this.prisma.sequenceRun.updateMany({
+      where: { id, status: { in: ["active", "paused"] }, invoice: { businessId } },
+      data: { status: "stopped", stoppedReason, completedAt },
+    });
+    return result.count === 1;
   }
 
   private buildWhere(filter: SequenceRunListFilter): Prisma.SequenceRunWhereInput {
