@@ -5,10 +5,12 @@ import { InvoicesController } from "./invoices.controller";
 import { ListInvoicesUseCase } from "./application/list-invoices.use-case";
 import { GetInvoiceUseCase } from "./application/get-invoice.use-case";
 import { CreatePaymentLinkUseCase } from "./application/create-payment-link.use-case";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
 import {
   InvalidStateForPaymentLinkError,
   InvoiceNotFoundError,
 } from "./domain/invoice.errors";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 import type {
   InvoiceDetail,
   InvoiceListItem,
@@ -16,6 +18,7 @@ import type {
 
 const BIZ_ID = "550e8400-e29b-41d4-a716-446655440000";
 const INV_ID = "550e8400-e29b-41d4-a716-446655440001";
+const FOREIGN_BIZ_ID = "550e8400-e29b-41d4-a716-446655449999";
 
 const listItem: InvoiceListItem = {
   id: INV_ID,
@@ -69,11 +72,13 @@ describe("InvoicesController", () => {
   let listUseCase: { execute: jest.Mock };
   let getUseCase: { execute: jest.Mock };
   let payLinkUseCase: { execute: jest.Mock };
+  let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     listUseCase = { execute: jest.fn() };
     getUseCase = { execute: jest.fn() };
     payLinkUseCase = { execute: jest.fn() };
+    businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       controllers: [InvoicesController],
@@ -81,6 +86,7 @@ describe("InvoicesController", () => {
         { provide: ListInvoicesUseCase, useValue: listUseCase },
         { provide: GetInvoiceUseCase, useValue: getUseCase },
         { provide: CreatePaymentLinkUseCase, useValue: payLinkUseCase },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
 
@@ -259,5 +265,17 @@ describe("InvoicesController", () => {
         .post(`/v1/invoices/${INV_ID}/payment-link`)
         .expect(400);
     });
+  });
+
+  it("GET /v1/invoices/:id returns 404 when businessId belongs to a different account", async () => {
+    businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+      new BusinessNotFoundError(FOREIGN_BIZ_ID),
+    );
+
+    await request(app.getHttpServer())
+      .get(`/v1/invoices/${INV_ID}?businessId=${FOREIGN_BIZ_ID}`)
+      .expect(404);
+
+    expect(getUseCase.execute).not.toHaveBeenCalled();
   });
 });
