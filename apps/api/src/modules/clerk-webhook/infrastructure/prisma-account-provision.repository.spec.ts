@@ -46,6 +46,7 @@ describe("PrismaAccountProvisionRepository (integration)", () => {
     expect(users[0].email).toBe(email);
     expect(users[0].role).toBe("owner");
     expect(users[0].name).toBe("Test User");
+    expect(users[0].clerkUserId).toBe(clerkId);
   });
 
   it("rolls back the Account if the User insert fails (e.g. duplicate email)", async () => {
