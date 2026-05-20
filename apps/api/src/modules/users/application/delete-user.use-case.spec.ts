@@ -1,5 +1,7 @@
 import { DeleteUserUseCase } from "./delete-user.use-case";
 import type { UserRepository } from "../domain/user.repository";
+import type { ClerkOrganizationService } from "../domain/clerk-organization.service";
+import type { ResolveOrgIdForAccountUseCase } from "../../clerk-webhook/application/resolve-org-id-for-account.use-case";
 import type { UserListItem } from "../domain/user.entity";
 import {
   CannotRemoveOwnerError,
@@ -33,10 +35,33 @@ const mkRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
   ...over,
 });
 
+const mkClerkOrgs = (
+  over: Partial<ClerkOrganizationService> = {},
+): ClerkOrganizationService => ({
+  createOrganization: jest.fn(),
+  createOrganizationInvitation: jest.fn(),
+  revokeOrganizationInvitation: jest.fn(),
+  deleteOrganizationMembership: jest.fn().mockResolvedValue(undefined),
+  createOrganizationMembership: jest.fn(),
+  ...over,
+});
+
+const mkResolveOrg = (
+  orgId = "org_acme",
+): Pick<ResolveOrgIdForAccountUseCase, "execute"> => ({
+  execute: jest.fn().mockResolvedValue(orgId),
+});
+
 describe("DeleteUserUseCase", () => {
   it("deletes a peer user", async () => {
     const repo = mkRepo();
-    const useCase = new DeleteUserUseCase(repo);
+    const clerkOrgs = mkClerkOrgs();
+    const resolveOrg = mkResolveOrg();
+    const useCase = new DeleteUserUseCase(
+      repo,
+      clerkOrgs,
+      resolveOrg as ResolveOrgIdForAccountUseCase,
+    );
 
     await useCase.execute({
       callerUserId: "u-caller",
@@ -50,7 +75,11 @@ describe("DeleteUserUseCase", () => {
 
   it("throws UserNotFoundError when target does not exist in account", async () => {
     const repo = mkRepo({ findByIdInAccount: jest.fn().mockResolvedValue(null) });
-    const useCase = new DeleteUserUseCase(repo);
+    const useCase = new DeleteUserUseCase(
+      repo,
+      mkClerkOrgs(),
+      mkResolveOrg() as ResolveOrgIdForAccountUseCase,
+    );
 
     await expect(
       useCase.execute({
@@ -66,7 +95,11 @@ describe("DeleteUserUseCase", () => {
     const repo = mkRepo({
       findByIdInAccount: jest.fn().mockResolvedValue(mkUser({ id: "u-caller" })),
     });
-    const useCase = new DeleteUserUseCase(repo);
+    const useCase = new DeleteUserUseCase(
+      repo,
+      mkClerkOrgs(),
+      mkResolveOrg() as ResolveOrgIdForAccountUseCase,
+    );
 
     await expect(
       useCase.execute({
@@ -82,7 +115,11 @@ describe("DeleteUserUseCase", () => {
     const repo = mkRepo({
       findByIdInAccount: jest.fn().mockResolvedValue(mkUser({ role: "owner" })),
     });
-    const useCase = new DeleteUserUseCase(repo);
+    const useCase = new DeleteUserUseCase(
+      repo,
+      mkClerkOrgs(),
+      mkResolveOrg() as ResolveOrgIdForAccountUseCase,
+    );
 
     await expect(
       useCase.execute({
@@ -97,7 +134,11 @@ describe("DeleteUserUseCase", () => {
   it("throws UserNotFoundError when repo.delete reports 0 rows deleted", async () => {
     // Race: row vanished between findByIdInAccount and delete.
     const repo = mkRepo({ delete: jest.fn().mockResolvedValue(0) });
-    const useCase = new DeleteUserUseCase(repo);
+    const useCase = new DeleteUserUseCase(
+      repo,
+      mkClerkOrgs(),
+      mkResolveOrg() as ResolveOrgIdForAccountUseCase,
+    );
 
     await expect(
       useCase.execute({
@@ -106,5 +147,88 @@ describe("DeleteUserUseCase", () => {
         targetId: "u-target",
       }),
     ).rejects.toBeInstanceOf(UserNotFoundError);
+  });
+
+  it("calls Clerk deleteOrganizationMembership before deleting the local row", async () => {
+    const clerkOrgs = mkClerkOrgs();
+    const resolveOrg = mkResolveOrg("org_acme");
+    const repo = mkRepo({
+      findByIdInAccount: jest
+        .fn()
+        .mockResolvedValue(mkUser({ clerkUserId: "user_clerk_target" })),
+      delete: jest.fn().mockResolvedValue(1),
+    });
+    const useCase = new DeleteUserUseCase(
+      repo,
+      clerkOrgs,
+      resolveOrg as ResolveOrgIdForAccountUseCase,
+    );
+
+    await useCase.execute({
+      callerUserId: "u-caller",
+      accountId: "a-1",
+      targetId: "u-target",
+    });
+
+    expect(resolveOrg.execute).toHaveBeenCalledWith("a-1");
+    expect(clerkOrgs.deleteOrganizationMembership).toHaveBeenCalledWith({
+      organizationId: "org_acme",
+      clerkUserId: "user_clerk_target",
+    });
+    expect(repo.delete).toHaveBeenCalledWith("u-target", "a-1");
+  });
+
+  it("skips Clerk call when target has no clerkUserId (still pending invite)", async () => {
+    const clerkOrgs = mkClerkOrgs();
+    const resolveOrg = mkResolveOrg("org_acme");
+    const repo = mkRepo({
+      findByIdInAccount: jest
+        .fn()
+        .mockResolvedValue(mkUser({ clerkUserId: null })),
+      delete: jest.fn().mockResolvedValue(1),
+    });
+    const useCase = new DeleteUserUseCase(
+      repo,
+      clerkOrgs,
+      resolveOrg as ResolveOrgIdForAccountUseCase,
+    );
+
+    await useCase.execute({
+      callerUserId: "u-caller",
+      accountId: "a-1",
+      targetId: "u-target",
+    });
+
+    expect(clerkOrgs.deleteOrganizationMembership).not.toHaveBeenCalled();
+    expect(repo.delete).toHaveBeenCalled();
+  });
+
+  it("proceeds with local delete when Clerk deleteOrganizationMembership fails (best-effort)", async () => {
+    const clerkOrgs = mkClerkOrgs({
+      deleteOrganizationMembership: jest
+        .fn()
+        .mockRejectedValue(new Error("clerk down")),
+    });
+    const resolveOrg = mkResolveOrg("org_acme");
+    const repo = mkRepo({
+      findByIdInAccount: jest
+        .fn()
+        .mockResolvedValue(mkUser({ clerkUserId: "user_clerk_target" })),
+      delete: jest.fn().mockResolvedValue(1),
+    });
+    const useCase = new DeleteUserUseCase(
+      repo,
+      clerkOrgs,
+      resolveOrg as ResolveOrgIdForAccountUseCase,
+    );
+
+    await expect(
+      useCase.execute({
+        callerUserId: "u-caller",
+        accountId: "a-1",
+        targetId: "u-target",
+      }),
+    ).resolves.toBeUndefined();
+    expect(repo.delete).toHaveBeenCalled();
   });
 });
