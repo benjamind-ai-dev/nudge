@@ -6,15 +6,18 @@ import { ListCustomersUseCase } from "./application/list-customers.use-case";
 import { GetCustomerUseCase } from "./application/get-customer.use-case";
 import { UpdateCustomerUseCase } from "./application/update-customer.use-case";
 import { AssignCustomerTierUseCase } from "./application/assign-customer-tier.use-case";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
 import {
   CustomerNotFoundError,
   SequenceBelongsToDifferentBusinessError,
   TierBelongsToDifferentBusinessError,
 } from "./domain/customer.errors";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 import type { Customer, CustomerDetail } from "./domain/customer.entity";
 
 const BIZ_ID = "550e8400-e29b-41d4-a716-446655440000";
 const CUST_ID = "550e8400-e29b-41d4-a716-446655440001";
+const FOREIGN_BIZ_ID = "550e8400-e29b-41d4-a716-446655449999";
 const TIER_ID = "550e8400-e29b-41d4-a716-446655440002";
 const SEQ_ID = "550e8400-e29b-41d4-a716-446655440003";
 
@@ -58,12 +61,14 @@ describe("CustomersController", () => {
   let getUseCase: { execute: jest.Mock };
   let updateUseCase: { execute: jest.Mock };
   let assignTierUseCase: { execute: jest.Mock };
+  let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     listUseCase = { execute: jest.fn() };
     getUseCase = { execute: jest.fn() };
     updateUseCase = { execute: jest.fn() };
     assignTierUseCase = { execute: jest.fn() };
+    businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       controllers: [CustomersController],
@@ -72,6 +77,7 @@ describe("CustomersController", () => {
         { provide: GetCustomerUseCase, useValue: getUseCase },
         { provide: UpdateCustomerUseCase, useValue: updateUseCase },
         { provide: AssignCustomerTierUseCase, useValue: assignTierUseCase },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
 
@@ -326,5 +332,17 @@ describe("CustomersController", () => {
         .send({ businessId: BIZ_ID, tierId: "not-a-uuid" })
         .expect(400);
     });
+  });
+
+  it("GET /v1/customers returns 404 when businessId belongs to a different account", async () => {
+    businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+      new BusinessNotFoundError(FOREIGN_BIZ_ID),
+    );
+
+    await request(app.getHttpServer())
+      .get(`/v1/customers?businessId=${FOREIGN_BIZ_ID}`)
+      .expect(404);
+
+    expect(listUseCase.execute).not.toHaveBeenCalled();
   });
 });
