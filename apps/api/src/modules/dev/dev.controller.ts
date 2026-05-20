@@ -15,6 +15,10 @@ import {
   triggerWeeklySummarySchema,
   type TriggerWeeklySummaryDto,
 } from "./dto/trigger-weekly-summary.dto";
+import {
+  BackfillClerkOrgsUseCase,
+  type BackfillClerkOrgsResult,
+} from "./application/backfill-clerk-orgs.use-case";
 import { DevKeyGuard } from "./infrastructure/dev-key.guard";
 
 @Controller("v1/dev")
@@ -23,6 +27,7 @@ export class DevController {
   constructor(
     @InjectQueue(QUEUE_NAMES.WEEKLY_SUMMARY)
     private readonly weeklySummaryQueue: Queue,
+    private readonly backfillClerkOrgs: BackfillClerkOrgsUseCase,
   ) {}
 
   @Post("weekly-summary/trigger")
@@ -46,6 +51,15 @@ export class DevController {
         weekStartsAt,
       },
     };
+  }
+
+  @Post("clerk-orgs/backfill")
+  @HttpCode(HttpStatus.OK)
+  async backfillClerkOrgsEndpoint(): Promise<{
+    data: BackfillClerkOrgsResult;
+  }> {
+    const result = await this.backfillClerkOrgs.execute();
+    return { data: result };
   }
 }
 
