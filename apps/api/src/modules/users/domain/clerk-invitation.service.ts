@@ -1,4 +1,6 @@
 export interface CreateInvitationParams {
+  organizationId: string;
+  inviterClerkUserId: string | null;
   email: string;
   accountId: string;
   userId: string;
@@ -10,6 +12,7 @@ export interface CreateInvitationResult {
 }
 
 export interface RevokeInvitationParams {
+  organizationId: string;
   clerkInvitationId: string;
 }
 

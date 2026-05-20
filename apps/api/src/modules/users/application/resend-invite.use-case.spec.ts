@@ -7,6 +7,7 @@ import {
   PendingUserNotFoundError,
 } from "../domain/user.errors";
 import type { UserListItem } from "../domain/user.entity";
+import type { ResolveOrgIdForAccountUseCase } from "../../clerk-webhook/application/resolve-org-id-for-account.use-case";
 
 const ACCOUNT_ID = "acc_1";
 const TARGET_ID = "u_target";
@@ -33,7 +34,16 @@ const makeRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
   deleteById: jest.fn(),
   linkClerkUserId: jest.fn(),
   setClerkInvitationId: jest.fn().mockResolvedValue(1),
-  findOwnerByAccount: jest.fn(),
+  findOwnerByAccount: jest.fn().mockResolvedValue({
+    id: "user_owner_db",
+    accountId: ACCOUNT_ID,
+    email: "owner@example.com",
+    name: "Owner",
+    role: "owner",
+    lastLoginAt: null,
+    clerkUserId: "user_owner_clerk",
+    clerkInvitationId: null,
+  }),
   ...over,
 });
 
@@ -43,19 +53,34 @@ const makeClerk = (over: Partial<ClerkInvitationService> = {}): ClerkInvitationS
   ...over,
 });
 
+const makeResolveOrg = (
+  over: Partial<ResolveOrgIdForAccountUseCase> = {},
+): ResolveOrgIdForAccountUseCase =>
+  ({
+    execute: jest.fn().mockResolvedValue("org_acme"),
+    ...over,
+  }) as unknown as ResolveOrgIdForAccountUseCase;
+
 describe("ResendInviteUseCase", () => {
-  it("happy path — revokes old, creates new, persists new id, returns user + new id", async () => {
+  it("happy path — revokes old (org-scoped), creates new, persists new id, returns user + new id", async () => {
     const repo = makeRepo();
     const clerk = makeClerk();
-    const useCase = new ResendInviteUseCase(repo, clerk);
+    const resolveOrg = makeResolveOrg();
+    const useCase = new ResendInviteUseCase(repo, clerk, resolveOrg);
 
     const result = await useCase.execute({
       callerAccountId: ACCOUNT_ID,
       targetId: TARGET_ID,
     });
 
-    expect(clerk.revokeInvitation).toHaveBeenCalledWith({ clerkInvitationId: "inv_old" });
+    expect(resolveOrg.execute).toHaveBeenCalledWith(ACCOUNT_ID);
+    expect(clerk.revokeInvitation).toHaveBeenCalledWith({
+      organizationId: "org_acme",
+      clerkInvitationId: "inv_old",
+    });
     expect(clerk.createInvitation).toHaveBeenCalledWith({
+      organizationId: "org_acme",
+      inviterClerkUserId: "user_owner_clerk",
       email: "t@example.com",
       accountId: ACCOUNT_ID,
       userId: TARGET_ID,
@@ -70,7 +95,7 @@ describe("ResendInviteUseCase", () => {
 
   it("throws PendingUserNotFoundError when target is missing", async () => {
     const repo = makeRepo({ findByIdInAccount: jest.fn().mockResolvedValue(null) });
-    const useCase = new ResendInviteUseCase(repo, makeClerk());
+    const useCase = new ResendInviteUseCase(repo, makeClerk(), makeResolveOrg());
 
     await expect(
       useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID }),
@@ -82,7 +107,7 @@ describe("ResendInviteUseCase", () => {
       findByIdInAccount: jest.fn().mockResolvedValue(mkUser({ clerkUserId: "user_clerk_x" })),
     });
     const clerk = makeClerk();
-    const useCase = new ResendInviteUseCase(repo, clerk);
+    const useCase = new ResendInviteUseCase(repo, clerk, makeResolveOrg());
 
     await expect(
       useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID }),
@@ -95,7 +120,7 @@ describe("ResendInviteUseCase", () => {
       findByIdInAccount: jest.fn().mockResolvedValue(mkUser({ clerkInvitationId: null })),
     });
     const clerk = makeClerk();
-    const useCase = new ResendInviteUseCase(repo, clerk);
+    const useCase = new ResendInviteUseCase(repo, clerk, makeResolveOrg());
 
     const result = await useCase.execute({
       callerAccountId: ACCOUNT_ID,
@@ -112,7 +137,7 @@ describe("ResendInviteUseCase", () => {
     const clerk = makeClerk({
       revokeInvitation: jest.fn().mockRejectedValue(new Error("clerk down")),
     });
-    const useCase = new ResendInviteUseCase(repo, clerk);
+    const useCase = new ResendInviteUseCase(repo, clerk, makeResolveOrg());
 
     const result = await useCase.execute({
       callerAccountId: ACCOUNT_ID,
@@ -128,7 +153,7 @@ describe("ResendInviteUseCase", () => {
     const clerk = makeClerk({
       createInvitation: jest.fn().mockRejectedValue(new Error("clerk down")),
     });
-    const useCase = new ResendInviteUseCase(repo, clerk);
+    const useCase = new ResendInviteUseCase(repo, clerk, makeResolveOrg());
 
     await expect(
       useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID }),
@@ -141,7 +166,7 @@ describe("ResendInviteUseCase", () => {
       setClerkInvitationId: jest.fn().mockRejectedValue(new Error("db hiccup")),
     });
     const clerk = makeClerk();
-    const useCase = new ResendInviteUseCase(repo, clerk);
+    const useCase = new ResendInviteUseCase(repo, clerk, makeResolveOrg());
 
     const result = await useCase.execute({
       callerAccountId: ACCOUNT_ID,
@@ -155,14 +180,8 @@ describe("ResendInviteUseCase", () => {
     const repo = makeRepo({
       findByIdInAccount: jest.fn().mockResolvedValue(mkUser({ role: "owner" })),
     });
-    const useCase = new ResendInviteUseCase(repo, makeClerk());
+    const useCase = new ResendInviteUseCase(repo, makeClerk(), makeResolveOrg());
 
-    // Owner rows always have a non-null clerkUserId in practice; if we ever see
-    // role=owner with clerkUserId=null this is a data bug. We do NOT treat it as
-    // resendable. The test above covers clerkUserId=non-null, so this case only
-    // matters if the data is wrong — covered by the role-guard branch in the
-    // use case (or alternatively: the same accepted-invite error path).
-    // Implementation: throw CannotCancelAcceptedInviteError when role === 'owner'.
     await expect(
       useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID }),
     ).rejects.toBeInstanceOf(CannotCancelAcceptedInviteError);

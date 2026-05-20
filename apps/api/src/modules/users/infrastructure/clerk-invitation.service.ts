@@ -8,6 +8,7 @@ import type {
   CreateInvitationResult,
   RevokeInvitationParams,
 } from "../domain/clerk-invitation.service";
+import { mapNudgeRoleToClerkRole } from "../domain/clerk-role";
 
 @Injectable()
 export class ClerkInvitationService implements IClerkInvitationService {
@@ -22,8 +23,12 @@ export class ClerkInvitationService implements IClerkInvitationService {
 
   async createInvitation(params: CreateInvitationParams): Promise<CreateInvitationResult> {
     try {
-      const invitation = await this.client.invitations.createInvitation({
+      const invitation = await this.client.organizations.createOrganizationInvitation({
+        organizationId: params.organizationId,
+        // Clerk SDK expects `string | undefined`, not `string | null`
+        inviterUserId: params.inviterClerkUserId ?? undefined,
         emailAddress: params.email,
+        role: mapNudgeRoleToClerkRole(params.role),
         publicMetadata: {
           nudgeAccountId: params.accountId,
           nudgeUserId: params.userId,
@@ -33,8 +38,9 @@ export class ClerkInvitationService implements IClerkInvitationService {
       return { clerkInvitationId: invitation.id };
     } catch (err) {
       this.logger.error({
-        msg: "Clerk createInvitation failed",
-        event: "clerk_invitation_error",
+        msg: "Clerk createOrganizationInvitation failed",
+        event: "clerk_org_invitation_error",
+        organizationId: params.organizationId,
         accountId: params.accountId,
         userId: params.userId,
         error: err instanceof Error ? err.message : String(err),
@@ -45,13 +51,15 @@ export class ClerkInvitationService implements IClerkInvitationService {
 
   async revokeInvitation(params: RevokeInvitationParams): Promise<void> {
     try {
-      // The Clerk Backend SDK v3 revokeInvitation() takes a plain string invitationId.
-      // The docs show an object form but the actual .d.ts is revokeInvitation(invitationId: string).
-      await this.client.invitations.revokeInvitation(params.clerkInvitationId);
+      await this.client.organizations.revokeOrganizationInvitation({
+        organizationId: params.organizationId,
+        invitationId: params.clerkInvitationId,
+      });
     } catch (err) {
       this.logger.error({
-        msg: "Clerk revokeInvitation failed",
-        event: "clerk_invitation_revoke_error",
+        msg: "Clerk revokeOrganizationInvitation failed",
+        event: "clerk_org_invitation_revoke_error",
+        organizationId: params.organizationId,
         clerkInvitationId: params.clerkInvitationId,
         error: err instanceof Error ? err.message : String(err),
       });

@@ -7,6 +7,7 @@ import {
   CLERK_INVITATION_SERVICE,
   type ClerkInvitationService,
 } from "../domain/clerk-invitation.service";
+import { ResolveOrgIdForAccountUseCase } from "../../clerk-webhook/application/resolve-org-id-for-account.use-case";
 import type { UserListItem } from "../domain/user.entity";
 import {
   CannotCancelAcceptedInviteError,
@@ -31,6 +32,7 @@ export class ResendInviteUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLERK_INVITATION_SERVICE) private readonly clerk: ClerkInvitationService,
+    private readonly resolveOrg: ResolveOrgIdForAccountUseCase,
   ) {}
 
   async execute(input: ResendInviteInput): Promise<ResendInviteResult> {
@@ -45,15 +47,20 @@ export class ResendInviteUseCase {
     // After the guards above we know target.role is 'admin' | 'viewer'.
     const role: "admin" | "viewer" = target.role;
 
+    const organizationId = await this.resolveOrg.execute(input.callerAccountId);
+    const owner = await this.users.findOwnerByAccount(input.callerAccountId);
+    const inviterClerkUserId = owner?.clerkUserId ?? null;
+
     // Best-effort revoke of the prior invitation. Don't block resend on this.
     if (target.clerkInvitationId !== null) {
       try {
         await this.clerk.revokeInvitation({
+          organizationId,
           clerkInvitationId: target.clerkInvitationId,
         });
       } catch (revokeErr) {
         this.logger.warn({
-          msg: "Clerk revokeInvitation failed during resend — proceeding to issue new invitation",
+          msg: "Clerk revokeOrganizationInvitation failed during resend — proceeding to issue new invitation",
           event: "clerk_invitation_revoke_failed",
           targetId: input.targetId,
           clerkInvitationId: target.clerkInvitationId,
@@ -66,6 +73,8 @@ export class ResendInviteUseCase {
     let newClerkInvitationId: string;
     try {
       const result = await this.clerk.createInvitation({
+        organizationId,
+        inviterClerkUserId,
         email: target.email,
         accountId: input.callerAccountId,
         userId: target.id,

@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { USER_REPOSITORY } from "./domain/user.repository";
 import { CLERK_INVITATION_SERVICE } from "./domain/clerk-invitation.service";
 import { CLERK_ORGANIZATION_SERVICE } from "./domain/clerk-organization.service";
@@ -12,8 +12,10 @@ import { InviteUserUseCase } from "./application/invite-user.use-case";
 import { CancelInviteUseCase } from "./application/cancel-invite.use-case";
 import { ResendInviteUseCase } from "./application/resend-invite.use-case";
 import { UsersController } from "./users.controller";
+import { ClerkWebhookModule } from "../clerk-webhook/clerk-webhook.module";
 
 @Module({
+  imports: [forwardRef(() => ClerkWebhookModule)],
   controllers: [UsersController],
   providers: [
     ListUsersUseCase,
