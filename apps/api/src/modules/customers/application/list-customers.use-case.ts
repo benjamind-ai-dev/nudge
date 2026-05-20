@@ -1,6 +1,20 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { CUSTOMER_REPOSITORY, type CustomerRepository } from "../domain/customer.repository";
+import {
+  CUSTOMER_REPOSITORY,
+  type CustomerListFilter,
+  type CustomerRepository,
+} from "../domain/customer.repository";
 import type { Customer } from "../domain/customer.entity";
+
+export interface ListCustomersResult {
+  data: Customer[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
 
 @Injectable()
 export class ListCustomersUseCase {
@@ -9,7 +23,17 @@ export class ListCustomersUseCase {
     private readonly repo: CustomerRepository,
   ) {}
 
-  async execute(businessId: string): Promise<Customer[]> {
-    return this.repo.findAllByBusiness(businessId);
+  async execute(filter: CustomerListFilter): Promise<ListCustomersResult> {
+    const { items, total } = await this.repo.findManyByFilter(filter);
+    const totalPages = Math.max(1, Math.ceil(total / filter.limit));
+    return {
+      data: items,
+      pagination: {
+        page: filter.page,
+        limit: filter.limit,
+        total,
+        totalPages,
+      },
+    };
   }
 }
