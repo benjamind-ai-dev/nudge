@@ -1,12 +1,32 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Query } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Query,
+} from "@nestjs/common";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { AccountId } from "../../common/decorators/account-id.decorator";
 import { ListCustomersUseCase } from "./application/list-customers.use-case";
+import { GetCustomerUseCase } from "./application/get-customer.use-case";
 import { UpdateCustomerUseCase } from "./application/update-customer.use-case";
-import { CustomerNotFoundError } from "./domain/customer.errors";
+import { AssignCustomerTierUseCase } from "./application/assign-customer-tier.use-case";
 import {
-  businessIdQuerySchema,
+  CustomerNotFoundError,
+  SequenceBelongsToDifferentBusinessError,
+  TierBelongsToDifferentBusinessError,
+} from "./domain/customer.errors";
+import {
+  assignTierBodySchema,
+  getCustomerQuerySchema,
+  listCustomersQuerySchema,
   updateCustomerSchema,
+  type AssignTierDto,
+  type GetCustomerQuery,
+  type ListCustomersQuery,
   type UpdateCustomerDto,
 } from "./dto/customers.dto";
 
@@ -14,16 +34,34 @@ import {
 export class CustomersController {
   constructor(
     private readonly listCustomers: ListCustomersUseCase,
+    private readonly getCustomer: GetCustomerUseCase,
     private readonly updateCustomer: UpdateCustomerUseCase,
+    private readonly assignCustomerTier: AssignCustomerTierUseCase,
   ) {}
 
   @Get()
   async list(
     @AccountId() _accountId: string,
-    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
+    @Query(new ZodValidationPipe(listCustomersQuerySchema)) query: ListCustomersQuery,
   ) {
-    const result = await this.listCustomers.execute(businessId);
-    return { data: result };
+    return this.listCustomers.execute(query);
+  }
+
+  @Get(":id")
+  async get(
+    @AccountId() _accountId: string,
+    @Param("id") id: string,
+    @Query(new ZodValidationPipe(getCustomerQuerySchema)) query: GetCustomerQuery,
+  ) {
+    try {
+      const data = await this.getCustomer.execute(id, query.businessId);
+      return { data };
+    } catch (error) {
+      if (error instanceof CustomerNotFoundError) {
+        throw new NotFoundException(error.message);
+      }
+      throw error;
+    }
   }
 
   @Patch(":id")
@@ -33,13 +71,41 @@ export class CustomersController {
     @Body(new ZodValidationPipe(updateCustomerSchema)) dto: UpdateCustomerDto,
   ) {
     try {
-      const result = await this.updateCustomer.execute(id, dto.businessId, {
+      const data = await this.updateCustomer.execute(id, dto.businessId, {
         relationshipTierId: dto.relationshipTierId,
         sequenceId: dto.sequenceId,
       });
-      return { data: result };
+      return { data };
     } catch (error) {
-      if (error instanceof CustomerNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CustomerNotFoundError) {
+        throw new NotFoundException(error.message);
+      }
+      if (
+        error instanceof TierBelongsToDifferentBusinessError ||
+        error instanceof SequenceBelongsToDifferentBusinessError
+      ) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  @Patch(":id/tier")
+  async assignTier(
+    @AccountId() _accountId: string,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(assignTierBodySchema)) dto: AssignTierDto,
+  ) {
+    try {
+      const data = await this.assignCustomerTier.execute(id, dto.businessId, dto.tierId);
+      return { data };
+    } catch (error) {
+      if (error instanceof CustomerNotFoundError) {
+        throw new NotFoundException(error.message);
+      }
+      if (error instanceof TierBelongsToDifferentBusinessError) {
+        throw new BadRequestException(error.message);
+      }
       throw error;
     }
   }
