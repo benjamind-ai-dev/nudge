@@ -24,6 +24,7 @@ import { RelationshipTiersModule } from "./modules/relationship-tiers/relationsh
 import { CustomersModule } from "./modules/customers/customers.module";
 import { InvoicesModule } from "./modules/invoices/invoices.module";
 import { MessagesModule } from "./modules/messages/messages.module";
+import { SequenceRunsModule } from "./modules/sequence-runs/sequence-runs.module";
 import { DevModule } from "./modules/dev/dev.module";
 
 @Module({
@@ -83,6 +84,7 @@ import { DevModule } from "./modules/dev/dev.module";
     CustomersModule,
     InvoicesModule,
     MessagesModule,
+    SequenceRunsModule,
     DevModule,
   ],
 })
