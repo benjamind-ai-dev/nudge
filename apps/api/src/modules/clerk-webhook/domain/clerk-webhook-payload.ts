@@ -30,6 +30,17 @@ export const clerkWebhookEventSchema = z.object({
   data: z.unknown(),
 });
 
+/** Payload shape for organizationMembership.created. */
+export const clerkOrgMembershipCreatedDataSchema = z.object({
+  organization: z.object({ id: z.string() }),
+  public_user_data: z.object({ user_id: z.string() }),
+  // The membership inherits the invitation's publicMetadata on accept.
+  public_metadata: z.record(z.string(), z.unknown()).optional().default({}),
+});
+export type ClerkOrgMembershipCreatedData = z.infer<
+  typeof clerkOrgMembershipCreatedDataSchema
+>;
+
 export type ClerkEmailAddress = z.infer<typeof clerkEmailAddressSchema>;
 export type ClerkUserCreatedData = z.infer<typeof clerkUserCreatedDataSchema>;
 

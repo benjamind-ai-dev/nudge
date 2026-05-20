@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { DatabaseModule } from "../../common/database/database.module";
 import { UsersModule } from "../users/users.module";
 import { ClerkWebhookController } from "./clerk-webhook.controller";
@@ -10,7 +10,7 @@ import { PrismaAccountProvisionRepository } from "./infrastructure/prisma-accoun
 import { ACCOUNT_PROVISION_REPOSITORY } from "./domain/account-provision.repository";
 
 @Module({
-  imports: [DatabaseModule, UsersModule],
+  imports: [DatabaseModule, forwardRef(() => UsersModule)],
   controllers: [ClerkWebhookController],
   providers: [
     ClerkWebhookGuard,

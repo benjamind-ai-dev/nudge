@@ -6,6 +6,7 @@ import {
   PendingUserNotFoundError,
 } from "../domain/user.errors";
 import type { UserListItem } from "../domain/user.entity";
+import type { ResolveOrgIdForAccountUseCase } from "../../clerk-webhook/application/resolve-org-id-for-account.use-case";
 
 const ACCOUNT_ID = "acc_1";
 const TARGET_ID = "u_target";
@@ -42,22 +43,35 @@ const makeClerk = (over: Partial<ClerkInvitationService> = {}): ClerkInvitationS
   ...over,
 });
 
+const makeResolveOrg = (
+  over: Partial<ResolveOrgIdForAccountUseCase> = {},
+): ResolveOrgIdForAccountUseCase =>
+  ({
+    execute: jest.fn().mockResolvedValue("org_acme"),
+    ...over,
+  }) as unknown as ResolveOrgIdForAccountUseCase;
+
 describe("CancelInviteUseCase", () => {
-  it("happy path — revokes Clerk invitation and deletes pending row", async () => {
+  it("happy path — revokes org-scoped Clerk invitation and deletes pending row", async () => {
     const repo = makeRepo();
     const clerk = makeClerk();
-    const useCase = new CancelInviteUseCase(repo, clerk);
+    const resolveOrg = makeResolveOrg();
+    const useCase = new CancelInviteUseCase(repo, clerk, resolveOrg);
 
     await useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID });
 
-    expect(clerk.revokeInvitation).toHaveBeenCalledWith({ clerkInvitationId: "inv_old" });
+    expect(resolveOrg.execute).toHaveBeenCalledWith(ACCOUNT_ID);
+    expect(clerk.revokeInvitation).toHaveBeenCalledWith({
+      organizationId: "org_acme",
+      clerkInvitationId: "inv_old",
+    });
     expect(repo.deleteById).toHaveBeenCalledWith(TARGET_ID, ACCOUNT_ID);
   });
 
   it("throws PendingUserNotFoundError when target is missing in this account", async () => {
     const repo = makeRepo({ findByIdInAccount: jest.fn().mockResolvedValue(null) });
     const clerk = makeClerk();
-    const useCase = new CancelInviteUseCase(repo, clerk);
+    const useCase = new CancelInviteUseCase(repo, clerk, makeResolveOrg());
 
     await expect(
       useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID }),
@@ -71,7 +85,7 @@ describe("CancelInviteUseCase", () => {
       findByIdInAccount: jest.fn().mockResolvedValue(mkUser({ clerkUserId: "user_clerk_x" })),
     });
     const clerk = makeClerk();
-    const useCase = new CancelInviteUseCase(repo, clerk);
+    const useCase = new CancelInviteUseCase(repo, clerk, makeResolveOrg());
 
     await expect(
       useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID }),
@@ -85,7 +99,7 @@ describe("CancelInviteUseCase", () => {
     const clerk = makeClerk({
       revokeInvitation: jest.fn().mockRejectedValue(new Error("clerk down")),
     });
-    const useCase = new CancelInviteUseCase(repo, clerk);
+    const useCase = new CancelInviteUseCase(repo, clerk, makeResolveOrg());
 
     await useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID });
 
@@ -97,7 +111,7 @@ describe("CancelInviteUseCase", () => {
       findByIdInAccount: jest.fn().mockResolvedValue(mkUser({ clerkInvitationId: null })),
     });
     const clerk = makeClerk();
-    const useCase = new CancelInviteUseCase(repo, clerk);
+    const useCase = new CancelInviteUseCase(repo, clerk, makeResolveOrg());
 
     await useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID });
 
@@ -107,7 +121,7 @@ describe("CancelInviteUseCase", () => {
 
   it("throws PendingUserNotFoundError when deleteById returns 0 (race)", async () => {
     const repo = makeRepo({ deleteById: jest.fn().mockResolvedValue(0) });
-    const useCase = new CancelInviteUseCase(repo, makeClerk());
+    const useCase = new CancelInviteUseCase(repo, makeClerk(), makeResolveOrg());
 
     await expect(
       useCase.execute({ callerAccountId: ACCOUNT_ID, targetId: TARGET_ID }),

@@ -7,6 +7,7 @@ import {
   CLERK_INVITATION_SERVICE,
   type ClerkInvitationService,
 } from "../domain/clerk-invitation.service";
+import { ResolveOrgIdForAccountUseCase } from "../../clerk-webhook/application/resolve-org-id-for-account.use-case";
 import type { UserListItem } from "../domain/user.entity";
 import {
   EmailAlreadyInUseError,
@@ -33,6 +34,7 @@ export class InviteUserUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLERK_INVITATION_SERVICE) private readonly clerk: ClerkInvitationService,
+    private readonly resolveOrg: ResolveOrgIdForAccountUseCase,
   ) {}
 
   async execute(input: InviteUserInput): Promise<InviteUserResult> {
@@ -45,6 +47,10 @@ export class InviteUserUseCase {
       throw new EmailAlreadyInUseError(input.email);
     }
 
+    const organizationId = await this.resolveOrg.execute(input.callerAccountId);
+    const owner = await this.users.findOwnerByAccount(input.callerAccountId);
+    const inviterClerkUserId = owner?.clerkUserId ?? null;
+
     // createPending throws EmailAlreadyInUseError on Prisma P2002 (cross-account collision).
     const pending = await this.users.createPending({
       accountId: input.callerAccountId,
@@ -55,6 +61,8 @@ export class InviteUserUseCase {
 
     try {
       const { clerkInvitationId } = await this.clerk.createInvitation({
+        organizationId,
+        inviterClerkUserId,
         email: input.email,
         accountId: input.callerAccountId,
         userId: pending.id,

@@ -56,6 +56,8 @@ describe("ClerkWebhookController (Part 3c branching)", () => {
     await app.close();
   });
 
+  // --- user.created branch ---
+
   it("fresh signup (empty public_metadata) → ProvisionAccountUseCase, not Link", async () => {
     await request(app.getHttpServer())
       .post("/v1/webhooks/clerk")
@@ -65,7 +67,7 @@ describe("ClerkWebhookController (Part 3c branching)", () => {
     expect(linkUseCase.execute).not.toHaveBeenCalled();
   });
 
-  it("invitation acceptance → LinkInvitedUserUseCase, not Provision", async () => {
+  it("user.created with nudge invitation metadata (legacy path) → LinkInvitedUserUseCase, not Provision", async () => {
     await request(app.getHttpServer())
       .post("/v1/webhooks/clerk")
       .send({
@@ -84,7 +86,7 @@ describe("ClerkWebhookController (Part 3c branching)", () => {
     expect(provisionUseCase.execute).not.toHaveBeenCalled();
   });
 
-  it("returns 200 (does not 4xx/5xx) when LinkInvitedUserUseCase throws PendingUserNotFoundError", async () => {
+  it("returns 200 when LinkInvitedUserUseCase throws PendingUserNotFoundError (legacy user.created path)", async () => {
     linkUseCase.execute.mockRejectedValue(new PendingUserNotFoundError("user_1"));
     await request(app.getHttpServer())
       .post("/v1/webhooks/clerk")
@@ -98,7 +100,7 @@ describe("ClerkWebhookController (Part 3c branching)", () => {
       .expect(200);
   });
 
-  it("ignores non-user.created event types", async () => {
+  it("ignores non-user.created and non-membership.created event types", async () => {
     await request(app.getHttpServer())
       .post("/v1/webhooks/clerk")
       .send({ type: "user.updated", data: { foo: "bar" } })
@@ -128,5 +130,80 @@ describe("ClerkWebhookController (Part 3c branching)", () => {
       .expect(200);
     expect(linkUseCase.execute).not.toHaveBeenCalled();
     expect(provisionUseCase.execute).toHaveBeenCalled();
+  });
+
+  // --- organizationMembership.created branch ---
+
+  it("organizationMembership.created with nudge metadata → LinkInvitedUserUseCase with new member's clerkUserId", async () => {
+    await request(app.getHttpServer())
+      .post("/v1/webhooks/clerk")
+      .send({
+        type: "organizationMembership.created",
+        data: {
+          organization: { id: "org_abc" },
+          public_user_data: { user_id: "user_invitee_clerk" },
+          public_metadata: {
+            nudgeAccountId: "00000000-0000-0000-0000-000000000001",
+            nudgeUserId: "00000000-0000-0000-0000-000000000002",
+            nudgeRole: "viewer",
+          },
+        },
+      })
+      .expect(200);
+    expect(linkUseCase.execute).toHaveBeenCalledWith({
+      nudgeAccountId: "00000000-0000-0000-0000-000000000001",
+      nudgeUserId: "00000000-0000-0000-0000-000000000002",
+      clerkUserId: "user_invitee_clerk",
+    });
+    expect(provisionUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("organizationMembership.created without nudge metadata (org member added outside our flow) → ack without calling LinkInvitedUserUseCase", async () => {
+    await request(app.getHttpServer())
+      .post("/v1/webhooks/clerk")
+      .send({
+        type: "organizationMembership.created",
+        data: {
+          organization: { id: "org_abc" },
+          public_user_data: { user_id: "user_x" },
+          public_metadata: {},
+        },
+      })
+      .expect(200);
+    expect(linkUseCase.execute).not.toHaveBeenCalled();
+    expect(provisionUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("organizationMembership.created — returns 200 when LinkInvitedUserUseCase throws PendingUserNotFoundError", async () => {
+    linkUseCase.execute.mockRejectedValue(new PendingUserNotFoundError("user_2"));
+    await request(app.getHttpServer())
+      .post("/v1/webhooks/clerk")
+      .send({
+        type: "organizationMembership.created",
+        data: {
+          organization: { id: "org_abc" },
+          public_user_data: { user_id: "user_invitee_clerk" },
+          public_metadata: {
+            nudgeAccountId: "00000000-0000-0000-0000-000000000001",
+            nudgeUserId: "00000000-0000-0000-0000-000000000002",
+            nudgeRole: "viewer",
+          },
+        },
+      })
+      .expect(200);
+  });
+
+  it("organizationMembership.created — returns 400 when payload is malformed (missing organization)", async () => {
+    await request(app.getHttpServer())
+      .post("/v1/webhooks/clerk")
+      .send({
+        type: "organizationMembership.created",
+        data: {
+          // missing organization key
+          public_user_data: { user_id: "user_x" },
+          public_metadata: {},
+        },
+      })
+      .expect(400);
   });
 });
