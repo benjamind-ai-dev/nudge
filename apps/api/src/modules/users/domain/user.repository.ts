@@ -56,4 +56,11 @@ export interface UserRepository {
     accountId: string,
     clerkInvitationId: string | null,
   ): Promise<number>;
+
+  /**
+   * Returns the owner row of an account (the one with role='owner'), or null
+   * if no owner row exists. Used to read the owner's clerkUserId for Clerk
+   * Organizations operations (org create, invitation inviter id).
+   */
+  findOwnerByAccount(accountId: string): Promise<UserListItem | null>;
 }

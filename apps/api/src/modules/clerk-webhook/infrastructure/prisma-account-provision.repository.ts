@@ -29,6 +29,7 @@ export class PrismaAccountProvisionRepository implements AccountProvisionReposit
           status: params.status,
           maxBusinesses: params.maxBusinesses,
           clerkId: params.clerkId,
+          clerkOrganizationId: params.clerkOrganizationId,
           trialEndsAt: params.trialEndsAt,
         },
       });
@@ -41,6 +42,33 @@ export class PrismaAccountProvisionRepository implements AccountProvisionReposit
           clerkUserId: params.clerkId,
         },
       });
+    });
+  }
+
+  async findAccountForOrgResolution(accountId: string): Promise<{
+    accountId: string;
+    accountName: string;
+    clerkOrganizationId: string | null;
+    ownerClerkUserId: string | null;
+  } | null> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM accounts WHERE id = ${accountId}::uuid FOR UPDATE`;
+      const account = await tx.account.findUnique({ where: { id: accountId } });
+      if (!account) return null;
+      const owner = await tx.user.findFirst({ where: { accountId, role: "owner" } });
+      return {
+        accountId: account.id,
+        accountName: account.name,
+        clerkOrganizationId: account.clerkOrganizationId,
+        ownerClerkUserId: owner?.clerkUserId ?? null,
+      };
+    });
+  }
+
+  async setClerkOrganizationId(accountId: string, clerkOrganizationId: string): Promise<void> {
+    await this.prisma.account.update({
+      where: { id: accountId },
+      data: { clerkOrganizationId },
     });
   }
 }

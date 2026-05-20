@@ -216,6 +216,40 @@ describe("PrismaUserRepository (invite methods)", () => {
     expect(second).toBeNull();
   });
 
+  describe("findOwnerByAccount", () => {
+    it("returns the owner row when one exists", async () => {
+      // ACCOUNT_ID was created with an owner user in beforeEach
+      const repo = new PrismaUserRepository(prisma);
+
+      const result = await repo.findOwnerByAccount(ACCOUNT_ID);
+
+      expect(result).not.toBeNull();
+      expect(result?.role).toBe("owner");
+    });
+
+    it("returns null when the account has no owner row", async () => {
+      // Create an account without an owner user
+      const noOwnerAccount = await prisma.account.create({
+        data: {
+          name: "No Owner Account",
+          email: `no-owner-${randomUUID()}@example.com`,
+          status: "trial",
+          plan: null,
+          maxBusinesses: 1,
+          trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const repo = new PrismaUserRepository(prisma);
+      const result = await repo.findOwnerByAccount(noOwnerAccount.id);
+
+      // Cleanup
+      await prisma.account.delete({ where: { id: noOwnerAccount.id } });
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe("clerkInvitationId persistence", () => {
     it("createPending stores clerkInvitationId when provided", async () => {
       const email = `pending-${randomUUID()}@example.com`;

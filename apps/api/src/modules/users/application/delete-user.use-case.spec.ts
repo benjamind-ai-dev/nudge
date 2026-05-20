@@ -29,6 +29,7 @@ const mkRepo = (over: Partial<UserRepository> = {}): UserRepository => ({
   deleteById: jest.fn(),
   linkClerkUserId: jest.fn(),
   setClerkInvitationId: jest.fn(),
+  findOwnerByAccount: jest.fn(),
   ...over,
 });
 
