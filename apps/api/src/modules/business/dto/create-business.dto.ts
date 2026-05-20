@@ -13,7 +13,6 @@ const ianaTimezone = z.string().refine(
 );
 
 export const createBusinessSchema = z.object({
-  accountId: z.string().uuid(),
   name: z.string().min(1),
   accountingProvider: z.enum(["quickbooks", "xero"]),
   senderName: z.string().min(1),

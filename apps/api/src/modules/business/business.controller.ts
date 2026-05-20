@@ -12,11 +12,14 @@ import {
   Patch,
   Post,
   Res,
-  UsePipes,
+  UnauthorizedException,
 } from "@nestjs/common";
 import type { Response } from "express";
 import { AccountId } from "../../common/decorators/account-id.decorator";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { CallerContextService } from "../../common/auth-context/caller-context.service";
+import { CallerNotProvisionedError } from "../../common/auth-context/business-authorization.errors";
 import { GetBusinessUseCase } from "./application/get-business.use-case";
 import { CreateBusinessUseCase } from "./application/create-business.use-case";
 import { UpdateBusinessSettingsUseCase } from "./application/update-business-settings.use-case";
@@ -48,16 +51,25 @@ export class BusinessController {
     private readonly updateSettings: UpdateBusinessSettingsUseCase,
     private readonly deleteBusiness: DeleteBusinessUseCase,
     private readonly triggerSync: TriggerManualSyncUseCase,
+    private readonly businessAuth: BusinessAuthorizationService,
+    private readonly callerCtx: CallerContextService,
   ) {}
 
   @Get(":id")
-  async getById(@Param("id") id: string) {
+  async getById(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+  ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, id);
       const result = await this.getBusiness.execute(id);
       return { data: result };
     } catch (error) {
       if (error instanceof BusinessNotFoundError) {
         throw new NotFoundException(error.message);
+      }
+      if (error instanceof CallerNotProvisionedError) {
+        throw new UnauthorizedException(error.message);
       }
       throw error;
     }
@@ -65,18 +77,27 @@ export class BusinessController {
 
   @Post()
   @HttpCode(201)
-  @UsePipes(new ZodValidationPipe(createBusinessSchema))
-  async create(@Body() dto: CreateBusinessDto) {
-    const result = await this.createBusiness.execute(dto);
+  async create(
+    @AccountId() clerkUserId: string,
+    @Body(new ZodValidationPipe(createBusinessSchema)) dto: CreateBusinessDto,
+  ) {
+    const ctx = await this.callerCtx.resolve(clerkUserId);
+    if (!ctx) throw new UnauthorizedException("Caller not provisioned");
+    const result = await this.createBusiness.execute({
+      ...dto,
+      accountId: ctx.accountId,
+    });
     return { data: result };
   }
 
   @Patch(":id")
   async updateById(
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateBusinessSettingsSchema)) dto: UpdateBusinessSettingsDto,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, id);
       const result = await this.updateSettings.execute({
         businessId: id,
         settings: dto,
@@ -86,6 +107,9 @@ export class BusinessController {
       if (error instanceof BusinessNotFoundError) {
         throw new NotFoundException(error.message);
       }
+      if (error instanceof CallerNotProvisionedError) {
+        throw new UnauthorizedException(error.message);
+      }
       throw error;
     }
   }
@@ -93,14 +117,18 @@ export class BusinessController {
   @Delete(":id")
   @HttpCode(204)
   async deleteById(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, id);
       await this.deleteBusiness.execute(id);
     } catch (error) {
       if (error instanceof BusinessNotFoundError) {
         throw new NotFoundException(error.message);
+      }
+      if (error instanceof CallerNotProvisionedError) {
+        throw new UnauthorizedException(error.message);
       }
       throw error;
     }
@@ -109,17 +137,21 @@ export class BusinessController {
   @Post(":id/sync")
   @HttpCode(HttpStatus.ACCEPTED)
   async triggerManualSync(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(triggerManualSyncSchema)) _body: TriggerManualSyncDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, id);
       const result = await this.triggerSync.execute(id);
       return { data: result };
     } catch (error) {
       if (error instanceof BusinessNotFoundError) {
         throw new NotFoundException(error.message);
+      }
+      if (error instanceof CallerNotProvisionedError) {
+        throw new UnauthorizedException(error.message);
       }
       if (error instanceof NoActiveConnectionError) {
         throw new ConflictException(error.message);
