@@ -32,3 +32,27 @@ export class CannotRemoveOwnerError extends Error {
     this.name = "CannotRemoveOwnerError";
   }
 }
+
+export class EmailAlreadyInUseError extends Error {
+  constructor(public readonly email: string) {
+    super(`This email is already in use`);
+    this.name = "EmailAlreadyInUseError";
+  }
+}
+
+export class InviteSendFailedError extends Error {
+  constructor(
+    public readonly email: string,
+    public readonly cause?: unknown,
+  ) {
+    super(`Failed to send invitation to ${email}`);
+    this.name = "InviteSendFailedError";
+  }
+}
+
+export class PendingUserNotFoundError extends Error {
+  constructor(public readonly userId: string) {
+    super(`Pending user ${userId} not found`);
+    this.name = "PendingUserNotFoundError";
+  }
+}
