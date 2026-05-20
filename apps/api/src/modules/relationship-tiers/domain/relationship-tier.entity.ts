@@ -7,6 +7,7 @@ export interface RelationshipTier {
   description: string | null;
   isDefault: boolean;
   sortOrder: number;
+  customerCount: number;
   createdAt: Date;
   updatedAt: Date;
 }

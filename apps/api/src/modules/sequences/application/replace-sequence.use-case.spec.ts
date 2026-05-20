@@ -55,7 +55,13 @@ const createMockRepo = (overrides: Partial<SequenceRepository> = {}): SequenceRe
 
 const createMockTierRepo = (overrides: Partial<RelationshipTierRepository> = {}): RelationshipTierRepository => ({
   findAllByBusiness: jest.fn().mockResolvedValue([{ id: "tier-1", businessId: "biz-1" }]),
+  findById: jest.fn(),
+  nameExistsInBusiness: jest.fn(),
+  countByBusiness: jest.fn(),
+  create: jest.fn(),
   update: jest.fn(),
+  hasActiveSequenceRuns: jest.fn(),
+  delete: jest.fn(),
   ...overrides,
 });
 
