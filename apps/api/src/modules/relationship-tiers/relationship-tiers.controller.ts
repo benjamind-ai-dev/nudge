@@ -11,9 +11,13 @@ import {
   Patch,
   Post,
   Query,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { AccountId } from "../../common/decorators/account-id.decorator";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { CallerNotProvisionedError } from "../../common/auth-context/business-authorization.errors";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 import { ListTiersUseCase } from "./application/list-tiers.use-case";
 import { CreateTierUseCase } from "./application/create-tier.use-case";
 import { UpdateTierUseCase } from "./application/update-tier.use-case";
@@ -44,29 +48,40 @@ export class RelationshipTiersController {
     private readonly createTier: CreateTierUseCase,
     private readonly updateTier: UpdateTierUseCase,
     private readonly deleteTier: DeleteTierUseCase,
+    private readonly businessAuth: BusinessAuthorizationService,
   ) {}
 
   @Get()
   async list(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Query(new ZodValidationPipe(listTiersQuerySchema)) query: ListTiersQuery,
   ) {
-    const data = await this.listTiers.execute(query.businessId);
-    return { data };
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
+      const data = await this.listTiers.execute(query.businessId);
+      return { data };
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
+    }
   }
 
   @Post()
   async create(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Body(new ZodValidationPipe(createTierSchema)) dto: CreateTierDto,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, dto.businessId);
       const data = await this.createTier.execute(dto.businessId, {
         name: dto.name,
         description: dto.description,
       });
       return { data };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (
         error instanceof TierLimitReachedError ||
         error instanceof TierNameAlreadyExistsError
@@ -79,11 +94,12 @@ export class RelationshipTiersController {
 
   @Patch(":id")
   async update(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateTierSchema)) dto: UpdateTierDto,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, dto.businessId);
       const data = await this.updateTier.execute(id, dto.businessId, {
         name: dto.name,
         description: dto.description,
@@ -93,6 +109,8 @@ export class RelationshipTiersController {
       });
       return { data };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof RelationshipTierNotFoundError) {
         throw new NotFoundException(error.message);
       }
@@ -106,13 +124,16 @@ export class RelationshipTiersController {
   @Delete(":id")
   @HttpCode(204)
   async remove(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Query(new ZodValidationPipe(deleteTierQuerySchema)) query: DeleteTierQuery,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
       await this.deleteTier.execute(id, query.businessId);
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof RelationshipTierNotFoundError) {
         throw new NotFoundException(error.message);
       }

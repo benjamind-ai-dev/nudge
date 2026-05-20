@@ -12,9 +12,13 @@ import {
   Post,
   Put,
   Query,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { AccountId } from "../../common/decorators/account-id.decorator";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { CallerNotProvisionedError } from "../../common/auth-context/business-authorization.errors";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 import { ListSequencesUseCase } from "./application/list-sequences.use-case";
 import { GetSequenceUseCase } from "./application/get-sequence.use-case";
 import { CreateSequenceUseCase } from "./application/create-sequence.use-case";
@@ -66,27 +70,38 @@ export class SequencesController {
     private readonly deleteStep: DeleteStepUseCase,
     private readonly reorderSteps: ReorderStepsUseCase,
     private readonly previewStep: PreviewStepUseCase,
+    private readonly businessAuth: BusinessAuthorizationService,
   ) {}
 
   @Get()
   async list(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
   ) {
-    const result = await this.listSequences.execute(businessId);
-    return { data: result };
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+      const result = await this.listSequences.execute(businessId);
+      return { data: result };
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
+    }
   }
 
   @Get(":id")
   async getById(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
       const result = await this.getSequence.execute(id, businessId);
       return { data: result };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       throw error;
     }
@@ -95,13 +110,16 @@ export class SequencesController {
   @Post()
   @HttpCode(201)
   async create(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Body(new ZodValidationPipe(createSequenceSchema)) dto: CreateSequenceDto,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, dto.businessId);
       const result = await this.createSequence.execute(dto.businessId, { name: dto.name, relationshipTierId: dto.relationshipTierId, steps: dto.steps });
       return { data: result };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceLimitReachedError) throw new BadRequestException(error.message);
       if (error instanceof StepLimitReachedError) throw new BadRequestException(error.message);
       if (error instanceof InvalidStepOrderError) throw new BadRequestException(error.message);
@@ -112,11 +130,12 @@ export class SequencesController {
 
   @Patch(":id")
   async update(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateSequenceSchema)) dto: UpdateSequenceDto,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, dto.businessId);
       const result = await this.updateSequence.execute(id, dto.businessId, {
         name: dto.name,
         isActive: dto.isActive,
@@ -124,6 +143,8 @@ export class SequencesController {
       });
       return { data: result };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof RelationshipTierNotFoundError) throw new NotFoundException(error.message);
       throw error;
@@ -133,13 +154,16 @@ export class SequencesController {
   @Delete(":id")
   @HttpCode(204)
   async remove(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
       await this.deleteSequence.execute(id, businessId);
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof SequenceInUseError) throw new ConflictException(error.message);
       throw error;
@@ -149,15 +173,18 @@ export class SequencesController {
   @Post(":id/steps")
   @HttpCode(201)
   async addSequenceStep(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") sequenceId: string,
     @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
     @Body(new ZodValidationPipe(addStepSchema)) dto: AddStepDto,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
       const result = await this.addStep.execute(sequenceId, businessId, dto);
       return { data: result };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       throw error;
     }
@@ -165,16 +192,19 @@ export class SequencesController {
 
   @Patch(":id/steps/:stepId")
   async updateSequenceStep(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") sequenceId: string,
     @Param("stepId") stepId: string,
     @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
     @Body(new ZodValidationPipe(updateStepSchema)) dto: UpdateStepDto,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
       const result = await this.updateStep.execute(stepId, sequenceId, businessId, dto);
       return { data: result };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof SequenceStepNotFoundError) throw new NotFoundException(error.message);
       throw error;
@@ -184,14 +214,17 @@ export class SequencesController {
   @Delete(":id/steps/:stepId")
   @HttpCode(204)
   async deleteSequenceStep(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") sequenceId: string,
     @Param("stepId") stepId: string,
     @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
       await this.deleteStep.execute(stepId, sequenceId, businessId);
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof SequenceStepNotFoundError) throw new NotFoundException(error.message);
       throw error;
@@ -200,15 +233,18 @@ export class SequencesController {
 
   @Patch(":id/steps/reorder")
   async reorderSequenceSteps(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") sequenceId: string,
     @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
     @Body(new ZodValidationPipe(reorderStepsSchema)) dto: ReorderStepsDto,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
       await this.reorderSteps.execute(sequenceId, businessId, dto.steps);
       return { data: null };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       throw error;
     }
@@ -216,11 +252,12 @@ export class SequencesController {
 
   @Put(":id")
   async replace(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(replaceSequenceSchema)) dto: ReplaceSequenceDto,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, dto.businessId);
       const result = await this.replaceSequence.execute(id, dto.businessId, {
         name: dto.name,
         relationshipTierId: dto.relationshipTierId,
@@ -228,6 +265,8 @@ export class SequencesController {
       });
       return { data: result };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof SequenceHasActiveRunsError) throw new BadRequestException(error.message);
       if (error instanceof StepLimitReachedError) throw new BadRequestException(error.message);
@@ -240,15 +279,18 @@ export class SequencesController {
   @Post(":id/steps/:stepId/preview")
   @HttpCode(200)
   async previewSequenceStep(
-    @AccountId() _accountId: string,
+    @AccountId() clerkUserId: string,
     @Param("id") sequenceId: string,
     @Param("stepId") stepId: string,
     @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
   ) {
     try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
       const result = await this.previewStep.execute(sequenceId, stepId, businessId);
       return { data: result };
     } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof SequenceStepNotFoundError) throw new NotFoundException(error.message);
       throw error;

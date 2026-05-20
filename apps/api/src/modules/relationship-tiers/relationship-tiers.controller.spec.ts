@@ -14,10 +14,13 @@ import {
   TierNameAlreadyExistsError,
 } from "./domain/relationship-tier.errors";
 import type { RelationshipTier } from "./domain/relationship-tier.entity";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 
 const BIZ_ID = "550e8400-e29b-41d4-a716-446655440000";
 const TIER_ID = "550e8400-e29b-41d4-a716-446655440010";
 const SEQ_ID = "550e8400-e29b-41d4-a716-446655440020";
+const FOREIGN_BIZ_ID = "550e8400-e29b-41d4-a716-446655440099";
 
 const tier: RelationshipTier = {
   id: TIER_ID,
@@ -39,12 +42,14 @@ describe("RelationshipTiersController", () => {
   let createUseCase: { execute: jest.Mock };
   let updateUseCase: { execute: jest.Mock };
   let deleteUseCase: { execute: jest.Mock };
+  let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     listUseCase = { execute: jest.fn() };
     createUseCase = { execute: jest.fn() };
     updateUseCase = { execute: jest.fn() };
     deleteUseCase = { execute: jest.fn() };
+    businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       controllers: [RelationshipTiersController],
@@ -53,6 +58,7 @@ describe("RelationshipTiersController", () => {
         { provide: CreateTierUseCase, useValue: createUseCase },
         { provide: UpdateTierUseCase, useValue: updateUseCase },
         { provide: DeleteTierUseCase, useValue: deleteUseCase },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
 
@@ -245,6 +251,21 @@ describe("RelationshipTiersController", () => {
       await request(app.getHttpServer())
         .delete(`/v1/relationship-tiers/${TIER_ID}`)
         .expect(400);
+    });
+  });
+
+  describe("cross-account authorization", () => {
+    it("GET /v1/relationship-tiers returns 404 when businessId belongs to a different account", async () => {
+      businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+        new BusinessNotFoundError(FOREIGN_BIZ_ID),
+      );
+
+      await request(app.getHttpServer())
+        .get("/v1/relationship-tiers")
+        .query({ businessId: FOREIGN_BIZ_ID })
+        .expect(404);
+
+      expect(listUseCase.execute).not.toHaveBeenCalled();
     });
   });
 });

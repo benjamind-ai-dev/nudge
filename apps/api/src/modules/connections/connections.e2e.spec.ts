@@ -12,6 +12,10 @@ describe("Connections E2E", () => {
   let prisma: PrismaClient;
   let businessId: string;
   let accountId: string;
+  // Per-test Clerk user ID — read by the stub middleware below. Set in
+  // beforeEach so every run gets a fresh row, avoiding the
+  // users_clerk_user_id_key unique-constraint collisions across re-runs.
+  let stubClerkUserId = "";
 
   const qbMock = {
     name: "quickbooks" as const,
@@ -39,6 +43,14 @@ describe("Connections E2E", () => {
       .compile();
 
     app = module.createNestApplication();
+    // Stub @clerk/express's clerkMiddleware which is wired in main.ts but not
+    // when bootstrapping via Test.createTestingModule. POST /authorize is now
+    // session-authenticated (BusinessAuthorizationService), so we have to make
+    // req.auth() resolve to a real Clerk user ID.
+    app.use((req: { auth: () => { userId: string } }, _res: unknown, next: () => void) => {
+      req.auth = () => ({ userId: stubClerkUserId });
+      next();
+    });
     await app.init();
     prisma = new PrismaClient();
     await prisma.$connect();
@@ -51,6 +63,7 @@ describe("Connections E2E", () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    stubClerkUserId = `user_${randomUUID()}`;
     const account = await prisma.account.create({
       data: {
         name: "T",
@@ -58,9 +71,22 @@ describe("Connections E2E", () => {
         plan: "starter",
         status: "active",
         maxBusinesses: 1,
+        clerkId: stubClerkUserId,
       },
     });
     accountId = account.id;
+    // Seed the owner User row that CallerContextService.resolve will look up
+    // for the stubbed Clerk session — this is the row Part 3a's provisioning
+    // creates in prod when a new Clerk user signs up.
+    await prisma.user.create({
+      data: {
+        accountId,
+        email: `owner-${randomUUID()}@example.com`,
+        name: "Owner",
+        role: "owner",
+        clerkUserId: stubClerkUserId,
+      },
+    });
     const business = await prisma.business.create({
       data: {
         accountId,
@@ -77,6 +103,7 @@ describe("Connections E2E", () => {
   afterEach(async () => {
     await prisma.connection.deleteMany({ where: { businessId } });
     await prisma.business.deleteMany({ where: { id: businessId } });
+    // Account FK is ON DELETE CASCADE, which removes the seeded User row too.
     await prisma.account.deleteMany({ where: { id: accountId } });
   });
 
