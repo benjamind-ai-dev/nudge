@@ -6,7 +6,6 @@ export interface BuildUserPromptInput {
   invoice: {
     invoiceNumber: string | null;
     balanceDueCents: number;
-    currency: string;
     dueDate: Date;
     daysOverdue: number;
   };

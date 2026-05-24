@@ -6,7 +6,6 @@ describe("buildUserPrompt", () => {
     invoice: {
       invoiceNumber: "INV-1042",
       balanceDueCents: 250000,
-      currency: "USD",
       dueDate: new Date("2026-04-15T00:00:00Z"),
       daysOverdue: 39,
     },
