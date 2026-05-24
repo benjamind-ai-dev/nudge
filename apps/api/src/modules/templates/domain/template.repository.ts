@@ -38,3 +38,9 @@ export interface TemplateRepository {
 }
 
 export const TEMPLATE_REPOSITORY = Symbol("TemplateRepository");
+
+export interface TemplateCustomerVerifier {
+  customerExistsInBusiness(customerId: string, businessId: string): Promise<boolean>;
+}
+
+export const TEMPLATE_CUSTOMER_VERIFIER = Symbol("TemplateCustomerVerifier");
