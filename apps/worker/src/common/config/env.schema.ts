@@ -16,6 +16,7 @@ export const envSchema = z.object({
   RESEND_API_KEY: z.string().min(1),
   ANTHROPIC_API_KEY: z.string().min(1),
   WEEKLY_SUMMARY_MODEL: z.string().default("claude-sonnet-4-6"),
+  AI_DRAFT_MODEL: z.string().default("claude-sonnet-4-6"),
   RESEND_INBOUND_ADDRESS: z.string().email(),
   NOTIFICATIONS_EMAIL: z.string().email(),
   TWILIO_ACCOUNT_SID: z.string().startsWith("AC"),
