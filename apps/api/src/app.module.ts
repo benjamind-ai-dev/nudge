@@ -28,6 +28,7 @@ import { SequenceRunsModule } from "./modules/sequence-runs/sequence-runs.module
 import { DevModule } from "./modules/dev/dev.module";
 import { AuthContextModule } from "./common/auth-context/auth-context.module";
 import { UsersModule } from "./modules/users/users.module";
+import { TemplatesModule } from "./modules/templates/templates.module";
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { UsersModule } from "./modules/users/users.module";
     DevModule,
     AuthContextModule,
     UsersModule,
+    TemplatesModule,
   ],
 })
 export class AppModule {}
