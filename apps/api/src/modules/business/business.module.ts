@@ -4,6 +4,7 @@ import { QUEUE_NAMES } from "@nudge/shared";
 import { CONNECTION_REPOSITORY } from "@nudge/connections-domain";
 import { ConnectionsCommonModule } from "../connections-common/connections-common.module";
 import { PrismaConnectionRepository } from "../connections-common/infrastructure/prisma-connection.repository";
+import { TemplatesModule } from "../templates/templates.module";
 import { BUSINESS_REPOSITORY } from "./domain/business.repository";
 import { DISCONNECT_REPOSITORY } from "./domain/disconnect.repository";
 import { PrismaBusinessRepository } from "./infrastructure/prisma-business.repository";
@@ -20,6 +21,7 @@ import { BusinessController } from "./business.controller";
   imports: [
     ConnectionsCommonModule,
     BullModule.registerQueue({ name: QUEUE_NAMES.INVOICE_SYNC }),
+    TemplatesModule,
   ],
   controllers: [BusinessController],
   providers: [
