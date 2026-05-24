@@ -17,6 +17,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^3.0.74
+        version: 3.0.74(zod@3.25.76)
       '@clerk/backend':
         specifier: ^3.2.11
         version: 3.2.14(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -47,6 +50,9 @@ importers:
       '@nudge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      ai:
+        specifier: ^6.0.174
+        version: 6.0.174(zod@3.25.76)
       bullmq:
         specifier: ^5.31.0
         version: 5.76.1

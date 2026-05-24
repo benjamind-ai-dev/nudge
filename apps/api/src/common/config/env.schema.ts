@@ -42,6 +42,8 @@ export const envSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
   DEV_API_KEY: z.string().min(16).optional(),
+  ANTHROPIC_API_KEY: z.string().min(1),
+  AI_TEMPLATE_MODEL: z.string().default("claude-sonnet-4-6"),
 });
 
 export type Env = z.infer<typeof envSchema>;
