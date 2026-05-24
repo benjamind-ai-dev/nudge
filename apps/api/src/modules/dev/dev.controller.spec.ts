@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
 import { ConfigService } from "@nestjs/config";
+import { NotFoundException } from "@nestjs/common";
 import { JOB_NAMES, QUEUE_NAMES } from "@nudge/shared";
 import { DevController } from "./dev.controller";
 import { DevKeyGuard } from "./infrastructure/dev-key.guard";
@@ -15,6 +16,10 @@ const allowingConfig = {
 } as unknown as ConfigService<Env, true>;
 
 const mockBackfillClerkOrgs = {
+  execute: jest.fn(),
+};
+
+const mockTriggerAiDraft = {
   execute: jest.fn(),
 };
 
@@ -36,6 +41,12 @@ describe("DevController.triggerWeeklySummary", () => {
             await import("./application/backfill-clerk-orgs.use-case")
           ).BackfillClerkOrgsUseCase,
           useValue: mockBackfillClerkOrgs,
+        },
+        {
+          provide: (
+            await import("./application/trigger-ai-draft.use-case")
+          ).TriggerAiDraftUseCase,
+          useValue: mockTriggerAiDraft,
         },
       ],
     }).compile();
@@ -97,6 +108,43 @@ describe("DevController.triggerWeeklySummary", () => {
     expect(mockBackfillClerkOrgs.execute).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       data: { scanned: 3, succeeded: 2, skipped: 1, failed: 0, failures: [] },
+    });
+  });
+
+  describe("POST /v1/dev/ai-draft/:messageId", () => {
+    const MESSAGE_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
+    beforeEach(() => {
+      mockTriggerAiDraft.execute.mockReset();
+    });
+
+    it("happy path: delegates to use case and returns 202 envelope", async () => {
+      mockTriggerAiDraft.execute.mockResolvedValue({
+        enqueued: true,
+        messageId: MESSAGE_ID,
+        jobId: `ai-draft:${MESSAGE_ID}`,
+      });
+
+      const result = await controller.triggerAiDraftEndpoint(MESSAGE_ID, { replyBody: "Hello!" });
+
+      expect(mockTriggerAiDraft.execute).toHaveBeenCalledWith(MESSAGE_ID, "Hello!");
+      expect(result).toEqual({
+        data: {
+          enqueued: true,
+          messageId: MESSAGE_ID,
+          jobId: `ai-draft:${MESSAGE_ID}`,
+        },
+      });
+    });
+
+    it("propagates NotFoundException thrown by the use case", async () => {
+      mockTriggerAiDraft.execute.mockRejectedValue(
+        new NotFoundException(`Message ${MESSAGE_ID} not found`),
+      );
+
+      await expect(
+        controller.triggerAiDraftEndpoint(MESSAGE_ID, { replyBody: "Hello!" }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

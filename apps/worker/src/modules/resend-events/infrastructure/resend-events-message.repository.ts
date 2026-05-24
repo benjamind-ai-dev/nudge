@@ -5,6 +5,7 @@ import type {
   MessageRecord,
   MessageStatus,
   ResendEventsMessageRepository,
+  SentEmailMessage,
 } from "../domain/resend-events-message.repository";
 
 @Injectable()
@@ -66,6 +67,31 @@ export class PrismaResendEventsMessageRepository
     await this.prisma.message.updateMany({
       where: { id, businessId, clickedAt: null },
       data: { clickedAt },
+    });
+  }
+
+  async findLatestSentEmailForRun(runId: string): Promise<SentEmailMessage | null> {
+    const row = await this.prisma.message.findFirst({
+      where: {
+        sequenceRunId: runId,
+        channel: "email",
+        sentAt: { not: null },
+      },
+      orderBy: { sentAt: "desc" },
+      select: { id: true, businessId: true },
+    });
+    return row ?? null;
+  }
+
+  async markReplied(
+    id: string,
+    businessId: string,
+    replyBody: string,
+    repliedAt: Date,
+  ): Promise<void> {
+    await this.prisma.message.updateMany({
+      where: { id, businessId },
+      data: { replyBody, repliedAt },
     });
   }
 }
