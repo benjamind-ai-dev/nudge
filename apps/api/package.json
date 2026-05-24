@@ -11,6 +11,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.74",
     "@clerk/backend": "^3.2.11",
     "@clerk/express": "^2.1.5",
     "@nestjs/bullmq": "^11.0.4",
@@ -21,6 +22,7 @@
     "@nudge/connections-domain": "workspace:*",
     "@nudge/database": "workspace:*",
     "@nudge/shared": "workspace:*",
+    "ai": "^6.0.174",
     "bullmq": "^5.31.0",
     "date-fns": "^4.1.0",
     "handlebars": "^4.7.8",

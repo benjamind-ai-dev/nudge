@@ -76,6 +76,7 @@ model Business {
   sequences         Sequence[]
   messages          Message[]
   weeklySummaries   WeeklySummary[]
+  templates         Template[]
 
   @@map("businesses")
 }
@@ -133,6 +134,7 @@ model Customer {
   sequence         Sequence?         @relation("CustomerSequenceOverride", fields: [sequenceId], references: [id], onDelete: SetNull)
   invoices         Invoice[]
   messages         Message[]
+  templateLinks    CustomerTemplate[]
 
   @@unique([businessId, externalId], map: "idx_customers_external")
   @@map("customers")
@@ -225,6 +227,7 @@ model Sequence {
 model SequenceStep {
   id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sequenceId         String   @map("sequence_id") @db.Uuid
+  templateId         String?  @map("template_id") @db.Uuid
   stepOrder          Int      @map("step_order")
   delayDays          Int      @map("delay_days")
   channel            String   @db.VarChar(20)
@@ -237,6 +240,7 @@ model SequenceStep {
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   sequence    Sequence      @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  template    Template?     @relation(fields: [templateId], references: [id], onDelete: SetNull)
   currentRuns SequenceRun[] @relation("CurrentStep")
   messages    Message[]
 
@@ -333,4 +337,40 @@ model WeeklySummary {
   @@unique([businessId, weekStartsAt], map: "idx_weekly_summaries_business_week")
   @@index([status, createdAt], map: "idx_weekly_summaries_status")
   @@map("weekly_summaries")
+}
+
+// ---------------------------------------------------------------------------
+// templates
+// ---------------------------------------------------------------------------
+model Template {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId String   @map("business_id") @db.Uuid
+  name       String   @db.VarChar(255)
+  subject    String?  @db.Text
+  body       String   @db.Text
+  signature  String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  business      Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sequenceSteps SequenceStep[]
+  customerLinks CustomerTemplate[]
+
+  @@index([businessId], map: "idx_templates_business")
+  @@map("templates")
+}
+
+// ---------------------------------------------------------------------------
+// customer_templates (many-to-many)
+// ---------------------------------------------------------------------------
+model CustomerTemplate {
+  customerId String   @map("customer_id") @db.Uuid
+  templateId String   @map("template_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, templateId])
+  @@map("customer_templates")
 }

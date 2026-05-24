@@ -1,0 +1,3288 @@
+openapi: 3.0.3
+info:
+  title: Nudge API
+  version: 1.0.0
+  description: >
+    Nudge — B2B accounts receivable follow-up automation API.
+
+    **Note:** This specification was reverse-engineered from the codebase at HEAD
+    (branch feat/dev-clerk-orgs-backfill, 2026-05-24). Field types are best-effort
+    inferred from Zod schemas and controller return statements. For ambiguous cases
+    the type defaults to `string` and is noted inline. Response schemas reflect the
+    actual keys returned by controllers (snake_case where controllers use it,
+    camelCase where they do not). Monetary values are integers in cents throughout.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://api.nudge.app
+    description: Production (placeholder)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Security schemes
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    clerkAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Clerk session JWT obtained from the Clerk frontend SDK.
+
+    devKey:
+      type: apiKey
+      in: header
+      name: x-dev-key
+      description: Internal development key. Never exposed in production.
+
+    resendSignature:
+      type: apiKey
+      in: header
+      name: svix-signature
+      description: >
+        Resend webhook signature (Svix). The guard also reads svix-id and
+        svix-timestamp headers to prevent replay attacks.
+
+    stripeSignature:
+      type: apiKey
+      in: header
+      name: stripe-signature
+      description: Stripe webhook signature for verifying Stripe events.
+
+    intuitSignature:
+      type: apiKey
+      in: header
+      name: intuit-signature
+      description: QuickBooks / Intuit webhook HMAC-SHA256 signature.
+
+    xeroSignature:
+      type: apiKey
+      in: header
+      name: x-xero-signature
+      description: Xero webhook SHA-256 HMAC signature.
+
+    clerkWebhookSignature:
+      type: apiKey
+      in: header
+      name: svix-signature
+      description: Clerk webhook signature (Svix) for user lifecycle events.
+
+    twilioSecret:
+      type: apiKey
+      in: query
+      name: secret
+      description: >
+        Shared secret passed as a query parameter on Twilio status-callback
+        requests. Validated against TWILIO_WEBHOOK_SECRET env var.
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Schemas
+  # ───────────────────────────────────────────────────────────────────────────
+  schemas:
+
+    # ── Error envelope ────────────────────────────────────────────────────────
+    ErrorEnvelope:
+      type: object
+      required: [statusCode, error, message]
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: Bad Request
+        message:
+          type: string
+          example: Validation failed
+        details:
+          description: Optional structured validation details.
+          type: object
+          additionalProperties: true
+
+    # ── Template ──────────────────────────────────────────────────────────────
+    Template:
+      type: object
+      required: [id, businessId, name, body, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        businessId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "30-Day Overdue Reminder"
+        subject:
+          type: string
+          nullable: true
+          example: "Invoice #{{invoiceNumber}} is overdue"
+        body:
+          type: string
+          example: "Hi {{customerName}}, your invoice is overdue…"
+        signature:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AiTemplateDraft:
+      type: object
+      description: >
+        AI-generated template draft returned by POST /v1/templates/generate.
+        Exact shape is determined by the AI client port implementation; fields
+        listed here are best-effort.
+      properties:
+        subject:
+          type: string
+          nullable: true
+        body:
+          type: string
+        signature:
+          type: string
+          nullable: true
+
+    # ── Business ──────────────────────────────────────────────────────────────
+    Business:
+      type: object
+      required: [id, accountId, name, accountingProvider, senderName, senderEmail, timezone, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        accountingProvider:
+          type: string
+          enum: [quickbooks, xero]
+        senderName:
+          type: string
+        senderEmail:
+          type: string
+          format: email
+        emailSignature:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+          description: IANA timezone string
+          example: "America/New_York"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SyncResult:
+      type: object
+      description: Result returned by POST /v1/businesses/:id/sync.
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+          example: enqueued
+
+    # ── Customer ──────────────────────────────────────────────────────────────
+    Customer:
+      type: object
+      required: [id, businessId, companyName, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        businessId:
+          type: string
+          format: uuid
+        companyName:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        relationshipTierId:
+          type: string
+          format: uuid
+          nullable: true
+        sequenceId:
+          type: string
+          format: uuid
+          nullable: true
+        totalOutstandingCents:
+          type: integer
+          description: Total outstanding balance in cents
+        avgDaysToPay:
+          type: number
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CustomerList:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    # ── Invoice ───────────────────────────────────────────────────────────────
+    Invoice:
+      type: object
+      required: [id, businessId, customerId, status, amountCents, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        businessId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        externalId:
+          type: string
+          nullable: true
+          description: Invoice number from the accounting provider
+        status:
+          type: string
+          enum: [open, overdue, partial, paid, voided, disputed]
+        amountCents:
+          type: integer
+          description: Invoice total in cents
+        balanceCents:
+          type: integer
+          description: Remaining balance in cents
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    InvoiceList:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invoice"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    PaymentLink:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Stripe payment link URL
+
+    # ── Sequence ──────────────────────────────────────────────────────────────
+    SequenceStep:
+      type: object
+      required: [id, sequenceId, stepOrder, delayDays, channel, bodyTemplate]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sequenceId:
+          type: string
+          format: uuid
+        stepOrder:
+          type: integer
+          minimum: 1
+        delayDays:
+          type: integer
+          minimum: 0
+        channel:
+          type: string
+          enum: [email, sms, email_and_sms]
+        subjectTemplate:
+          type: string
+          nullable: true
+        bodyTemplate:
+          type: string
+        smsBodyTemplate:
+          type: string
+          nullable: true
+        isOwnerAlert:
+          type: boolean
+        includePaymentLink:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Sequence:
+      type: object
+      required: [id, businessId, name, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        businessId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        isActive:
+          type: boolean
+        relationshipTierId:
+          type: string
+          format: uuid
+          nullable: true
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/SequenceStep"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SequenceStepInput:
+      type: object
+      required: [stepOrder, delayDays, channel, bodyTemplate]
+      properties:
+        stepOrder:
+          type: integer
+          minimum: 1
+        delayDays:
+          type: integer
+          minimum: 0
+        channel:
+          type: string
+          enum: [email, sms, email_and_sms]
+        subjectTemplate:
+          type: string
+          nullable: true
+        bodyTemplate:
+          type: string
+          minLength: 1
+        smsBodyTemplate:
+          type: string
+          nullable: true
+        isOwnerAlert:
+          type: boolean
+        includePaymentLink:
+          type: boolean
+
+    StepPreview:
+      type: object
+      description: >
+        Rendered preview of a sequence step against example data.
+        Exact shape determined by the PreviewStepUseCase implementation.
+      properties:
+        subject:
+          type: string
+          nullable: true
+        body:
+          type: string
+        smsBody:
+          type: string
+          nullable: true
+
+    # ── Sequence Run ──────────────────────────────────────────────────────────
+    SequenceRun:
+      type: object
+      required: [id, businessId, sequenceId, customerId, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        businessId:
+          type: string
+          format: uuid
+        sequenceId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        invoiceId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [active, paused, stopped, completed]
+        currentStepOrder:
+          type: integer
+        nextFireAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SequenceRunList:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SequenceRun"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    # ── Message ───────────────────────────────────────────────────────────────
+    Message:
+      type: object
+      required: [id, businessId, customerId, channel, status, sentAt, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        businessId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        invoiceId:
+          type: string
+          format: uuid
+          nullable: true
+        sequenceRunId:
+          type: string
+          format: uuid
+          nullable: true
+        channel:
+          type: string
+          enum: [email, sms]
+        status:
+          type: string
+          enum: [queued, sent, delivered, bounced, failed]
+        subject:
+          type: string
+          nullable: true
+        body:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+        hasReply:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MessageList:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    # ── RelationshipTier ──────────────────────────────────────────────────────
+    RelationshipTier:
+      type: object
+      required: [id, businessId, name, isDefault, sortOrder, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        businessId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        isDefault:
+          type: boolean
+        sortOrder:
+          type: integer
+          minimum: 0
+        sequenceId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ── User ──────────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, email, role, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [owner, admin, viewer]
+        status:
+          type: string
+          enum: [active, pending]
+        clerkUserId:
+          type: string
+          nullable: true
+
+    InviteResponse:
+      type: object
+      required: [id, email, role, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [admin, viewer]
+        status:
+          type: string
+          enum: [pending]
+        clerkInvitationId:
+          type: string
+          nullable: true
+
+    # ── Connection ────────────────────────────────────────────────────────────
+    Connection:
+      type: object
+      description: >
+        OAuth connection to an accounting provider. Exact shape determined by
+        the StartConnectionUseCase and CompleteConnectionUseCase implementations.
+      properties:
+        authUrl:
+          type: string
+          format: uri
+          description: OAuth authorization URL to redirect the user to.
+
+    # ── Billing ───────────────────────────────────────────────────────────────
+    BillingStatus:
+      type: object
+      required: [plan, status, has_stripe_customer]
+      properties:
+        plan:
+          type: string
+          enum: [starter, growth, agency]
+          nullable: true
+          description: Current subscription plan; null if on free/trial
+        status:
+          type: string
+          enum: [active, trialing, past_due, canceled, incomplete]
+          nullable: true
+        current_period_end:
+          type: string
+          format: date-time
+          nullable: true
+        cancel_at_period_end:
+          type: boolean
+          nullable: true
+        trial_ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        has_stripe_customer:
+          type: boolean
+
+    CheckoutResult:
+      type: object
+      required: [checkout_url]
+      properties:
+        checkout_url:
+          type: string
+          format: uri
+
+    PortalResult:
+      type: object
+      required: [portal_url]
+      properties:
+        portal_url:
+          type: string
+          format: uri
+
+    # ── Dev ───────────────────────────────────────────────────────────────────
+    WeeklySummaryJobResult:
+      type: object
+      required: [jobId, businessId, weekStartsAt]
+      properties:
+        jobId:
+          type: string
+        businessId:
+          type: string
+          format: uuid
+        weekStartsAt:
+          type: string
+          format: date
+          example: "2026-05-19"
+
+    BackfillClerkOrgsResult:
+      type: object
+      description: >
+        Result of the Clerk org backfill operation. Exact shape from
+        BackfillClerkOrgsUseCase; fields best-effort.
+      properties:
+        processed:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: integer
+
+    # ── Webhook payloads (third-party — accept any JSON) ─────────────────────
+    WebhookPayload:
+      type: object
+      additionalProperties: true
+      description: Arbitrary JSON payload delivered by the third-party provider.
+
+    TwilioStatusCallback:
+      type: object
+      description: >
+        Form-encoded Twilio status callback body. Keys match Twilio's documented
+        StatusCallback parameters.
+      properties:
+        MessageSid:
+          type: string
+        MessageStatus:
+          type: string
+          enum: [queued, sending, sent, delivered, undelivered, failed, read]
+        To:
+          type: string
+        ErrorCode:
+          type: string
+          nullable: true
+      additionalProperties: true
+
+    # ── Shared ────────────────────────────────────────────────────────────────
+    PaginationMeta:
+      type: object
+      required: [page, limit, total]
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Default security (overridden per-operation for webhooks & dev)
+# ─────────────────────────────────────────────────────────────────────────────
+security:
+  - clerkAuth: []
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Paths
+# ─────────────────────────────────────────────────────────────────────────────
+paths:
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # TEMPLATES
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/templates:
+    get:
+      tags: [templates]
+      operationId: listTemplates
+      summary: List templates for a business
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Template"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    post:
+      tags: [templates]
+      operationId: createTemplate
+      summary: Create a template
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId, name, body]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                subject:
+                  type: string
+                  nullable: true
+                body:
+                  type: string
+                  minLength: 1
+                signature:
+                  type: string
+                  nullable: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Template"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/templates/generate:
+    post:
+      tags: [templates]
+      operationId: generateTemplate
+      summary: AI-generate a template draft
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description]
+              properties:
+                description:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AiTemplateDraft"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/templates/{id}:
+    get:
+      tags: [templates]
+      operationId: getTemplate
+      summary: Get a template by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Template"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [templates]
+      operationId: updateTemplate
+      summary: Update a template
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                subject:
+                  type: string
+                  nullable: true
+                body:
+                  type: string
+                  minLength: 1
+                signature:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Template"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [templates]
+      operationId: deleteTemplate
+      summary: Delete a template
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CUSTOMERS — template attachment sub-resource
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/customers/{customerId}/templates:
+    post:
+      tags: [customers, templates]
+      operationId: attachTemplateToCustomer
+      summary: Attach a template to a customer
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId, templateId]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                templateId:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: Created — no body
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/customers/{customerId}/templates/{templateId}:
+    delete:
+      tags: [customers, templates]
+      operationId: detachTemplateFromCustomer
+      summary: Detach a template from a customer
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # BUSINESSES
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/businesses:
+    post:
+      tags: [business]
+      operationId: createBusiness
+      summary: Create a new business
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, accountingProvider, senderName, senderEmail, timezone]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                accountingProvider:
+                  type: string
+                  enum: [quickbooks, xero]
+                senderName:
+                  type: string
+                  minLength: 1
+                senderEmail:
+                  type: string
+                  format: email
+                timezone:
+                  type: string
+                  description: IANA timezone string
+                  example: "America/New_York"
+                emailSignature:
+                  type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Business"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/businesses/{id}:
+    get:
+      tags: [business]
+      operationId: getBusiness
+      summary: Get a business by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Business"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [business]
+      operationId: updateBusiness
+      summary: Update business settings
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                senderName:
+                  type: string
+                  minLength: 1
+                senderEmail:
+                  type: string
+                  format: email
+                emailSignature:
+                  type: string
+                  nullable: true
+                timezone:
+                  type: string
+                  description: IANA timezone string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Business"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [business]
+      operationId: deleteBusiness
+      summary: Delete a business
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/businesses/{id}/sync:
+    post:
+      tags: [business]
+      operationId: triggerManualSync
+      summary: Trigger a manual sync with the accounting provider
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              # body must be an empty object (strict schema)
+              additionalProperties: false
+      responses:
+        "202":
+          description: Accepted — sync job enqueued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SyncResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: No active connection — cannot sync
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "429":
+          description: Sync rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the caller may retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # INVOICES
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/invoices:
+    get:
+      tags: [invoices]
+      operationId: listInvoices
+      summary: List invoices for a business
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, overdue, partial, paid, voided, disputed]
+        - name: customerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: minAmount
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+          description: Minimum balance in cents (inclusive)
+        - name: maxAmount
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum balance in cents (inclusive)
+        - name: dueBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dueAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [due_date, amount_cents, days_overdue, status]
+            default: due_date
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/invoices/{id}:
+    get:
+      tags: [invoices]
+      operationId: getInvoice
+      summary: Get an invoice by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Invoice"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/invoices/{id}/payment-link:
+    post:
+      tags: [invoices]
+      operationId: createInvoicePaymentLink
+      summary: Generate a Stripe payment link for an invoice
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PaymentLink"
+        "400":
+          description: Invoice is paid or voided — cannot generate link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CUSTOMERS
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/customers:
+    get:
+      tags: [customers]
+      operationId: listCustomers
+      summary: List customers for a business
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: search
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: tierId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: hasOverdue
+          in: query
+          schema:
+            type: boolean
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [company_name, total_outstanding, avg_days_to_pay]
+            default: company_name
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/customers/{id}:
+    get:
+      tags: [customers]
+      operationId: getCustomer
+      summary: Get a customer by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [customers]
+      operationId: updateCustomer
+      summary: Update a customer (assign tier or sequence)
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                relationshipTierId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                sequenceId:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/customers/{id}/tier:
+    patch:
+      tags: [customers]
+      operationId: assignCustomerTier
+      summary: Assign (or clear) a relationship tier for a customer
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId, tierId]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                tierId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Pass null to clear the tier assignment
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # SEQUENCES
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/sequences:
+    get:
+      tags: [sequences]
+      operationId: listSequences
+      summary: List sequences for a business
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Sequence"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    post:
+      tags: [sequences]
+      operationId: createSequence
+      summary: Create a sequence
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId, name]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                relationshipTierId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                steps:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/SequenceStepInput"
+                  minItems: 1
+                  maxItems: 10
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Sequence"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/sequences/{id}:
+    get:
+      tags: [sequences]
+      operationId: getSequence
+      summary: Get a sequence by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Sequence"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [sequences]
+      operationId: updateSequence
+      summary: Update sequence metadata
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                isActive:
+                  type: boolean
+                relationshipTierId:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Sequence"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [sequences]
+      operationId: deleteSequence
+      summary: Delete a sequence
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Sequence is in use and cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+    put:
+      tags: [sequences]
+      operationId: replaceSequence
+      summary: Fully replace a sequence (name + steps)
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId, name, steps]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                relationshipTierId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                steps:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/SequenceStepInput"
+                  minItems: 1
+                  maxItems: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Sequence"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/sequences/{id}/steps:
+    post:
+      tags: [sequences]
+      operationId: addSequenceStep
+      summary: Add a step to a sequence
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SequenceStepInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SequenceStep"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/sequences/{id}/steps/reorder:
+    patch:
+      tags: [sequences]
+      operationId: reorderSequenceSteps
+      summary: Reorder steps within a sequence
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [steps]
+              properties:
+                steps:
+                  type: array
+                  items:
+                    type: object
+                    required: [stepId, stepOrder]
+                    properties:
+                      stepId:
+                        type: string
+                        format: uuid
+                      stepOrder:
+                        type: integer
+                        minimum: 1
+      responses:
+        "200":
+          description: OK — returns null data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    nullable: true
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/sequences/{id}/steps/{stepId}:
+    patch:
+      tags: [sequences]
+      operationId: updateSequenceStep
+      summary: Update a sequence step
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: stepId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stepOrder:
+                  type: integer
+                  minimum: 1
+                delayDays:
+                  type: integer
+                  minimum: 0
+                channel:
+                  type: string
+                  enum: [email, sms, email_and_sms]
+                subjectTemplate:
+                  type: string
+                  nullable: true
+                bodyTemplate:
+                  type: string
+                  minLength: 1
+                smsBodyTemplate:
+                  type: string
+                  nullable: true
+                isOwnerAlert:
+                  type: boolean
+                includePaymentLink:
+                  type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SequenceStep"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [sequences]
+      operationId: deleteSequenceStep
+      summary: Delete a sequence step
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: stepId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/sequences/{id}/steps/{stepId}/preview:
+    post:
+      tags: [sequences]
+      operationId: previewSequenceStep
+      summary: Preview a rendered sequence step
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: stepId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/StepPreview"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # SEQUENCE RUNS
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/sequence-runs:
+    get:
+      tags: [sequence-runs]
+      operationId: listSequenceRuns
+      summary: List sequence runs for a business
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, stopped, completed]
+        - name: customerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: invoiceId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SequenceRunList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/sequence-runs/{id}:
+    get:
+      tags: [sequence-runs]
+      operationId: getSequenceRun
+      summary: Get a sequence run by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SequenceRun"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/sequence-runs/{id}/pause:
+    post:
+      tags: [sequence-runs]
+      operationId: pauseSequenceRun
+      summary: Pause an active sequence run
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  enum: [manual_pause]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SequenceRun"
+        "400":
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/sequence-runs/{id}/resume:
+    post:
+      tags: [sequence-runs]
+      operationId: resumeSequenceRun
+      summary: Resume a paused sequence run
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SequenceRun"
+        "400":
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/sequence-runs/{id}/stop:
+    post:
+      tags: [sequence-runs]
+      operationId: stopSequenceRun
+      summary: Stop a sequence run permanently
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  enum: [manual_stop]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SequenceRun"
+        "400":
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # MESSAGES
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/messages:
+    get:
+      tags: [messages]
+      operationId: listMessages
+      summary: List messages for a business
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: customerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: invoiceId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: sequenceRunId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [email, sms]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [queued, sent, delivered, bounced, failed]
+        - name: hasReply
+          in: query
+          schema:
+            type: boolean
+        - name: sentAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: sentBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/messages/{id}:
+    get:
+      tags: [messages]
+      operationId: getMessage
+      summary: Get a message by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Message"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/messages/{id}/send-reply:
+    post:
+      tags: [messages]
+      operationId: sendMessageReply
+      summary: Send a reply to a message thread
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body, resumeSequence]
+              properties:
+                body:
+                  type: string
+                  minLength: 1
+                resumeSequence:
+                  type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Message"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: No reply-to message to respond to
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Customer has no email address
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "502":
+          description: Email send failed (upstream error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # RELATIONSHIP TIERS
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/relationship-tiers:
+    get:
+      tags: [relationship-tiers]
+      operationId: listRelationshipTiers
+      summary: List relationship tiers for a business
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RelationshipTier"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    post:
+      tags: [relationship-tiers]
+      operationId: createRelationshipTier
+      summary: Create a relationship tier
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId, name]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 1000
+                  nullable: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/RelationshipTier"
+        "400":
+          description: Tier limit reached or name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/relationship-tiers/{id}:
+    patch:
+      tags: [relationship-tiers]
+      operationId: updateRelationshipTier
+      summary: Update a relationship tier
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 1000
+                  nullable: true
+                sequenceId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                isDefault:
+                  type: boolean
+                sortOrder:
+                  type: integer
+                  minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/RelationshipTier"
+        "400":
+          description: Name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [relationship-tiers]
+      operationId: deleteRelationshipTier
+      summary: Delete a relationship tier
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Cannot delete default tier or tier with active sequences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # USERS
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/users:
+    get:
+      tags: [users]
+      operationId: listUsers
+      summary: List all users (active + pending) on the caller's account
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/users/invite:
+    post:
+      tags: [users]
+      operationId: inviteUser
+      summary: Invite a new user to the account
+      description: Requires caller to be owner or admin.
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [admin, viewer]
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/InviteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — caller is not owner or admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "502":
+          description: Invite send failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /v1/users/invites/{id}:
+    delete:
+      tags: [users]
+      operationId: cancelInvite
+      summary: Cancel a pending invite
+      description: Requires caller to be owner or admin.
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Invite already accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /v1/users/invites/{id}/resend:
+    post:
+      tags: [users]
+      operationId: resendInvite
+      summary: Resend a pending invite email
+      description: Requires caller to be owner or admin.
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/InviteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Invite already accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "502":
+          description: Invite send failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /v1/users/{id}:
+    patch:
+      tags: [users]
+      operationId: updateUserRole
+      summary: Update a user's role
+      description: Requires caller to be owner.
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, viewer]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+        "400":
+          description: Cannot change own role or owner's role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — caller is not owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [users]
+      operationId: removeUser
+      summary: Remove a user from the account
+      description: Requires caller to be owner.
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Cannot remove self or owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — caller is not owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CONNECTIONS / OAUTH
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/connections/authorize:
+    post:
+      tags: [connections]
+      operationId: authorizeConnection
+      summary: Start an OAuth connection for an accounting provider
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId, provider]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                provider:
+                  type: string
+                  enum: [quickbooks, xero]
+      responses:
+        "200":
+          description: OK — returns the authorization URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Connection"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/connections/quickbooks/callback:
+    get:
+      tags: [quickbooks-oauth]
+      operationId: quickbooksOauthCallback
+      summary: QuickBooks OAuth 2.0 callback
+      description: >
+        Browser redirect target after QuickBooks authorization. Completes the
+        connection and redirects back to the frontend. Not called directly by
+        API clients.
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: realmId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to frontend after connection complete
+
+  /v1/connections/xero/callback:
+    get:
+      tags: [xero-oauth]
+      operationId: xeroOauthCallback
+      summary: Xero OAuth 2.0 callback
+      description: >
+        Browser redirect target after Xero authorization. Completes the
+        connection and redirects back to the frontend. Not called directly by
+        API clients.
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to frontend after connection complete
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # BILLING
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/billing/status:
+    get:
+      tags: [billing]
+      operationId: getBillingStatus
+      summary: Get billing/subscription status for the caller's account
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/BillingStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/billing/create-checkout:
+    post:
+      tags: [billing]
+      operationId: createBillingCheckout
+      summary: Create a Stripe checkout session
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan]
+              properties:
+                plan:
+                  type: string
+                  enum: [starter, growth, agency]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CheckoutResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/billing/create-portal:
+    post:
+      tags: [billing]
+      operationId: createBillingPortal
+      summary: Create a Stripe customer portal session
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PortalResult"
+        "400":
+          description: No Stripe customer attached to this account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # DEV (internal, protected by x-dev-key)
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/dev/weekly-summary/trigger:
+    post:
+      tags: [dev]
+      operationId: devTriggerWeeklySummary
+      summary: "[DEV] Enqueue a weekly summary job for a business"
+      security:
+        - devKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessId]
+              properties:
+                businessId:
+                  type: string
+                  format: uuid
+                weekStartsAt:
+                  type: string
+                  format: date
+                  description: >
+                    ISO date (YYYY-MM-DD). Defaults to the most recent Monday
+                    UTC if omitted.
+                  example: "2026-05-19"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/WeeklySummaryJobResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/dev/clerk-orgs/backfill:
+    post:
+      tags: [dev]
+      operationId: devBackfillClerkOrgs
+      summary: "[DEV] Backfill Clerk organizations for legacy accounts"
+      security:
+        - devKey: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/BackfillClerkOrgsResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # WEBHOOKS
+  # ══════════════════════════════════════════════════════════════════════════
+
+  /v1/webhooks/clerk:
+    post:
+      tags: [clerk-webhook]
+      operationId: clerkWebhookHandle
+      summary: Receive Clerk user lifecycle events
+      description: >
+        Handles `user.created` (account provisioning or legacy invite link) and
+        `organizationMembership.created` (org-scoped invite acceptance).
+        Unknown event types are silently acked.
+      security:
+        - clerkWebhookSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookPayload"
+      responses:
+        "200":
+          description: OK — event processed
+        "400":
+          description: Malformed payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /v1/webhooks/resend/events:
+    post:
+      tags: [resend-webhook]
+      operationId: resendWebhookHandle
+      summary: Receive Resend email delivery events
+      description: >
+        Idempotent — duplicate batches (same Svix message ID) are silently
+        acked with 200.
+      security:
+        - resendSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookPayload"
+      responses:
+        "200":
+          description: OK
+
+  /v1/webhooks/stripe:
+    post:
+      tags: [stripe-webhook]
+      operationId: stripeWebhookHandle
+      summary: Receive Stripe billing events
+      description: >
+        Idempotent — duplicate events (same Stripe event ID) are silently
+        acked with 200.
+      security:
+        - stripeSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookPayload"
+      responses:
+        "200":
+          description: OK
+
+  /v1/webhooks/quickbooks:
+    post:
+      tags: [quickbooks-webhook]
+      operationId: quickbooksWebhookHandle
+      summary: Receive QuickBooks data-change notifications
+      security:
+        - intuitSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookPayload"
+      responses:
+        "200":
+          description: OK
+
+  /v1/webhooks/xero:
+    post:
+      tags: [xero-webhook]
+      operationId: xeroWebhookHandle
+      summary: Receive Xero data-change notifications
+      security:
+        - xeroSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookPayload"
+      responses:
+        "200":
+          description: OK
+
+  /v1/webhooks/twilio/status:
+    post:
+      tags: [twilio-webhook]
+      operationId: twilioStatusCallback
+      summary: Receive Twilio SMS delivery status callbacks
+      description: >
+        Authenticated via the `secret` query parameter matched against
+        TWILIO_WEBHOOK_SECRET. Body is application/x-www-form-urlencoded
+        (Twilio default). Only logs the status — no side-effects persisted yet.
+      security:
+        - twilioSecret: []
+      parameters:
+        - name: secret
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: businessId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: invoiceId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: sequenceStepId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/TwilioStatusCallback"
+      responses:
+        "200":
+          description: OK — status logged
+        "401":
+          description: Invalid or missing secret
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared parameters & responses
+# ─────────────────────────────────────────────────────────────────────────────
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad Request — validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+    Unauthorized:
+      description: Unauthorized — missing or invalid auth token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tags
+# ─────────────────────────────────────────────────────────────────────────────
+tags:
+  - name: templates
+    description: Email/SMS message templates
+  - name: business
+    description: Business configuration and sync
+  - name: invoices
+    description: Invoice data synced from accounting providers
+  - name: customers
+    description: Customer profiles synced from accounting providers
+  - name: sequences
+    description: Follow-up automation sequences and steps
+  - name: sequence-runs
+    description: Active/historical sequence execution records
+  - name: messages
+    description: Sent messages and reply threads
+  - name: relationship-tiers
+    description: Customer relationship tier management
+  - name: users
+    description: User management and team invitations
+  - name: connections
+    description: Accounting provider OAuth connections
+  - name: billing
+    description: Stripe subscription and billing management
+  - name: quickbooks-oauth
+    description: QuickBooks OAuth 2.0 redirect flow
+  - name: xero-oauth
+    description: Xero OAuth 2.0 redirect flow
+  - name: dev
+    description: Internal development-only endpoints (x-dev-key required)
+  - name: clerk-webhook
+    description: Clerk user lifecycle webhook
+  - name: resend-webhook
+    description: Resend email delivery event webhook
+  - name: stripe-webhook
+    description: Stripe billing event webhook
+  - name: quickbooks-webhook
+    description: QuickBooks data-change notification webhook
+  - name: xero-webhook
+    description: Xero data-change notification webhook
+  - name: twilio-webhook
+    description: Twilio SMS status callback webhook
+

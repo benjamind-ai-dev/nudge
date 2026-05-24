@@ -246,14 +246,25 @@ export class SendMessageUseCase {
       return { sent: false, skippedReason: "no_recipient" };
     }
 
-    const subject = run.stepSubjectTemplate
-      ? this.templateService.render(`${run.stepId}-subject`, run.stepSubjectTemplate, templateData)
+    // Template precedence: if the step has an attached template, use its content; else fall back to inline.
+    const subjectSource = run.stepTemplateSubject ?? run.stepSubjectTemplate;
+    const bodySource = run.stepTemplateBody ?? run.stepBodyTemplate;
+
+    const subject = subjectSource
+      ? this.templateService.render(`${run.stepId}-subject`, subjectSource, templateData)
       : `Reminder: Invoice ${run.invoiceNumber ?? ""}`;
 
-    let body = this.templateService.render(`${run.stepId}-body`, run.stepBodyTemplate, templateData);
+    let body = this.templateService.render(`${run.stepId}-body`, bodySource, templateData);
 
-    if (run.businessEmailSignature) {
-      body = `${body}\n\n${run.businessEmailSignature}`;
+    // Signature precedence: template signature > business email signature.
+    const signatureSource = run.stepTemplateSignature ?? run.businessEmailSignature;
+    if (signatureSource) {
+      const renderedSig = this.templateService.render(
+        `${run.stepId}-signature`,
+        signatureSource,
+        templateData,
+      );
+      body = `${body}\n\n${renderedSig}`;
     }
 
     if (

@@ -34,6 +34,9 @@ const createMockRun = (overrides: Partial<RunReadyToSend> = {}): RunReadyToSend 
   stepSmsBodyTemplate: null,
   stepIsOwnerAlert: false,
   stepIncludePaymentLink: true,
+  stepTemplateSubject: null,
+  stepTemplateBody: null,
+  stepTemplateSignature: null,
   ...overrides,
 });
 
@@ -519,5 +522,48 @@ describe("SendMessageUseCase", () => {
     expect(sent.html).toContain("Internal alert body.");
     expect(sent.html).not.toContain("Pay Invoice");
     expect(sent.to).toBe("bob@bobsplumbing.com"); // businessSenderEmail from factory — confirms it routed to owner
+  });
+
+  describe("when the step has an attached template", () => {
+    it("uses the template's subject + body + signature instead of inline content", async () => {
+      const run = createMockRun({
+        stepSubjectTemplate: "INLINE SUBJECT",
+        stepBodyTemplate: "INLINE BODY",
+        stepTemplateSubject: "Template subject {{customer.company_name}}",
+        stepTemplateBody: "Template body {{customer.company_name}}",
+        stepTemplateSignature: "Template sig",
+        businessEmailSignature: "Business sig (should NOT appear when template signature present)",
+      });
+      repo.findRunById.mockResolvedValue(run);
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const renderedSources = templateService.render.mock.calls.map((c) => c[1]);
+      expect(renderedSources).toContain("Template subject {{customer.company_name}}");
+      expect(renderedSources).toContain("Template body {{customer.company_name}}");
+      expect(renderedSources).toContain("Template sig");
+      expect(renderedSources).not.toContain("INLINE SUBJECT");
+      expect(renderedSources).not.toContain("INLINE BODY");
+      expect(renderedSources).not.toContain("Business sig (should NOT appear when template signature present)");
+    });
+
+    it("falls back to inline content when stepTemplateBody is null", async () => {
+      const run = createMockRun({
+        stepSubjectTemplate: "INLINE SUBJECT",
+        stepBodyTemplate: "INLINE BODY",
+        stepTemplateSubject: null,
+        stepTemplateBody: null,
+        stepTemplateSignature: null,
+        businessEmailSignature: "Business sig",
+      });
+      repo.findRunById.mockResolvedValue(run);
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const renderedSources = templateService.render.mock.calls.map((c) => c[1]);
+      expect(renderedSources).toContain("INLINE SUBJECT");
+      expect(renderedSources).toContain("INLINE BODY");
+      expect(renderedSources).toContain("Business sig");
+    });
   });
 });
