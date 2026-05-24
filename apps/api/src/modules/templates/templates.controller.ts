@@ -5,15 +5,20 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Param,
   Patch,
   Post,
+  Query,
   UnauthorizedException,
 } from "@nestjs/common";
 import { AccountId } from "../../common/decorators/account-id.decorator";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
-import { CallerContextService } from "../../common/auth-context/caller-context.service";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { CallerNotProvisionedError } from "../../common/auth-context/business-authorization.errors";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 import {
+  businessIdQuerySchema,
   createTemplateSchema,
   type CreateTemplateDto,
   updateTemplateSchema,
@@ -37,7 +42,7 @@ import type { AiTemplateDraft } from "./application/ports/ai-template.client";
 @Controller("v1")
 export class TemplatesController {
   constructor(
-    private readonly callerCtx: CallerContextService,
+    private readonly businessAuth: BusinessAuthorizationService,
     private readonly listUc: ListTemplatesUseCase,
     private readonly getUc: GetTemplateUseCase,
     private readonly createUc: CreateTemplateUseCase,
@@ -49,118 +54,150 @@ export class TemplatesController {
   ) {}
 
   @Get("templates")
-  async list(@AccountId() clerkUserId: string): Promise<{ data: Template[] }> {
-    const caller = await this.callerCtx.resolve(clerkUserId);
-    if (!caller) {
-      throw new UnauthorizedException("Caller context could not be resolved");
+  async list(
+    @AccountId() clerkUserId: string,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
+  ): Promise<{ data: Template[] }> {
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+      const data = await this.listUc.execute({ businessId });
+      return { data };
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
     }
-    const data = await this.listUc.execute({ businessId: caller.accountId });
-    return { data };
   }
 
   @Get("templates/:id")
   async get(
-    @Param("id") id: string,
     @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
   ): Promise<{ data: Template }> {
-    const caller = await this.callerCtx.resolve(clerkUserId);
-    if (!caller) {
-      throw new UnauthorizedException("Caller context could not be resolved");
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+      const data = await this.getUc.execute({ id, businessId });
+      return { data };
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
     }
-    const data = await this.getUc.execute({ id, businessId: caller.accountId });
-    return { data };
   }
 
   @Post("templates/generate")
   @HttpCode(HttpStatus.OK)
   async generate(
-    @Body(new ZodValidationPipe(generateTemplateSchema)) body: GenerateTemplateDto,
     @AccountId() clerkUserId: string,
+    @Body(new ZodValidationPipe(generateTemplateSchema)) body: GenerateTemplateDto,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
   ): Promise<{ data: AiTemplateDraft }> {
-    const caller = await this.callerCtx.resolve(clerkUserId);
-    if (!caller) {
-      throw new UnauthorizedException("Caller context could not be resolved");
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+      const data = await this.generateUc.execute({ description: body.description });
+      return { data };
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
     }
-    const data = await this.generateUc.execute({ description: body.description });
-    return { data };
   }
 
   @Post("templates")
   @HttpCode(HttpStatus.CREATED)
   async create(
-    @Body(new ZodValidationPipe(createTemplateSchema)) body: CreateTemplateDto,
     @AccountId() clerkUserId: string,
+    @Body(new ZodValidationPipe(createTemplateSchema)) body: CreateTemplateDto,
   ): Promise<{ data: Template }> {
-    const caller = await this.callerCtx.resolve(clerkUserId);
-    if (!caller) {
-      throw new UnauthorizedException("Caller context could not be resolved");
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, body.businessId);
+      const data = await this.createUc.execute({
+        businessId: body.businessId,
+        name: body.name,
+        subject: body.subject ?? null,
+        body: body.body,
+        signature: body.signature ?? null,
+      });
+      return { data };
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
     }
-    const data = await this.createUc.execute({
-      businessId: caller.accountId,
-      name: body.name,
-      subject: body.subject ?? null,
-      body: body.body,
-      signature: body.signature ?? null,
-    });
-    return { data };
   }
 
   @Patch("templates/:id")
   async update(
+    @AccountId() clerkUserId: string,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateTemplateSchema)) patch: UpdateTemplateDto,
-    @AccountId() clerkUserId: string,
   ): Promise<{ data: Template }> {
-    const caller = await this.callerCtx.resolve(clerkUserId);
-    if (!caller) {
-      throw new UnauthorizedException("Caller context could not be resolved");
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, patch.businessId);
+      const { businessId, ...patchFields } = patch;
+      const data = await this.updateUc.execute({ id, businessId, patch: patchFields });
+      return { data };
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
     }
-    const data = await this.updateUc.execute({ id, businessId: caller.accountId, patch });
-    return { data };
   }
 
   @Delete("templates/:id")
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(
-    @Param("id") id: string,
     @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
   ): Promise<void> {
-    const caller = await this.callerCtx.resolve(clerkUserId);
-    if (!caller) {
-      throw new UnauthorizedException("Caller context could not be resolved");
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+      await this.deleteUc.execute({ id, businessId });
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
     }
-    await this.deleteUc.execute({ id, businessId: caller.accountId });
   }
 
   @Post("customers/:customerId/templates")
   @HttpCode(HttpStatus.CREATED)
   async attach(
+    @AccountId() clerkUserId: string,
     @Param("customerId") customerId: string,
     @Body(new ZodValidationPipe(attachTemplateSchema)) body: AttachTemplateDto,
-    @AccountId() clerkUserId: string,
   ): Promise<void> {
-    const caller = await this.callerCtx.resolve(clerkUserId);
-    if (!caller) {
-      throw new UnauthorizedException("Caller context could not be resolved");
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, body.businessId);
+      await this.attachUc.execute({
+        templateId: body.templateId,
+        customerId,
+        businessId: body.businessId,
+      });
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
     }
-    await this.attachUc.execute({
-      templateId: body.templateId,
-      customerId,
-      businessId: caller.accountId,
-    });
   }
 
   @Delete("customers/:customerId/templates/:templateId")
   @HttpCode(HttpStatus.NO_CONTENT)
   async detach(
+    @AccountId() clerkUserId: string,
     @Param("customerId") customerId: string,
     @Param("templateId") templateId: string,
-    @AccountId() clerkUserId: string,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
   ): Promise<void> {
-    const caller = await this.callerCtx.resolve(clerkUserId);
-    if (!caller) {
-      throw new UnauthorizedException("Caller context could not be resolved");
+    try {
+      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+      await this.detachUc.execute({ templateId, customerId, businessId });
+    } catch (error) {
+      if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
+      throw error;
     }
-    await this.detachUc.execute({ templateId, customerId, businessId: caller.accountId });
   }
 }

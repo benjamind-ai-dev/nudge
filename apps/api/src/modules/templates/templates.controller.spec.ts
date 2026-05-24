@@ -10,21 +10,15 @@ import { DeleteTemplateUseCase } from "./application/delete-template.use-case";
 import { GenerateTemplateUseCase } from "./application/generate-template.use-case";
 import { AttachTemplateToCustomerUseCase } from "./application/attach-template-to-customer.use-case";
 import { DetachTemplateFromCustomerUseCase } from "./application/detach-template-from-customer.use-case";
-import { CallerContextService } from "../../common/auth-context/caller-context.service";
+import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
+import { BusinessNotFoundError } from "../business/domain/business.errors";
 import type { Template } from "./domain/template.entity";
 import type { AiTemplateDraft } from "./application/ports/ai-template.client";
-import type { CallerContext } from "../../common/auth-context/caller-context.types";
 
 const CLERK_USER = "user_test_clerk";
 const BIZ_ID = "550e8400-e29b-41d4-a716-446655440000";
 const TEMPLATE_ID = "550e8400-e29b-41d4-a716-446655440010";
 const CUSTOMER_ID = "550e8400-e29b-41d4-a716-446655440020";
-
-const callerCtxFixture: CallerContext = {
-  userId: "550e8400-e29b-41d4-a716-446655440001",
-  accountId: BIZ_ID,
-  role: "owner",
-};
 
 const templateFixture: Template = {
   id: TEMPLATE_ID,
@@ -54,7 +48,7 @@ describe("TemplatesController", () => {
   let generateUc: { execute: jest.Mock };
   let attachUc: { execute: jest.Mock };
   let detachUc: { execute: jest.Mock };
-  let callerCtx: { resolve: jest.Mock };
+  let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     listUc = { execute: jest.fn() };
@@ -65,7 +59,7 @@ describe("TemplatesController", () => {
     generateUc = { execute: jest.fn() };
     attachUc = { execute: jest.fn() };
     detachUc = { execute: jest.fn() };
-    callerCtx = { resolve: jest.fn().mockResolvedValue(callerCtxFixture) };
+    businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       controllers: [TemplatesController],
@@ -78,7 +72,7 @@ describe("TemplatesController", () => {
         { provide: GenerateTemplateUseCase, useValue: generateUc },
         { provide: AttachTemplateToCustomerUseCase, useValue: attachUc },
         { provide: DetachTemplateFromCustomerUseCase, useValue: detachUc },
-        { provide: CallerContextService, useValue: callerCtx },
+        { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
 
@@ -101,18 +95,36 @@ describe("TemplatesController", () => {
     it("returns 200 with the list of templates", async () => {
       listUc.execute.mockResolvedValue([templateFixture]);
 
-      const res = await request(app.getHttpServer()).get("/v1/templates").expect(200);
+      const res = await request(app.getHttpServer())
+        .get("/v1/templates")
+        .query({ businessId: BIZ_ID })
+        .expect(200);
 
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].id).toBe(TEMPLATE_ID);
       expect(listUc.execute).toHaveBeenCalledWith({ businessId: BIZ_ID });
     });
 
-    it("returns 401 when caller context cannot be resolved", async () => {
-      callerCtx.resolve.mockResolvedValue(null);
+    it("returns 404 when assertCallerOwnsBusiness throws BusinessNotFoundError", async () => {
+      businessAuth.assertCallerOwnsBusiness.mockRejectedValue(new BusinessNotFoundError(BIZ_ID));
 
-      await request(app.getHttpServer()).get("/v1/templates").expect(401);
+      await request(app.getHttpServer())
+        .get("/v1/templates")
+        .query({ businessId: BIZ_ID })
+        .expect(404);
+
       expect(listUc.execute).not.toHaveBeenCalled();
+    });
+
+    it("calls assertCallerOwnsBusiness with the correct clerkUserId and businessId", async () => {
+      listUc.execute.mockResolvedValue([]);
+
+      await request(app.getHttpServer())
+        .get("/v1/templates")
+        .query({ businessId: BIZ_ID })
+        .expect(200);
+
+      expect(businessAuth.assertCallerOwnsBusiness).toHaveBeenCalledWith(CLERK_USER, BIZ_ID);
     });
   });
 
@@ -122,6 +134,7 @@ describe("TemplatesController", () => {
 
       const res = await request(app.getHttpServer())
         .get(`/v1/templates/${TEMPLATE_ID}`)
+        .query({ businessId: BIZ_ID })
         .expect(200);
 
       expect(res.body.data.id).toBe(TEMPLATE_ID);
@@ -134,12 +147,14 @@ describe("TemplatesController", () => {
 
       await request(app.getHttpServer())
         .get(`/v1/templates/${TEMPLATE_ID}`)
+        .query({ businessId: BIZ_ID })
         .expect(404);
     });
   });
 
   describe("POST /v1/templates", () => {
     const validBody = {
+      businessId: BIZ_ID,
       name: "Payment Reminder",
       subject: "Your invoice is due",
       body: "Hi {{customer.contact_name}}, your invoice is due.",
@@ -176,7 +191,16 @@ describe("TemplatesController", () => {
     it("returns 400 when body field is empty string", async () => {
       await request(app.getHttpServer())
         .post("/v1/templates")
-        .send({ name: "Test", body: "" })
+        .send({ businessId: BIZ_ID, name: "Test", body: "" })
+        .expect(400);
+
+      expect(createUc.execute).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when businessId is missing from body", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/templates")
+        .send({ name: "Test", body: "Hello" })
         .expect(400);
 
       expect(createUc.execute).not.toHaveBeenCalled();
@@ -190,7 +214,7 @@ describe("TemplatesController", () => {
 
       const res = await request(app.getHttpServer())
         .patch(`/v1/templates/${TEMPLATE_ID}`)
-        .send({ name: "Updated Name" })
+        .send({ businessId: BIZ_ID, name: "Updated Name" })
         .expect(200);
 
       expect(res.body.data.name).toBe("Updated Name");
@@ -208,6 +232,7 @@ describe("TemplatesController", () => {
 
       await request(app.getHttpServer())
         .delete(`/v1/templates/${TEMPLATE_ID}`)
+        .query({ businessId: BIZ_ID })
         .expect(204);
 
       expect(deleteUc.execute).toHaveBeenCalledWith({ id: TEMPLATE_ID, businessId: BIZ_ID });
@@ -220,6 +245,7 @@ describe("TemplatesController", () => {
 
       const res = await request(app.getHttpServer())
         .post("/v1/templates/generate")
+        .query({ businessId: BIZ_ID })
         .send({ description: "A gentle payment reminder for overdue invoices" })
         .expect(200);
 
@@ -236,6 +262,7 @@ describe("TemplatesController", () => {
     it("returns 400 when description is missing", async () => {
       await request(app.getHttpServer())
         .post("/v1/templates/generate")
+        .query({ businessId: BIZ_ID })
         .send({})
         .expect(400);
 
@@ -249,7 +276,7 @@ describe("TemplatesController", () => {
 
       await request(app.getHttpServer())
         .post(`/v1/customers/${CUSTOMER_ID}/templates`)
-        .send({ templateId: TEMPLATE_ID })
+        .send({ businessId: BIZ_ID, templateId: TEMPLATE_ID })
         .expect(201);
 
       expect(attachUc.execute).toHaveBeenCalledWith({
@@ -262,7 +289,7 @@ describe("TemplatesController", () => {
     it("returns 400 when templateId is not a UUID", async () => {
       await request(app.getHttpServer())
         .post(`/v1/customers/${CUSTOMER_ID}/templates`)
-        .send({ templateId: "not-a-uuid" })
+        .send({ businessId: BIZ_ID, templateId: "not-a-uuid" })
         .expect(400);
 
       expect(attachUc.execute).not.toHaveBeenCalled();
@@ -275,6 +302,7 @@ describe("TemplatesController", () => {
 
       await request(app.getHttpServer())
         .delete(`/v1/customers/${CUSTOMER_ID}/templates/${TEMPLATE_ID}`)
+        .query({ businessId: BIZ_ID })
         .expect(204);
 
       expect(detachUc.execute).toHaveBeenCalledWith({

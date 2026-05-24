@@ -1,6 +1,10 @@
 import { z } from "zod";
 
+export const businessIdQuerySchema = z.string().uuid();
+export type BusinessIdQuery = z.infer<typeof businessIdQuerySchema>;
+
 export const createTemplateSchema = z.object({
+  businessId: z.string().uuid(),
   name: z.string().min(1).max(255),
   subject: z.string().nullable().optional(),
   body: z.string().min(1),
@@ -10,6 +14,7 @@ export const createTemplateSchema = z.object({
 export type CreateTemplateDto = z.infer<typeof createTemplateSchema>;
 
 export const updateTemplateSchema = z.object({
+  businessId: z.string().uuid(),
   name: z.string().min(1).max(255).optional(),
   subject: z.string().nullable().optional(),
   body: z.string().min(1).optional(),
@@ -25,6 +30,7 @@ export const generateTemplateSchema = z.object({
 export type GenerateTemplateDto = z.infer<typeof generateTemplateSchema>;
 
 export const attachTemplateSchema = z.object({
+  businessId: z.string().uuid(),
   templateId: z.string().uuid(),
 });
 
