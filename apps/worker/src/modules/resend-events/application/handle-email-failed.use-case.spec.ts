@@ -18,6 +18,8 @@ function makeRepo(
     updateStatus: jest.fn().mockResolvedValue(undefined),
     updateOpenedAt: jest.fn(),
     updateClickedAt: jest.fn(),
+    findLatestSentEmailForRun: jest.fn(),
+    markReplied: jest.fn(),
   };
 }
 

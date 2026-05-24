@@ -19,10 +19,12 @@ import {
 import {
   RESEND_EVENTS_CUSTOMER_REPOSITORY,
 } from "./domain/resend-events-customer.repository";
+import { AI_DRAFT_PRODUCER } from "./domain/ai-draft.producer";
 import { PrismaResendEventsMessageRepository } from "./infrastructure/resend-events-message.repository";
 import { PrismaResendEventsSequenceRunRepository } from "./infrastructure/resend-events-sequence-run.repository";
 import { PrismaResendEventsBusinessRepository } from "./infrastructure/resend-events-business.repository";
 import { PrismaResendEventsCustomerRepository } from "./infrastructure/resend-events-customer.repository";
+import { BullmqAiDraftProducer } from "./infrastructure/bullmq-ai-draft.producer";
 import { EMAIL_SERVICE } from "../message-send/domain/email.service";
 import { ResendEmailService } from "../message-send/infrastructure/resend-email.service";
 
@@ -51,6 +53,10 @@ import { ResendEmailService } from "../message-send/infrastructure/resend-email.
     {
       provide: RESEND_EVENTS_CUSTOMER_REPOSITORY,
       useClass: PrismaResendEventsCustomerRepository,
+    },
+    {
+      provide: AI_DRAFT_PRODUCER,
+      useClass: BullmqAiDraftProducer,
     },
     {
       provide: EMAIL_SERVICE,

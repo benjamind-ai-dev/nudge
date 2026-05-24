@@ -16,6 +16,8 @@ function makeRepo(openedAt: Date | null = null): jest.Mocked<ResendEventsMessage
     updateStatus: jest.fn(),
     updateOpenedAt: jest.fn().mockResolvedValue(undefined),
     updateClickedAt: jest.fn(),
+    findLatestSentEmailForRun: jest.fn(),
+    markReplied: jest.fn(),
   };
 }
 
@@ -35,6 +37,8 @@ describe("HandleEmailOpenedUseCase", () => {
       updateStatus: jest.fn(),
       updateOpenedAt: jest.fn(),
       updateClickedAt: jest.fn(),
+      findLatestSentEmailForRun: jest.fn(),
+      markReplied: jest.fn(),
     };
     const useCase = new HandleEmailOpenedUseCase(repo);
 

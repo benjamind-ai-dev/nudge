@@ -16,6 +16,8 @@ interface ResendEvent {
   data: {
     email_id?: string;
     from?: string;
+    text?: string;
+    html?: string;
   };
 }
 
@@ -110,7 +112,16 @@ export class ResendEventsProcessor extends WorkerHost {
           break;
         }
         const senderEmail = from.includes("<") ? from.split("<")[1].replace(">", "").trim() : from.trim();
-        await this.handleReceived.execute({ fromEmail: senderEmail });
+        const replyBody = (event.data.text ?? event.data.html ?? "").trim();
+        if (!replyBody) {
+          this.logger.warn({
+            msg: "email.received missing reply body (text and html both empty) — skipping",
+            event: "email_received_no_body",
+            fromEmail: senderEmail,
+          });
+          break;
+        }
+        await this.handleReceived.execute({ fromEmail: senderEmail, replyBody });
         break;
       }
 

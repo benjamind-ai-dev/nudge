@@ -21,6 +21,8 @@ function makeMessageRepo(message = mockMessage): jest.Mocked<ResendEventsMessage
     updateStatus: jest.fn().mockResolvedValue(undefined),
     updateOpenedAt: jest.fn(),
     updateClickedAt: jest.fn(),
+    findLatestSentEmailForRun: jest.fn(),
+    markReplied: jest.fn(),
   };
 }
 
@@ -65,6 +67,8 @@ describe("HandleEmailComplainedUseCase", () => {
       updateStatus: jest.fn(),
       updateOpenedAt: jest.fn(),
       updateClickedAt: jest.fn(),
+      findLatestSentEmailForRun: jest.fn(),
+      markReplied: jest.fn(),
     };
     const runRepo = makeRunRepo();
     const businessRepo = makeBusinessRepo();
