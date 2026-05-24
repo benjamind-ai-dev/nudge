@@ -22,8 +22,12 @@ export class AiDraftProcessor extends WorkerHost {
       businessId: job.data.businessId,
     });
 
+    const msg = result.generated
+      ? `AI draft generated for message ${job.data.messageId} in ${result.durationMs}ms`
+      : `AI draft skipped for message ${job.data.messageId} (${result.skipReason ?? "unknown"}) in ${result.durationMs}ms`;
+
     this.logger.log({
-      msg: `AI draft generated for message ${job.data.messageId} in ${result.durationMs}ms`,
+      msg,
       event: result.generated ? "ai_draft_generated" : "ai_draft_skipped",
       jobId: job.id,
       messageId: job.data.messageId,
