@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   UseGuards,
   UsePipes,
@@ -16,9 +17,17 @@ import {
   type TriggerWeeklySummaryDto,
 } from "./dto/trigger-weekly-summary.dto";
 import {
+  triggerAiDraftSchema,
+  type TriggerAiDraftDto,
+} from "./dto/trigger-ai-draft.dto";
+import {
   BackfillClerkOrgsUseCase,
   type BackfillClerkOrgsResult,
 } from "./application/backfill-clerk-orgs.use-case";
+import {
+  TriggerAiDraftUseCase,
+  type TriggerAiDraftResult,
+} from "./application/trigger-ai-draft.use-case";
 import { DevKeyGuard } from "./infrastructure/dev-key.guard";
 
 @Controller("v1/dev")
@@ -28,6 +37,7 @@ export class DevController {
     @InjectQueue(QUEUE_NAMES.WEEKLY_SUMMARY)
     private readonly weeklySummaryQueue: Queue,
     private readonly backfillClerkOrgs: BackfillClerkOrgsUseCase,
+    private readonly triggerAiDraft: TriggerAiDraftUseCase,
   ) {}
 
   @Post("weekly-summary/trigger")
@@ -59,6 +69,17 @@ export class DevController {
     data: BackfillClerkOrgsResult;
   }> {
     const result = await this.backfillClerkOrgs.execute();
+    return { data: result };
+  }
+
+  @Post("ai-draft/:messageId")
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UsePipes(new ZodValidationPipe(triggerAiDraftSchema))
+  async triggerAiDraftEndpoint(
+    @Param("messageId") messageId: string,
+    @Body() body: TriggerAiDraftDto,
+  ): Promise<{ data: TriggerAiDraftResult }> {
+    const result = await this.triggerAiDraft.execute(messageId, body.replyBody);
     return { data: result };
   }
 }

@@ -6,6 +6,7 @@ export const JOB_NAMES = {
   DAYS_RECALC_TICK: "days-recalc-tick",
   WEEKLY_SUMMARY_DISPATCH: "weekly-summary-dispatch",
   WEEKLY_SUMMARY_BUSINESS: "weekly-summary-business",
+  GENERATE_AI_DRAFT: "generate-ai-draft",
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];

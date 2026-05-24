@@ -17,6 +17,7 @@ import { DaysRecalcModule } from "./modules/days-recalc/days-recalc.module";
 import { StripeEventsModule } from "./modules/stripe-events/stripe-events.module";
 import { ResendEventsModule } from "./modules/resend-events/resend-events.module";
 import { WeeklySummaryModule } from "./modules/weekly-summary/weekly-summary.module";
+import { AiDraftModule } from "./modules/ai-draft/ai-draft.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { WeeklySummaryModule } from "./modules/weekly-summary/weekly-summary.mod
     SequenceTriggerModule,
     MessageSendModule,
     WeeklySummaryModule,
+    AiDraftModule,
     DeadLetterMonitorModule,
     DaysRecalcModule,
     StripeEventsModule,
