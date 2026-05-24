@@ -89,6 +89,13 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
             isOwnerAlert: true,
             includePaymentLink: true,
             delayDays: true,
+            template: {
+              select: {
+                subject: true,
+                body: true,
+                signature: true,
+              },
+            },
           },
         },
       },
@@ -146,6 +153,9 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
         stepSmsBodyTemplate: run.currentStep!.smsBodyTemplate,
         stepIsOwnerAlert: run.currentStep!.isOwnerAlert,
         stepIncludePaymentLink: run.currentStep!.includePaymentLink,
+        stepTemplateSubject: run.currentStep!.template?.subject ?? null,
+        stepTemplateBody: run.currentStep!.template?.body ?? null,
+        stepTemplateSignature: run.currentStep!.template?.signature ?? null,
       }));
   }
 
@@ -203,6 +213,13 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
             isOwnerAlert: true,
             includePaymentLink: true,
             delayDays: true,
+            template: {
+              select: {
+                subject: true,
+                body: true,
+                signature: true,
+              },
+            },
           },
         },
       },
@@ -253,6 +270,9 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       stepSmsBodyTemplate: run.currentStep.smsBodyTemplate,
       stepIsOwnerAlert: run.currentStep.isOwnerAlert,
       stepIncludePaymentLink: run.currentStep.includePaymentLink,
+      stepTemplateSubject: run.currentStep.template?.subject ?? null,
+      stepTemplateBody: run.currentStep.template?.body ?? null,
+      stepTemplateSignature: run.currentStep.template?.signature ?? null,
     };
   }
 
