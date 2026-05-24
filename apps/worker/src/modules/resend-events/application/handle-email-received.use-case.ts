@@ -13,6 +13,14 @@ import {
   RESEND_EVENTS_BUSINESS_REPOSITORY,
 } from "../domain/resend-events-business.repository";
 import {
+  type ResendEventsMessageRepository,
+  RESEND_EVENTS_MESSAGE_REPOSITORY,
+} from "../domain/resend-events-message.repository";
+import {
+  type AiDraftProducer,
+  AI_DRAFT_PRODUCER,
+} from "../domain/ai-draft.producer";
+import {
   type EmailService,
   EMAIL_SERVICE,
 } from "../../message-send/domain/email.service";
@@ -21,6 +29,7 @@ const ALERTS_FROM = "Nudge <alerts@paynudge.net>";
 
 export interface HandleEmailReceivedInput {
   fromEmail: string;
+  replyBody: string;
 }
 
 @Injectable()
@@ -34,6 +43,10 @@ export class HandleEmailReceivedUseCase {
     private readonly runRepo: ResendEventsSequenceRunRepository,
     @Inject(RESEND_EVENTS_BUSINESS_REPOSITORY)
     private readonly businessRepo: ResendEventsBusinessRepository,
+    @Inject(RESEND_EVENTS_MESSAGE_REPOSITORY)
+    private readonly messageRepo: ResendEventsMessageRepository,
+    @Inject(AI_DRAFT_PRODUCER)
+    private readonly aiDraftProducer: AiDraftProducer,
     @Inject(EMAIL_SERVICE)
     private readonly emailService: EmailService,
   ) {}
@@ -49,7 +62,44 @@ export class HandleEmailReceivedUseCase {
       return;
     }
 
+    const repliedAt = new Date();
+
     for (const run of runs) {
+      // Identify the outbound email the client is replying to and persist the
+      // reply body + repliedAt on it, then enqueue an AI draft for that message.
+      // Done before stopRun so the message-aware work happens against an
+      // unambiguous run state. If no sent email exists on the run, we still
+      // stop the run and alert the owner — just without a draft.
+      const sentMessage = await this.messageRepo.findLatestSentEmailForRun(run.runId);
+
+      if (sentMessage) {
+        await this.messageRepo.markReplied(
+          sentMessage.id,
+          sentMessage.businessId,
+          input.replyBody,
+          repliedAt,
+        );
+
+        try {
+          await this.aiDraftProducer.enqueue(sentMessage.id, sentMessage.businessId);
+        } catch (err) {
+          this.logger.error({
+            msg: "Failed to enqueue ai-draft job — continuing",
+            event: "ai_draft_enqueue_failed",
+            error: err instanceof Error ? err.message : String(err),
+            messageId: sentMessage.id,
+            businessId: sentMessage.businessId,
+          });
+        }
+      } else {
+        this.logger.warn({
+          msg: "Reply received for run with no sent email — skipping draft",
+          event: "reply_no_sent_email",
+          runId: run.runId,
+          businessId: run.businessId,
+        });
+      }
+
       await this.runRepo.stopRun(run.runId, run.businessId, STOPPED_REASONS.CLIENT_REPLIED);
 
       const business = await this.businessRepo.findWithOwner(run.businessId);

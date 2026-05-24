@@ -16,6 +16,11 @@ export interface MessageRecord {
   clickedAt: Date | null;
 }
 
+export interface SentEmailMessage {
+  id: string;
+  businessId: string;
+}
+
 export interface ResendEventsMessageRepository {
   findByExternalId(externalMessageId: string): Promise<MessageRecord | null>;
   updateStatus(id: string, businessId: string, status: MessageStatus): Promise<void>;
@@ -29,6 +34,22 @@ export interface ResendEventsMessageRepository {
    * A zero-update result is not an error — it means the field was already set.
    */
   updateClickedAt(id: string, businessId: string, clickedAt: Date): Promise<void>;
+  /**
+   * Returns the most recently sent email message on the given run, or null
+   * if the run has no sent email messages. Used to identify which outbound
+   * follow-up a client reply pertains to.
+   */
+  findLatestSentEmailForRun(runId: string): Promise<SentEmailMessage | null>;
+  /**
+   * Records the client's reply body and replied-at timestamp on the given
+   * message. Tenant-scoped via businessId.
+   */
+  markReplied(
+    id: string,
+    businessId: string,
+    replyBody: string,
+    repliedAt: Date,
+  ): Promise<void>;
 }
 
 export const RESEND_EVENTS_MESSAGE_REPOSITORY = Symbol(

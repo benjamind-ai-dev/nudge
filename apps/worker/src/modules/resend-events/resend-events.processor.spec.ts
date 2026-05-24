@@ -86,18 +86,18 @@ describe("ResendEventsProcessor", () => {
     const uc = makeUseCases();
     const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
 
-    await processor.process(makeJob([{ type: "email.received", created_at: "2024-01-01T00:00:00.000Z", data: { from: "customer@acme.com" } }]));
+    await processor.process(makeJob([{ type: "email.received", created_at: "2024-01-01T00:00:00.000Z", data: { from: "customer@acme.com", text: "we dispute this" } }]));
 
-    expect(uc.received.execute).toHaveBeenCalledWith({ fromEmail: "customer@acme.com" });
+    expect(uc.received.execute).toHaveBeenCalledWith({ fromEmail: "customer@acme.com", replyBody: "we dispute this" });
   });
 
   it("parses display-name format from email.received", async () => {
     const uc = makeUseCases();
     const processor = new ResendEventsProcessor(uc.delivered, uc.opened, uc.clicked, uc.bounced, uc.complained, uc.failed, uc.received);
 
-    await processor.process(makeJob([{ type: "email.received", created_at: "2024-01-01T00:00:00.000Z", data: { from: "John Smith <john@acme.com>" } }]));
+    await processor.process(makeJob([{ type: "email.received", created_at: "2024-01-01T00:00:00.000Z", data: { from: "John Smith <john@acme.com>", text: "thanks" } }]));
 
-    expect(uc.received.execute).toHaveBeenCalledWith({ fromEmail: "john@acme.com" });
+    expect(uc.received.execute).toHaveBeenCalledWith({ fromEmail: "john@acme.com", replyBody: "thanks" });
   });
 
   it("skips events with unknown type without throwing", async () => {
