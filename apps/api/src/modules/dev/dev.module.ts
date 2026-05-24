@@ -8,6 +8,8 @@ import { BackfillClerkOrgsUseCase } from "./application/backfill-clerk-orgs.use-
 import { TriggerAiDraftUseCase } from "./application/trigger-ai-draft.use-case";
 import { DEV_ACCOUNT_LISTING_REPOSITORY } from "./domain/dev-account-listing.repository";
 import { PrismaDevAccountListingRepository } from "./infrastructure/prisma-dev-account-listing.repository";
+import { DEV_MESSAGE_REPLY_REPOSITORY } from "./domain/dev-message-reply.repository";
+import { PrismaDevMessageReplyRepository } from "./infrastructure/prisma-dev-message-reply.repository";
 
 @Module({
   imports: [ClerkWebhookModule, UsersModule, MessagesModule],
@@ -19,6 +21,10 @@ import { PrismaDevAccountListingRepository } from "./infrastructure/prisma-dev-a
     {
       provide: DEV_ACCOUNT_LISTING_REPOSITORY,
       useClass: PrismaDevAccountListingRepository,
+    },
+    {
+      provide: DEV_MESSAGE_REPLY_REPOSITORY,
+      useClass: PrismaDevMessageReplyRepository,
     },
   ],
 })
