@@ -1,7 +1,9 @@
 import { Controller, Get, Inject } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import { PrismaClient } from "@nudge/database";
 import { PRISMA_CLIENT } from "../common/database/database.module";
 
+@SkipThrottle()
 @Controller("v1/health")
 export class HealthController {
   constructor(

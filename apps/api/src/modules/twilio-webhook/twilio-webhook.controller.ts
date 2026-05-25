@@ -8,11 +8,15 @@ import {
   HttpCode,
   UseGuards,
 } from "@nestjs/common";
+import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import { ConfigService } from "@nestjs/config";
 import { Env } from "../../common/config/env.schema";
 import { TwilioSignatureGuard } from "./infrastructure/twilio-signature.guard";
 import { IngestTwilioInboundUseCase } from "./application/ingest-twilio-inbound.use-case";
+import { RATE_LIMITS, RATE_LIMIT_NAMES } from "../../common/throttler/throttler-config";
 
+@SkipThrottle({ [RATE_LIMIT_NAMES.DEFAULT]: true, [RATE_LIMIT_NAMES.AUTH]: true })
+@Throttle({ [RATE_LIMIT_NAMES.WEBHOOKS]: RATE_LIMITS.WEBHOOKS })
 @Controller("v1/webhooks/twilio")
 export class TwilioWebhookController {
   private readonly logger = new Logger(TwilioWebhookController.name);
