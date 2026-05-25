@@ -1,15 +1,12 @@
 import { ThrottlerBehindProxyGuard } from "./throttler-behind-proxy.guard";
 
 describe("ThrottlerBehindProxyGuard.getTracker", () => {
-  // ThrottlerGuard requires options/storage/reflector args via DI; we pass
-  // undefined because we only exercise getTracker which doesn't use them.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const makeGuard = (): ThrottlerBehindProxyGuard =>
-    new ThrottlerBehindProxyGuard(
-      undefined as any,
-      undefined as any,
-      undefined as any,
-    );
+  const makeGuard = (): ThrottlerBehindProxyGuard => {
+    // ThrottlerGuard's constructor params (options, storage, reflector) aren't
+    // exercised by getTracker — we only test that one method in isolation.
+    const stub = undefined as unknown as never;
+    return new ThrottlerBehindProxyGuard(stub, stub, stub);
+  };
 
   it("returns the leftmost forwarded IP when req.ips is populated", async () => {
     const guard = makeGuard();
