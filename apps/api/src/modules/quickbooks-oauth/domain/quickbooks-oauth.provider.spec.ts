@@ -96,6 +96,24 @@ describe("QuickbooksOAuthProvider", () => {
         ),
       ).rejects.toThrow(/realmId/);
     });
+
+    it("throws if realmId is an empty string", async () => {
+      await expect(
+        provider.resolveTenantId(
+          { accessToken: "a", refreshToken: "r", expiresAt: new Date() },
+          { realmId: "" },
+        ),
+      ).rejects.toThrow(/realmId/);
+    });
+
+    it("throws if realmId is whitespace only", async () => {
+      await expect(
+        provider.resolveTenantId(
+          { accessToken: "a", refreshToken: "r", expiresAt: new Date() },
+          { realmId: "   " },
+        ),
+      ).rejects.toThrow(/realmId/);
+    });
   });
 
   describe("refreshTokens", () => {
