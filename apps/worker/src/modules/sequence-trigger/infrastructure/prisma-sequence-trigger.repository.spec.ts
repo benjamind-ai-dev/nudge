@@ -207,6 +207,7 @@ describe("PrismaSequenceTriggerRepository (integration)", () => {
 
       const result = await repo.createSequenceRun({
         invoiceId: invoice.id,
+        businessId,
         sequenceId,
         currentStepId: stepId,
         status: "active",
@@ -241,6 +242,7 @@ describe("PrismaSequenceTriggerRepository (integration)", () => {
 
       const result = await repo.createSequenceRun({
         invoiceId: invoice.id,
+        businessId,
         sequenceId,
         currentStepId: stepId,
         status: "active",
@@ -254,6 +256,69 @@ describe("PrismaSequenceTriggerRepository (integration)", () => {
         where: { invoiceId: invoice.id },
       });
       expect(count).toBe(0);
+    });
+
+    it("returns created=false when the invoiceId belongs to a different business (cross-tenant guard)", async () => {
+      // Create an invoice under the test business — open status, would normally
+      // be eligible for sequence-run creation.
+      const ownInvoice = await prisma.invoice.create({
+        data: {
+          businessId,
+          customerId,
+          externalId: `inv-${randomUUID()}`,
+          provider: "quickbooks",
+          amountCents: 10_000,
+          amountPaidCents: 0,
+          balanceDueCents: 10_000,
+          currency: "USD",
+          dueDate: new Date("2026-01-01"),
+          status: "open",
+        },
+        select: { id: true },
+      });
+
+      // Spin up a SECOND business — the call below will pass this business's id
+      // alongside the first business's invoice id. The tenant-scoped findFirst
+      // must return null, so createSequenceRun should report created=false.
+      const otherAccount = await prisma.account.create({
+        data: {
+          name: "Other",
+          email: `other-${randomUUID()}@example.com`,
+          plan: "starter",
+          status: "active",
+          maxBusinesses: 1,
+        },
+      });
+      const otherBusiness = await prisma.business.create({
+        data: {
+          accountId: otherAccount.id,
+          name: "Other Biz",
+          accountingProvider: "quickbooks",
+          senderName: "Sender",
+          senderEmail: "s@example.com",
+          timezone: "UTC",
+        },
+      });
+
+      const result = await repo.createSequenceRun({
+        invoiceId: ownInvoice.id,
+        businessId: otherBusiness.id,
+        sequenceId,
+        currentStepId: stepId,
+        status: "active",
+        nextSendAt,
+        startedAt,
+      });
+
+      expect(result).toEqual({ created: false, runId: null });
+
+      const count = await prisma.sequenceRun.count({
+        where: { invoiceId: ownInvoice.id },
+      });
+      expect(count).toBe(0);
+
+      await prisma.business.delete({ where: { id: otherBusiness.id } });
+      await prisma.account.delete({ where: { id: otherAccount.id } });
     });
   });
 });
