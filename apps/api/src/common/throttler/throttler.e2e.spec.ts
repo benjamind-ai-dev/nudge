@@ -34,6 +34,16 @@ class SkippedRouteController {
   }
 }
 
+@SkipThrottle({ default: true })
+@Throttle({ tight: { limit: 2, ttl: 60_000 } })
+@Controller("partial-skip-route")
+class PartialSkipController {
+  @Get()
+  ok() {
+    return { ok: true };
+  }
+}
+
 describe("Throttler integration", () => {
   let app: INestApplication;
 
@@ -47,7 +57,7 @@ describe("Throttler integration", () => {
           ],
         }),
       ],
-      controllers: [DefaultRouteController, TightRouteController, SkippedRouteController],
+      controllers: [DefaultRouteController, TightRouteController, SkippedRouteController, PartialSkipController],
       providers: [{ provide: APP_GUARD, useClass: ThrottlerBehindProxyGuard }],
     }).compile();
 
@@ -100,5 +110,16 @@ describe("Throttler integration", () => {
       const res = await server.get("/skip-route");
       expect(res.status).toEqual(200);
     }
+  });
+
+  it("documents v6 behavior: SkipThrottle({ default: true }) does NOT skip other named throttlers", async () => {
+    // Regression guard: @nestjs/throttler v6 only skips the buckets explicitly listed.
+    // A controller that wants to skip all throttlers must enumerate every name.
+    // The health controller relies on this — see health.controller.ts.
+    const server = request(app.getHttpServer());
+    await server.get("/partial-skip-route");
+    await server.get("/partial-skip-route");
+    const blocked = await server.get("/partial-skip-route");
+    expect(blocked.status).toEqual(429);
   });
 });
