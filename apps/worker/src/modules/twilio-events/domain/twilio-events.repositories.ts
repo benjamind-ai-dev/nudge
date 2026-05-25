@@ -9,7 +9,9 @@ export interface TwilioEventsCustomerRepository {
 }
 
 export interface TwilioEventsSequenceRunRepository {
-  stopRun(runId: string, businessId: string, reason: string): Promise<void>;
+  /** Returns true if the run was active and is now stopped; false if it was
+   *  already terminal (so the caller can skip side-effects like alerts). */
+  stopRun(runId: string, businessId: string, reason: string): Promise<boolean>;
 }
 
 /**

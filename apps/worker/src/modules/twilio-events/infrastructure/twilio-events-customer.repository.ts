@@ -43,8 +43,8 @@ export class PrismaTwilioEventsCustomerRepository
         AND m.recipient_phone IS NOT NULL
         AND sr.status = 'active'
         AND (
-          regexp_replace(m.recipient_phone, '\D', '', 'g') = ${phoneDigits}
-          OR right(regexp_replace(m.recipient_phone, '\D', '', 'g'), 10) = ${suffix}
+          regexp_replace(m.recipient_phone, '[^0-9]', '', 'g') = ${phoneDigits}
+          OR right(regexp_replace(m.recipient_phone, '[^0-9]', '', 'g'), 10) = ${suffix}
         )
     `);
 

@@ -23,7 +23,9 @@ export class TwilioSignatureGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<Request>();
-    const signature = req.headers[SIGNATURE_HEADER] as string | undefined;
+    const rawHeader = req.headers[SIGNATURE_HEADER];
+    // Express headers can be string[] for repeated headers; take the first value.
+    const signature = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
 
     if (!signature) {
       this.logger.warn({ msg: "Twilio webhook rejected: missing signature header" });
@@ -48,20 +50,36 @@ export class TwilioSignatureGuard implements CanActivate {
 
   private buildUrl(req: Request): string {
     const proto =
-      (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0]?.trim() ??
+      pickFirst(req.headers["x-forwarded-proto"])?.split(",")[0]?.trim() ??
       req.protocol;
-    const host = (req.headers["x-forwarded-host"] as string | undefined) ?? req.get("host");
+    let host = pickFirst(req.headers["x-forwarded-host"]) ?? req.get("host") ?? "";
+    host = host.split(",")[0].trim();
+    // Twilio signs without the default port; strip :443 / :80 to keep parity.
+    if (proto === "https" && host.endsWith(":443")) host = host.slice(0, -4);
+    if (proto === "http" && host.endsWith(":80")) host = host.slice(0, -3);
     return `${proto}://${host}${req.originalUrl}`;
   }
 
   private sign(url: string, params: Record<string, unknown>): string {
+    // Twilio's reference algorithm: for each key in lexicographic order, append
+    // the key followed by each value as a separate string. Repeated-key /
+    // array-valued params (e.g., MMS MediaUrlN if Express coerces) must be
+    // emitted per-value, not joined with commas (which is what String(arr) does).
     const sortedKeys = Object.keys(params).sort();
-    const data = sortedKeys.reduce(
-      (acc, key) => acc + key + String(params[key] ?? ""),
-      url,
-    );
+    const data = sortedKeys.reduce((acc, key) => {
+      const value = params[key];
+      if (Array.isArray(value)) {
+        return value.reduce<string>((inner, v) => inner + key + String(v ?? ""), acc);
+      }
+      return acc + key + String(value ?? "");
+    }, url);
     return createHmac("sha1", this.authToken).update(data, "utf-8").digest("base64");
   }
+}
+
+function pickFirst(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
 }
 
 function safeEqual(a: string, b: string): boolean {

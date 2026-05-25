@@ -56,18 +56,32 @@ export class HandleSmsReceivedUseCase {
       this.logger.warn({
         msg: "No active runs found for inbound SMS sender — skipping",
         event: "sms_received_no_match",
-        fromPhoneDigits: digits,
       });
       return;
     }
 
+    let stoppedCount = 0;
     for (const run of runs) {
-      await this.runRepo.stopRun(
+      const stopped = await this.runRepo.stopRun(
         run.runId,
         run.businessId,
         STOPPED_REASONS.CLIENT_REPLIED,
       );
 
+      // Skip the owner alert when the run was already terminal — a concurrent
+      // payment/manual-stop/email-reply flow got there first, so this SMS
+      // reply did not actually change state.
+      if (!stopped) {
+        this.logger.log({
+          msg: "Run already terminal — skipping alert",
+          event: "sms_reply_no_op",
+          runId: run.runId,
+          businessId: run.businessId,
+        });
+        continue;
+      }
+
+      stoppedCount += 1;
       const business = await this.businessRepo.findWithOwner(run.businessId);
 
       if (business) {
@@ -92,8 +106,8 @@ export class HandleSmsReceivedUseCase {
     this.logger.log({
       msg: "Sequence runs stopped due to customer SMS reply",
       event: "client_replied_sms",
-      fromPhoneDigits: digits,
-      stoppedCount: runs.length,
+      matchedCount: runs.length,
+      stoppedCount,
     });
   }
 }

@@ -9,10 +9,14 @@ export class PrismaTwilioEventsSequenceRunRepository
 {
   constructor(@Inject(PRISMA_CLIENT) private readonly prisma: PrismaClient) {}
 
-  async stopRun(runId: string, businessId: string, reason: string): Promise<void> {
-    await this.prisma.sequenceRun.updateMany({
-      where: { id: runId, invoice: { businessId } },
+  async stopRun(runId: string, businessId: string, reason: string): Promise<boolean> {
+    // Filter on status='active' so a run already stopped/paused by another flow
+    // (payment, manual stop, prior reply) is not silently overwritten with
+    // 'client_replied' — preserves the audit reason.
+    const result = await this.prisma.sequenceRun.updateMany({
+      where: { id: runId, status: "active", invoice: { businessId } },
       data: { status: "stopped", stoppedReason: reason },
     });
+    return result.count > 0;
   }
 }
