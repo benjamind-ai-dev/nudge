@@ -105,15 +105,24 @@ export class CompleteConnectionUseCase {
       tenantId = await provider.resolveTenantId(tokens, input.providerMetadata);
     } catch (cause) {
       const errorMessage = describeCause(cause);
+      const isMultipleTenants = errorMessage
+        .toLowerCase()
+        .includes("multiple organisations");
       this.logger.error({
-        msg: `Tenant fetch failed: ${errorMessage}`,
+        msg: isMultipleTenants
+          ? `Tenant resolution rejected: ${errorMessage}`
+          : `Tenant fetch failed: ${errorMessage}`,
         businessId: payload.businessId,
         provider: payload.provider,
         errorMessage,
         causeType: typeof cause,
         causeConstructor: cause?.constructor?.name,
       });
-      return { redirectUrl: this.errUrl("tenant_fetch_failed") };
+      return {
+        redirectUrl: this.errUrl(
+          isMultipleTenants ? "multiple_tenants_not_supported" : "tenant_fetch_failed",
+        ),
+      };
     }
 
     try {
