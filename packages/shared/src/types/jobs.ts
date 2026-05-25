@@ -34,6 +34,14 @@ export interface ResendEventsJobData {
   payload: unknown[];
 }
 
+export interface TwilioEventsJobData {
+  type: "sms.received";
+  messageSid: string;
+  from: string;
+  to: string;
+  body: string;
+}
+
 export interface StripeEventsJobData {
   eventId: string;
   eventType: string;

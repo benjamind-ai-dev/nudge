@@ -75,6 +75,16 @@ components:
         Shared secret passed as a query parameter on Twilio status-callback
         requests. Validated against TWILIO_WEBHOOK_SECRET env var.
 
+    twilioSignature:
+      type: apiKey
+      in: header
+      name: x-twilio-signature
+      description: >
+        Twilio's HMAC-SHA1 request signature. Computed as
+        `base64(hmac-sha1(TWILIO_AUTH_TOKEN, fullUrl + concat(sortedFormParams)))`
+        where sortedFormParams is each key+value pair concatenated in lexicographic
+        order. Used for inbound message webhooks.
+
   # ───────────────────────────────────────────────────────────────────────────
   # Schemas
   # ───────────────────────────────────────────────────────────────────────────
@@ -709,6 +719,30 @@ components:
         ErrorCode:
           type: string
           nullable: true
+      additionalProperties: true
+
+    TwilioInboundMessage:
+      type: object
+      description: >
+        Form-encoded Twilio inbound-message body. Keys match Twilio's documented
+        incoming-message parameters. Only the fields Nudge consumes are typed —
+        Twilio sends many more (FromCity, FromCountry, NumMedia, etc.).
+      required: [MessageSid, From]
+      properties:
+        MessageSid:
+          type: string
+          description: Twilio's unique ID for the inbound message (e.g. `SM...`).
+        From:
+          type: string
+          description: Sender's phone number in E.164 (e.g. `+15551234567`).
+        To:
+          type: string
+          description: The Nudge-owned Twilio number that received the SMS.
+        Body:
+          type: string
+          description: The text body of the inbound message.
+        AccountSid:
+          type: string
       additionalProperties: true
 
     # ── Shared ────────────────────────────────────────────────────────────────
@@ -3206,6 +3240,43 @@ paths:
           description: OK — status logged
         "401":
           description: Invalid or missing secret
+
+  /v1/webhooks/twilio/inbound:
+    post:
+      tags: [twilio-webhook]
+      operationId: twilioInboundMessage
+      summary: Receive inbound SMS replies from customers
+      description: >
+        Twilio posts an inbound SMS to this endpoint when a customer replies to a
+        message Nudge sent. The request is authenticated by Twilio's
+        `X-Twilio-Signature` header (HMAC-SHA1 of URL + sorted form params, signed
+        with `TWILIO_AUTH_TOKEN`). Body is application/x-www-form-urlencoded.
+
+        On a valid signature, the controller enqueues a `twilio-events` job
+        (`type: sms.received`) keyed by `MessageSid` for idempotency. The worker
+        normalizes the sender's number to digits, matches it against active
+        sequence runs' customer `contact_phone`, stops each match with
+        `stopped_reason=client_replied`, and emails the business owner.
+
+        Returns 200 even when no matching run is found — the webhook is fire-and-forget
+        from Twilio's perspective.
+      security:
+        - twilioSignature: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/TwilioInboundMessage"
+      responses:
+        "200":
+          description: OK — enqueued (or silently skipped if MessageSid/From missing)
+        "403":
+          description: Missing or invalid `X-Twilio-Signature`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared parameters & responses

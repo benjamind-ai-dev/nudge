@@ -14,6 +14,7 @@ export type {
   PaymentScoreJobData,
   AiDraftJobData,
   ResendEventsJobData,
+  TwilioEventsJobData,
   StripeEventsJobData,
   QuickbooksWebhooksJobData,
   XeroWebhooksJobData,

@@ -8,6 +8,7 @@ export const QUEUE_NAMES = {
   PAYMENT_SCORE: "payment-score",
   AI_DRAFT: "ai-draft",
   RESEND_EVENTS: "resend-events",
+  TWILIO_EVENTS: "twilio-events",
   STRIPE_EVENTS: "stripe-events",
   QUICKBOOKS_WEBHOOKS: "quickbooks-webhooks",
   XERO_WEBHOOKS: "xero-webhooks",

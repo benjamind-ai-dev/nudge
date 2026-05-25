@@ -27,6 +27,11 @@ async function bootstrap() {
       "application/cloudevents-batch+json",
     ],
   });
+  // Required so req.protocol / req.ip reflect x-forwarded-* headers from the
+  // load balancer (Railway). The TwilioSignatureGuard reconstructs the request
+  // URL to verify the HMAC — without this, req.protocol is always 'http' and
+  // signature verification rejects every legitimate webhook.
+  app.set("trust proxy", true);
   app.use(clerkMiddleware());
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new GlobalExceptionFilter());
