@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
+import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { ProvisionAccountUseCase } from "./application/provision-account.use-case";
 import { LinkInvitedUserUseCase } from "./application/link-invited-user.use-case";
@@ -19,9 +20,12 @@ import {
   nudgeInvitationMetadataSchema,
 } from "./domain/clerk-webhook-payload";
 import { PendingUserNotFoundError } from "../users/domain/user.errors";
+import { RATE_LIMITS, RATE_LIMIT_NAMES } from "../../common/throttler/throttler-config";
 
 type ClerkRequest = RawBodyRequest<Request> & Record<string, unknown>;
 
+@SkipThrottle({ [RATE_LIMIT_NAMES.DEFAULT]: true, [RATE_LIMIT_NAMES.AUTH]: true })
+@Throttle({ [RATE_LIMIT_NAMES.WEBHOOKS]: RATE_LIMITS.WEBHOOKS })
 @Controller("v1/webhooks/clerk")
 export class ClerkWebhookController {
   private readonly logger = new Logger(ClerkWebhookController.name);

@@ -29,6 +29,7 @@ import { DevModule } from "./modules/dev/dev.module";
 import { AuthContextModule } from "./common/auth-context/auth-context.module";
 import { UsersModule } from "./modules/users/users.module";
 import { TemplatesModule } from "./modules/templates/templates.module";
+import { ThrottlerConfigModule } from "./common/throttler/throttler.module";
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { TemplatesModule } from "./modules/templates/templates.module";
     DatabaseModule,
     QueueModule,
     RedisModule,
+    ThrottlerConfigModule,
     HealthModule,
     DebugModule,
     TwilioWebhookModule,

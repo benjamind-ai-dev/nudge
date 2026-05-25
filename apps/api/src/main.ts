@@ -13,6 +13,10 @@ async function bootstrap() {
     bufferLogs: true,
     rawBody: true,
   });
+  // Railway terminates TLS at its proxy and forwards via X-Forwarded-For.
+  // Trusting one hop lets Express populate req.ip/req.ips correctly so the
+  // ThrottlerBehindProxyGuard tracks the real client IP, not Railway's edge.
+  app.set("trust proxy", 1);
   // Intuit's CloudEvents 2.0 webhooks arrive with content-type
   // `application/cloudevents-batch+json` (batched mode) or
   // `application/cloudevents+json` (structured mode). Express's default JSON

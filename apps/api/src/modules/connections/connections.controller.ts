@@ -6,6 +6,7 @@ import {
   Post,
   UnauthorizedException,
 } from "@nestjs/common";
+import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { AccountId } from "../../common/decorators/account-id.decorator";
 import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
@@ -14,7 +15,10 @@ import { BusinessNotFoundError as CanonicalBusinessNotFoundError } from "../busi
 import { StartConnectionUseCase } from "../connections-common/application/start-connection.use-case";
 import { BusinessNotFoundError } from "../connections-common/domain/connection.errors";
 import { authorizeSchema, AuthorizeDto } from "./dto/authorize.dto";
+import { RATE_LIMITS, RATE_LIMIT_NAMES } from "../../common/throttler/throttler-config";
 
+@SkipThrottle({ [RATE_LIMIT_NAMES.DEFAULT]: true, [RATE_LIMIT_NAMES.WEBHOOKS]: true })
+@Throttle({ [RATE_LIMIT_NAMES.AUTH]: RATE_LIMITS.AUTH })
 @Controller("v1/connections")
 export class ConnectionsController {
   constructor(

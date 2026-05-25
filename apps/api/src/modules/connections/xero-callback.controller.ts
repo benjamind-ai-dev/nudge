@@ -1,7 +1,11 @@
 import { Controller, Get, Query, Res } from "@nestjs/common";
+import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import { Response } from "express";
 import { CompleteConnectionUseCase } from "../connections-common/application/complete-connection.use-case";
+import { RATE_LIMITS, RATE_LIMIT_NAMES } from "../../common/throttler/throttler-config";
 
+@SkipThrottle({ [RATE_LIMIT_NAMES.DEFAULT]: true, [RATE_LIMIT_NAMES.WEBHOOKS]: true })
+@Throttle({ [RATE_LIMIT_NAMES.AUTH]: RATE_LIMITS.AUTH })
 @Controller("v1/connections/xero")
 export class XeroCallbackController {
   constructor(private readonly useCase: CompleteConnectionUseCase) {}
