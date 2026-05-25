@@ -16,6 +16,7 @@ import { DeadLetterMonitorModule } from "./modules/dead-letter-monitor/dead-lett
 import { DaysRecalcModule } from "./modules/days-recalc/days-recalc.module";
 import { StripeEventsModule } from "./modules/stripe-events/stripe-events.module";
 import { ResendEventsModule } from "./modules/resend-events/resend-events.module";
+import { TwilioEventsModule } from "./modules/twilio-events/twilio-events.module";
 import { WeeklySummaryModule } from "./modules/weekly-summary/weekly-summary.module";
 import { AiDraftModule } from "./modules/ai-draft/ai-draft.module";
 
@@ -44,6 +45,7 @@ import { AiDraftModule } from "./modules/ai-draft/ai-draft.module";
     DaysRecalcModule,
     StripeEventsModule,
     ResendEventsModule,
+    TwilioEventsModule,
   ],
 })
 export class AppModule {}
