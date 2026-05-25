@@ -99,12 +99,28 @@ describe("CompleteConnectionUseCase", () => {
     expect(connectionRepo.upsertByBusinessAndProvider).not.toHaveBeenCalled();
   });
 
-  it("returns tenant_fetch_failed when provider.resolveTenantId throws", async () => {
+  it("returns tenant_fetch_failed when provider.resolveTenantId throws a generic error", async () => {
     stateService.consume.mockResolvedValue({ businessId: "b", provider: "xero" });
     xeroProvider.exchangeCode.mockResolvedValue(goodTokens);
-    xeroProvider.resolveTenantId.mockRejectedValue(new Error("no tenants"));
+    xeroProvider.resolveTenantId.mockRejectedValue(new Error("Xero /connections returned 502"));
     const { redirectUrl } = await useCase.execute(baseInput());
     expect(redirectUrl).toEqual(ERR("tenant_fetch_failed"));
+    expect(connectionRepo.upsertByBusinessAndProvider).not.toHaveBeenCalled();
+  });
+
+  it("returns multiple_tenants_not_supported when Xero rejects multi-tenant authorization", async () => {
+    stateService.consume.mockResolvedValue({ businessId: "b", provider: "xero" });
+    xeroProvider.exchangeCode.mockResolvedValue(goodTokens);
+    xeroProvider.resolveTenantId.mockRejectedValue(
+      new Error(
+        "Xero authorization includes multiple organisations; please reconnect with a single organisation selected.",
+      ),
+    );
+
+    const { redirectUrl } = await useCase.execute(baseInput());
+
+    expect(redirectUrl).toEqual(ERR("multiple_tenants_not_supported"));
+    expect(connectionRepo.upsertByBusinessAndProvider).not.toHaveBeenCalled();
   });
 
   it("persists Connection, enqueues invoice-sync, returns success (Xero)", async () => {

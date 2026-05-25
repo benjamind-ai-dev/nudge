@@ -7,6 +7,7 @@ import { AppLayout } from "./components/app-layout";
 import SignIn from "./pages/sign-in";
 import SignUp from "./pages/sign-up";
 import Onboarding from "./pages/onboarding";
+import OnboardingComplete from "./pages/onboarding-complete/onboarding-complete.page";
 import Dashboard from "./pages/dashboard";
 import Customers from "./pages/customers";
 import Invoices from "./pages/invoices";
@@ -35,6 +36,7 @@ export default function App() {
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/onboarding/complete" element={<OnboardingComplete />} />
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />

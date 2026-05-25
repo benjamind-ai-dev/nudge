@@ -19,7 +19,6 @@ jest.mock("xero-node", () => ({
   })),
 }));
 
-import { Logger } from "@nestjs/common";
 import { XeroClient } from "xero-node";
 import {
   RefreshFailedError,
@@ -100,17 +99,7 @@ describe("XeroOAuthProvider", () => {
   });
 
   describe("resolveTenantId", () => {
-    let warnSpy: jest.SpyInstance;
-
-    beforeEach(() => {
-      warnSpy = jest.spyOn(Logger.prototype, "warn").mockImplementation();
-    });
-
-    afterEach(() => {
-      warnSpy.mockRestore();
-    });
-
-    it("returns first tenant and does not warn when length === 1", async () => {
+    it("returns the only tenant when length === 1", async () => {
       mockUpdateTenants.mockImplementation(async function (this: {
         tenants: Array<{ tenantId: string; tenantName: string }>;
       }) {
@@ -128,10 +117,9 @@ describe("XeroOAuthProvider", () => {
       );
 
       expect(id).toEqual("t-1");
-      expect(warnSpy).not.toHaveBeenCalled();
     });
 
-    it("returns first tenant and warns when length > 1", async () => {
+    it("throws when tenants list contains more than one organisation", async () => {
       mockUpdateTenants.mockImplementation(async function (this: {
         tenants: Array<{ tenantId: string; tenantName: string }>;
       }) {
@@ -142,18 +130,12 @@ describe("XeroOAuthProvider", () => {
         return this.tenants;
       });
 
-      const id = await provider.resolveTenantId(
-        { accessToken: "at", refreshToken: "rt", expiresAt: new Date() },
-        {},
-      );
-
-      expect(id).toEqual("t-1");
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          msg: "Xero connection returned multiple tenants",
-          tenantCount: 2,
-        }),
-      );
+      await expect(
+        provider.resolveTenantId(
+          { accessToken: "at", refreshToken: "rt", expiresAt: new Date() },
+          {},
+        ),
+      ).rejects.toThrow(/multiple organisations/i);
     });
 
     it("throws when tenants list is empty", async () => {

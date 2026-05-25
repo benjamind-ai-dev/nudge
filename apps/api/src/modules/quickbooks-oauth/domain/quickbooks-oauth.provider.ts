@@ -66,10 +66,13 @@ export class QuickbooksOAuthProvider implements OAuthProvider {
     _tokens: ProviderTokens,
     metadata: ProviderMetadata,
   ): Promise<string> {
-    if (!metadata.realmId) {
-      throw new Error("QuickBooks callback missing realmId");
+    const realmId = metadata.realmId?.trim();
+    if (!realmId) {
+      throw new Error(
+        "QuickBooks callback is missing a realmId; the OAuth callback must include exactly one realm.",
+      );
     }
-    return metadata.realmId;
+    return realmId;
   }
 
   async revokeTokens(refreshToken: string): Promise<void> {
