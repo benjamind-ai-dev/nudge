@@ -4,6 +4,7 @@ export { paginationSchema, type Pagination } from "./schemas/index";
 export type { ApiResponse, HealthCheck } from "./types/index";
 export { formatCents, formatDate } from "./utils/format";
 export { nextBusinessHour } from "./utils/business-hours";
+export { withRetry, type WithRetryOptions } from "./utils/with-retry";
 export type {
   InvoiceSyncJobData,
   SequenceTriggerJobData,

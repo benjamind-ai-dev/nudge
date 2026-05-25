@@ -23,6 +23,7 @@ export interface SequenceTriggerRepository {
   findSequenceFirstStep(sequenceId: string): Promise<SequenceFirstStep | null>;
   createSequenceRun(data: {
     invoiceId: string;
+    businessId: string;
     sequenceId: string;
     currentStepId: string;
     status: "active";

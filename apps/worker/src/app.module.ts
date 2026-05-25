@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { LoggerModule } from "nestjs-pino";
-import { envSchema } from "./common/config/env.schema";
+import { envSchema, Env } from "./common/config/env.schema";
 import { DatabaseModule } from "./common/database/database.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { QueueModule } from "./common/queue/queue.module";
@@ -26,8 +26,31 @@ import { AiDraftModule } from "./modules/ai-draft/ai-draft.module";
       isGlobal: true,
       validate: (config) => envSchema.parse(config),
     }),
-    LoggerModule.forRoot({
-      pinoHttp: { autoLogging: false },
+    LoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>) => {
+        const nodeEnv = config.get("NODE_ENV", { infer: true });
+        const logLevel = config.get("LOG_LEVEL", { infer: true });
+        const level = logLevel ?? (nodeEnv === "production" ? "info" : "debug");
+        return {
+          pinoHttp: {
+            name: "worker",
+            level,
+            autoLogging: false,
+            transport: nodeEnv !== "production" ? { target: "pino-pretty" } : undefined,
+            redact: {
+              paths: [
+                "req.headers.authorization",
+                "req.headers.cookie",
+                "*.password",
+                "*.access_token",
+                "*.refresh_token",
+              ],
+              censor: "[REDACTED]",
+            },
+          },
+        };
+      },
     }),
     DatabaseModule,
     RedisModule,

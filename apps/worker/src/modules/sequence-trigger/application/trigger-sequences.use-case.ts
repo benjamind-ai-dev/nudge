@@ -120,6 +120,7 @@ export class TriggerSequencesUseCase {
 
     const { created } = await this.repo.createSequenceRun({
       invoiceId: invoice.invoiceId,
+      businessId: invoice.businessId,
       sequenceId,
       currentStepId: firstStep.firstStepId,
       status: "active",

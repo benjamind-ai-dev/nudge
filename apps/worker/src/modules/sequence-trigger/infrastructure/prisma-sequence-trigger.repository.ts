@@ -100,6 +100,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
 
   async createSequenceRun(data: {
     invoiceId: string;
+    businessId: string;
     sequenceId: string;
     currentStepId: string;
     status: "active";
@@ -108,8 +109,11 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
   }): Promise<{ created: boolean; runId: string | null }> {
     try {
       const run = await this.prisma.$transaction(async (tx) => {
-        const invoice = await tx.invoice.findUnique({
-          where: { id: data.invoiceId },
+        // Tenant-scoped lookup: findFirst with both id and businessId ensures we
+        // can't accidentally read an invoice from another business if a job
+        // payload is mis-routed.
+        const invoice = await tx.invoice.findFirst({
+          where: { id: data.invoiceId, businessId: data.businessId },
           select: { status: true },
         });
 
