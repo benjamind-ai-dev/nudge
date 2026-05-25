@@ -151,10 +151,11 @@ export class XeroOAuthProvider implements OAuthProvider {
       throw new Error("Xero returned no tenants");
     }
     if (list.length > 1) {
-      this.logger.warn({
-        msg: "Xero connection returned multiple tenants",
-        tenantCount: list.length,
-      });
+      // Fail closed: binding to tenants[0] risks cross-tenant data leakage.
+      // The use case detects this message to redirect with a specific reason.
+      throw new Error(
+        "Xero authorization includes multiple organisations; please reconnect with a single organisation selected.",
+      );
     }
     return list[0].tenantId;
   }
