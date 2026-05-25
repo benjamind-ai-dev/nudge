@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { XeroClient } from "xero-node";
 import { Env } from "../../../common/config/env.schema";
@@ -24,8 +24,6 @@ const SCOPES = [
 export class XeroOAuthProvider implements OAuthProvider {
   readonly name: ProviderName = "xero";
   readonly scopes = SCOPES.join(" ");
-
-  private readonly logger = new Logger(XeroOAuthProvider.name);
 
   constructor(private readonly config: ConfigService<Env, true>) {}
 
@@ -152,7 +150,8 @@ export class XeroOAuthProvider implements OAuthProvider {
     }
     if (list.length > 1) {
       // Fail closed: binding to tenants[0] risks cross-tenant data leakage.
-      // The use case detects this message to redirect with a specific reason.
+      // CompleteConnectionUseCase matches /multiple organisations/i on this
+      // message to redirect with reason=multiple_tenants_not_supported.
       throw new Error(
         "Xero authorization includes multiple organisations; please reconnect with a single organisation selected.",
       );
