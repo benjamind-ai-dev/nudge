@@ -14,6 +14,7 @@ const sortByEnum = z.enum([
   "amount_cents",
   "days_overdue",
   "status",
+  "paid_at",
 ]);
 
 const sortOrderEnum = z.enum(["asc", "desc"]);
