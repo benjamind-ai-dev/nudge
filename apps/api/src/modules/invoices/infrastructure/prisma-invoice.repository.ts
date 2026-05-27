@@ -252,7 +252,9 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
           ? { amountCents: order }
           : filter.sortBy === "days_overdue"
             ? { daysOverdue: order }
-            : { status: order };
+            : filter.sortBy === "paid_at"
+              ? { paidAt: order }
+              : { status: order };
 
     // Always tie-break on id desc so pagination is deterministic.
     return [primary, { id: "desc" }];

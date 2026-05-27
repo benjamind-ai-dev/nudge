@@ -193,6 +193,22 @@ describe("InvoicesController", () => {
         .query({ businessId: BIZ_ID, status: "disputed" })
         .expect(200);
     });
+
+    it("accepts sortBy=paid_at and forwards it to the use case", async () => {
+      listUseCase.execute.mockResolvedValueOnce({
+        data: [],
+        pagination: { page: 1, limit: 25, total: 0, totalPages: 1 },
+      });
+
+      const res = await request(app.getHttpServer())
+        .get("/v1/invoices")
+        .query({ businessId: BIZ_ID, status: "paid", sortBy: "paid_at", sortOrder: "desc", limit: 5 });
+
+      expect(res.status).toBe(200);
+      expect(listUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ sortBy: "paid_at", sortOrder: "desc" }),
+      );
+    });
   });
 
   describe("GET /v1/invoices/:id", () => {
