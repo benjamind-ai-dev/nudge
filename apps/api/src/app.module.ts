@@ -22,6 +22,7 @@ import { ResendWebhookModule } from "./modules/resend-webhook/resend-webhook.mod
 import { SequencesModule } from "./modules/sequences/sequences.module";
 import { RelationshipTiersModule } from "./modules/relationship-tiers/relationship-tiers.module";
 import { CustomersModule } from "./modules/customers/customers.module";
+import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { InvoicesModule } from "./modules/invoices/invoices.module";
 import { MessagesModule } from "./modules/messages/messages.module";
 import { SequenceRunsModule } from "./modules/sequence-runs/sequence-runs.module";
@@ -87,6 +88,7 @@ import { ThrottlerConfigModule } from "./common/throttler/throttler.module";
     SequencesModule,
     RelationshipTiersModule,
     CustomersModule,
+    DashboardModule,
     InvoicesModule,
     MessagesModule,
     SequenceRunsModule,
