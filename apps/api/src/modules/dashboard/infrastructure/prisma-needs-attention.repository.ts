@@ -86,13 +86,6 @@ export class PrismaNeedsAttentionRepository implements NeedsAttentionRepository 
         WHERE i.business_id = ${businessId}::uuid
           AND i.status = 'disputed'
       ),
-      already_surfaced AS (
-        SELECT invoice_id FROM replied
-        UNION
-        SELECT invoice_id FROM owner_alert
-        UNION
-        SELECT invoice_id FROM disputed
-      ),
       stale AS (
         SELECT
           i.id                       AS id,
@@ -111,12 +104,8 @@ export class PrismaNeedsAttentionRepository implements NeedsAttentionRepository 
         WHERE i.business_id = ${businessId}::uuid
           AND i.status IN ('open', 'overdue', 'partial')
           AND i.days_overdue >= 90
-          AND i.id NOT IN (SELECT invoice_id FROM already_surfaced)
-      )
-      SELECT id::text, type, invoice_id::text, invoice_number, customer_id::text,
-             customer_name, amount_cents, balance_due_cents, days_overdue,
-             occurred_at, summary
-      FROM (
+      ),
+      all_items AS (
         SELECT * FROM replied
         UNION ALL
         SELECT * FROM owner_alert
@@ -124,7 +113,28 @@ export class PrismaNeedsAttentionRepository implements NeedsAttentionRepository 
         SELECT * FROM disputed
         UNION ALL
         SELECT * FROM stale
-      ) u
+      ),
+      ranked AS (
+        SELECT
+          *,
+          ROW_NUMBER() OVER (
+            PARTITION BY invoice_id
+            ORDER BY
+              CASE type
+                WHEN 'client_replied'        THEN 1
+                WHEN 'owner_alert_triggered' THEN 2
+                WHEN 'disputed'              THEN 3
+                WHEN 'stale_no_response'     THEN 4
+              END,
+              occurred_at DESC
+          ) AS rn
+        FROM all_items
+      )
+      SELECT id::text, type, invoice_id::text, invoice_number, customer_id::text,
+             customer_name, amount_cents, balance_due_cents, days_overdue,
+             occurred_at, summary
+      FROM ranked
+      WHERE rn = 1
       ORDER BY occurred_at DESC
       LIMIT ${limit}
     `;
