@@ -3,6 +3,7 @@ import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { DashboardController } from "./dashboard.controller";
 import { GetDashboardSummaryUseCase } from "./application/get-dashboard-summary.use-case";
+import { GetNeedsAttentionUseCase } from "./application/get-needs-attention.use-case";
 import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
 import { CallerNotProvisionedError } from "../../common/auth-context/business-authorization.errors";
 import { BusinessNotFoundError } from "../business/domain/business.errors";
@@ -27,10 +28,12 @@ const SAMPLE_SUMMARY = {
 describe("DashboardController", () => {
   let app: INestApplication;
   let summaryUseCase: { execute: jest.Mock };
+  let needsAttentionUseCase: jest.Mocked<GetNeedsAttentionUseCase>;
   let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     summaryUseCase = { execute: jest.fn() };
+    needsAttentionUseCase = { execute: jest.fn() } as never;
     businessAuth = {
       assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined),
     };
@@ -39,6 +42,7 @@ describe("DashboardController", () => {
       controllers: [DashboardController],
       providers: [
         { provide: GetDashboardSummaryUseCase, useValue: summaryUseCase },
+        { provide: GetNeedsAttentionUseCase, useValue: needsAttentionUseCase },
         { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
@@ -120,6 +124,74 @@ describe("DashboardController", () => {
         .query({ businessId: BIZ_ID });
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe("GET /v1/dashboard/needs-attention", () => {
+    const SAMPLE_ITEMS = [
+      {
+        id: "msg-1",
+        type: "client_replied" as const,
+        invoiceId: "inv-1",
+        invoiceNumber: "INV-001",
+        customerId: "cust-1",
+        customerName: "Acme",
+        amountCents: 50_000,
+        balanceDueCents: 25_000,
+        daysOverdue: 14,
+        occurredAt: "2026-05-20T10:00:00.000Z",
+        summary: "Replied to a sequence message",
+      },
+    ];
+
+    it("returns 200 with the items envelope (default limit 10)", async () => {
+      needsAttentionUseCase.execute.mockResolvedValue(SAMPLE_ITEMS);
+
+      const res = await request(app.getHttpServer())
+        .get("/v1/dashboard/needs-attention")
+        .query({ businessId: BIZ_ID });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ data: SAMPLE_ITEMS });
+      expect(needsAttentionUseCase.execute).toHaveBeenCalledWith(BIZ_ID, 10);
+    });
+
+    it("forwards an explicit limit to the use case", async () => {
+      needsAttentionUseCase.execute.mockResolvedValue([]);
+
+      await request(app.getHttpServer())
+        .get("/v1/dashboard/needs-attention")
+        .query({ businessId: BIZ_ID, limit: 25 });
+
+      expect(needsAttentionUseCase.execute).toHaveBeenCalledWith(BIZ_ID, 25);
+    });
+
+    it("returns 400 when limit > 50", async () => {
+      const res = await request(app.getHttpServer())
+        .get("/v1/dashboard/needs-attention")
+        .query({ businessId: BIZ_ID, limit: 51 });
+      expect(res.status).toBe(400);
+      expect(needsAttentionUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it("returns 401 when caller does not own the business", async () => {
+      businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+        new CallerNotProvisionedError(USER_ID),
+      );
+      const res = await request(app.getHttpServer())
+        .get("/v1/dashboard/needs-attention")
+        .query({ businessId: BIZ_ID });
+      expect(res.status).toBe(401);
+      expect(needsAttentionUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it("returns { data: [] } when nothing needs attention", async () => {
+      needsAttentionUseCase.execute.mockResolvedValue([]);
+      const res = await request(app.getHttpServer())
+        .get("/v1/dashboard/needs-attention")
+        .query({ businessId: BIZ_ID });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ data: [] });
     });
   });
 });
