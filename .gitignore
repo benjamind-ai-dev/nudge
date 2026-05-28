@@ -10,3 +10,6 @@ coverage
 docs/superpowers/
 .playwright-mcp/
 graphify-out/
+.agents/
+.claude/skills/cave*
+skills-lock.json
