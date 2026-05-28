@@ -9,3 +9,4 @@ coverage
 *.tsbuildinfo
 docs/superpowers/
 .playwright-mcp/
+graphify-out/
