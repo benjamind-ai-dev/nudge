@@ -14,4 +14,3 @@ graphify-out/
 .claude/skills/cave*
 skills-lock.json
 logs/
-apps/web/public/fonts/*.woff2
