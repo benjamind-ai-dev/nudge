@@ -1,1 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+
+@theme {
+  /* Body + UI + data: clean, legible sans (tables, numbers, forms) */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Display: high-contrast Didone serif (Zara feel) — brand + headings only */
+  --font-display: "Bodoni Moda", ui-serif, Georgia, serif;
+}
