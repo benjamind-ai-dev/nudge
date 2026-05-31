@@ -81,3 +81,10 @@ Detailed coding rules are in `.claude/rules/` and are loaded automatically:
 - `forbidden.rule.md` — Banned patterns and libraries
 - `testing.rule.md` — Test frameworks, conventions, what to test where
 - `pr-size.rule.md` — Per-PR file cap (≤16 target, ≤20 hard) and Part-N split process
+
+## Skills
+
+Two expert skills carry the exact code patterns (the rules above say *what*; these show *how*). Invoke the matching skill when building in that area — and when dispatching a subagent for backend or frontend work, instruct it to invoke the relevant skill first:
+
+- **`nestjs-expert`** — building/modifying NestJS modules, controllers, use cases, processors, or domain entities in `apps/api` or `apps/worker`.
+- **`react-viewmodel-expert`** — building/modifying pages, view models, components, query hooks, or stores in `apps/web` (ViewModel pattern: page = glue, view model = logic, query hooks wrap the typed API client, components are dumb).
