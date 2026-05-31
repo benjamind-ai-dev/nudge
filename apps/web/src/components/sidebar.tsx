@@ -46,7 +46,7 @@ export function Sidebar() {
         <div>
           <div className="flex items-center gap-2 px-6 pb-10">
             <span className="h-2.5 w-2.5 rounded-full bg-[#7CBAFF]" />
-            <span className="font-display text-2xl font-bold tracking-[0.02em] text-white">
+            <span className="text-2xl font-bold tracking-[0.02em] text-white">
               Nudge
             </span>
           </div>

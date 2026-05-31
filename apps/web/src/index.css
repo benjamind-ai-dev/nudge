@@ -1,9 +1,43 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
+/* ── Self-hosted fonts ──────────────────────────────────────────────
+   Drop the licensed .woff2 files in apps/web/public/fonts/ with the
+   names below. Until present, the fallback stack renders.            */
+
+@font-face {
+  font-family: "ABC Diatype";
+  src: url("/fonts/ABCDiatype-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ABC Diatype";
+  src: url("/fonts/ABCDiatype-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ABC Diatype";
+  src: url("/fonts/ABCDiatype-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Items Light";
+  src: url("/fonts/Items-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  /* Body + UI + data: clean, legible sans (tables, numbers, forms) */
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  /* Display: geometric, premium sans — brand + headings */
-  --font-display: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Body + UI + buttons + labels: ABC Diatype.
+     --font is a runtime override hook (set on :root or a brand wrapper
+     to re-skin the typeface without rebuilding). */
+  --font-sans: var(--font, "ABC Diatype"), ui-sans-serif, system-ui, sans-serif;
+  /* Hero display headings ONLY (onboarding/welcome titles) — Items Light. */
+  --font-display: "Items Light", ui-serif, Georgia, serif;
 }
