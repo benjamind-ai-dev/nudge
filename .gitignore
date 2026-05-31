@@ -13,3 +13,4 @@ graphify-out/
 .agents/
 .claude/skills/cave*
 skills-lock.json
+logs/
