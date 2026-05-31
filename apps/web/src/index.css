@@ -1,1 +1,10 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
+
+@theme {
+  /* Body + UI + buttons + labels: Geist (free OFL neutral grotesque,
+     close to ABC Diatype). --font is a runtime override hook. */
+  --font-sans: var(--font, "Geist"), ui-sans-serif, system-ui, sans-serif;
+  /* Display / hero headings: Geist Light. */
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+}
