@@ -8,7 +8,7 @@ interface TopbarProps {
 export function Topbar({ title, hasNotifications = false }: TopbarProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-[#C5C6CF] bg-white px-6">
-      <h1 className="font-display text-xl font-semibold tracking-tight text-[#1A1C1C]">
+      <h1 className="font-display text-xl font-semibold tracking-[0.01em] text-[#1A1C1C]">
         {title}
       </h1>
       <button
