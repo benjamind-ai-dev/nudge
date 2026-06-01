@@ -4,8 +4,8 @@ import { useAuth } from "@clerk/clerk-react";
 import { setTokenGetter } from "./api/client";
 import { ProtectedRoute } from "./components/protected-route";
 import { AppLayout } from "./components/app-layout";
-import SignIn from "./pages/sign-in";
-import SignUp from "./pages/sign-up";
+import { SignInPage } from "./pages/sign-in";
+import { SignUpPage } from "./pages/sign-up";
 import Onboarding from "./pages/onboarding";
 import OnboardingComplete from "./pages/onboarding-complete/onboarding-complete.page";
 import Dashboard from "./pages/dashboard";
@@ -30,8 +30,8 @@ export default function App() {
       <ClerkTokenBridge />
       <Routes>
         {/* Public */}
-        <Route path="/sign-in" element={<SignIn />} />
-        <Route path="/sign-up" element={<SignUp />} />
+        <Route path="/sign-in/*" element={<SignInPage />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
