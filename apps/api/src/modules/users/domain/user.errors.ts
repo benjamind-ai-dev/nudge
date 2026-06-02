@@ -50,6 +50,15 @@ export class InviteSendFailedError extends Error {
   }
 }
 
+export class SeatLimitReachedError extends Error {
+  constructor(public readonly maxSeats: number) {
+    super(
+      `Your plan includes ${maxSeats} team member${maxSeats === 1 ? "" : "s"}. Upgrade to invite more.`,
+    );
+    this.name = "SeatLimitReachedError";
+  }
+}
+
 export class PendingUserNotFoundError extends Error {
   constructor(public readonly userId: string) {
     super(`Pending user ${userId} not found`);

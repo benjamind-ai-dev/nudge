@@ -1,9 +1,25 @@
+import { PLAN_LIMITS } from "@nudge/shared";
 import { InviteUserUseCase } from "./invite-user.use-case";
 import type { UserRepository } from "../domain/user.repository";
 import type { ClerkInvitationService } from "../domain/clerk-invitation.service";
-import { EmailAlreadyInUseError, InviteSendFailedError } from "../domain/user.errors";
+import {
+  EmailAlreadyInUseError,
+  InviteSendFailedError,
+  SeatLimitReachedError,
+} from "../domain/user.errors";
 import type { UserListItem } from "../domain/user.entity";
 import type { ResolveOrgIdForAccountUseCase } from "../../clerk-webhook/application/resolve-org-id-for-account.use-case";
+import type { EntitlementsService } from "../../../common/entitlements/entitlements.service";
+
+const makeEntitlements = (
+  over: Partial<EntitlementsService> = {},
+): EntitlementsService =>
+  ({
+    limitsForAccount: jest.fn().mockResolvedValue(PLAN_LIMITS.growth),
+    limitsForBusiness: jest.fn().mockResolvedValue(PLAN_LIMITS.growth),
+    seatUsage: jest.fn().mockResolvedValue(1),
+    ...over,
+  }) as unknown as EntitlementsService;
 
 const mkUser = (
   over: Partial<{
@@ -65,7 +81,7 @@ describe("InviteUserUseCase", () => {
     const repo = makeRepo();
     const clerk = makeClerk();
     const resolveOrg = makeResolveOrg();
-    const useCase = new InviteUserUseCase(repo, clerk, resolveOrg);
+    const useCase = new InviteUserUseCase(repo, clerk, resolveOrg, makeEntitlements());
 
     const result = await useCase.execute({
       callerAccountId: "acc_1",
@@ -96,7 +112,7 @@ describe("InviteUserUseCase", () => {
     const repo = makeRepo();
     const clerk = makeClerk();
     const resolveOrg = makeResolveOrg();
-    const useCase = new InviteUserUseCase(repo, clerk, resolveOrg);
+    const useCase = new InviteUserUseCase(repo, clerk, resolveOrg, makeEntitlements());
 
     await useCase.execute({
       callerAccountId: "acc_1",
@@ -130,7 +146,7 @@ describe("InviteUserUseCase", () => {
     });
     const clerk = makeClerk();
     const resolveOrg = makeResolveOrg();
-    const useCase = new InviteUserUseCase(repo, clerk, resolveOrg);
+    const useCase = new InviteUserUseCase(repo, clerk, resolveOrg, makeEntitlements());
 
     await useCase.execute({ callerAccountId: "acc_1", email: "x@example.com", role: "viewer" });
 
@@ -141,7 +157,7 @@ describe("InviteUserUseCase", () => {
 
   it("name defaults to empty string when not provided", async () => {
     const repo = makeRepo();
-    const useCase = new InviteUserUseCase(repo, makeClerk(), makeResolveOrg());
+    const useCase = new InviteUserUseCase(repo, makeClerk(), makeResolveOrg(), makeEntitlements());
     await useCase.execute({ callerAccountId: "acc_1", email: "x@example.com", role: "admin" });
     expect((repo.createPending as jest.Mock).mock.calls[0][0].name).toBe("");
   });
@@ -150,7 +166,7 @@ describe("InviteUserUseCase", () => {
     const existing = mkUser({ id: "existing", email: "x@example.com", clerkUserId: null });
     const repo = makeRepo({ findByEmailInAccount: jest.fn().mockResolvedValue(existing) });
     const clerk = makeClerk();
-    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg());
+    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg(), makeEntitlements());
 
     const result = await useCase.execute({
       callerAccountId: "acc_1",
@@ -167,7 +183,7 @@ describe("InviteUserUseCase", () => {
   it("throws EmailAlreadyInUseError when email belongs to an active user in this account", async () => {
     const active = mkUser({ id: "active", email: "x@example.com", clerkUserId: "user_clerk_x" });
     const repo = makeRepo({ findByEmailInAccount: jest.fn().mockResolvedValue(active) });
-    const useCase = new InviteUserUseCase(repo, makeClerk(), makeResolveOrg());
+    const useCase = new InviteUserUseCase(repo, makeClerk(), makeResolveOrg(), makeEntitlements());
 
     await expect(
       useCase.execute({ callerAccountId: "acc_1", email: "x@example.com", role: "viewer" }),
@@ -179,7 +195,7 @@ describe("InviteUserUseCase", () => {
       createPending: jest.fn().mockRejectedValue(new EmailAlreadyInUseError("x@example.com")),
     });
     const clerk = makeClerk();
-    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg());
+    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg(), makeEntitlements());
 
     await expect(
       useCase.execute({ callerAccountId: "acc_1", email: "x@example.com", role: "viewer" }),
@@ -192,7 +208,7 @@ describe("InviteUserUseCase", () => {
     const clerk = makeClerk({
       createInvitation: jest.fn().mockRejectedValue(new Error("clerk down")),
     });
-    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg());
+    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg(), makeEntitlements());
 
     await expect(
       useCase.execute({ callerAccountId: "acc_1", email: "x@example.com", role: "viewer" }),
@@ -207,7 +223,7 @@ describe("InviteUserUseCase", () => {
     const clerk = makeClerk({
       createInvitation: jest.fn().mockRejectedValue(new Error("clerk down")),
     });
-    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg());
+    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg(), makeEntitlements());
 
     await expect(
       useCase.execute({ callerAccountId: "acc_1", email: "x@example.com", role: "viewer" }),
@@ -217,7 +233,7 @@ describe("InviteUserUseCase", () => {
   it("persists clerkInvitationId on the pending row after Clerk createInvitation succeeds", async () => {
     const repo = makeRepo();
     const clerk = makeClerk();
-    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg());
+    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg(), makeEntitlements());
 
     await useCase.execute({
       callerAccountId: "acc_1",
@@ -237,7 +253,7 @@ describe("InviteUserUseCase", () => {
       setClerkInvitationId: jest.fn().mockRejectedValue(new Error("db hiccup")),
     });
     const clerk = makeClerk();
-    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg());
+    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg(), makeEntitlements());
 
     const result = await useCase.execute({
       callerAccountId: "acc_1",
@@ -247,5 +263,33 @@ describe("InviteUserUseCase", () => {
 
     expect(result.clerkInvitationId).toBe("inv_abc");
     expect(repo.deleteById).not.toHaveBeenCalled();
+  });
+
+  it("throws SeatLimitReachedError when account is at its plan seat cap", async () => {
+    const repo = makeRepo();
+    const entitlements = makeEntitlements({
+      limitsForAccount: jest.fn().mockResolvedValue(PLAN_LIMITS.starter), // maxSeats 1
+      seatUsage: jest.fn().mockResolvedValue(1),
+    });
+    const clerk = makeClerk();
+    const useCase = new InviteUserUseCase(repo, clerk, makeResolveOrg(), entitlements);
+
+    await expect(
+      useCase.execute({ callerAccountId: "acc_1", email: "new@example.com", role: "viewer" }),
+    ).rejects.toBeInstanceOf(SeatLimitReachedError);
+    expect(repo.createPending).not.toHaveBeenCalled();
+    expect(clerk.createInvitation).not.toHaveBeenCalled();
+  });
+
+  it("allows invite when under the seat cap", async () => {
+    const repo = makeRepo();
+    const entitlements = makeEntitlements({
+      limitsForAccount: jest.fn().mockResolvedValue(PLAN_LIMITS.growth), // maxSeats 5
+      seatUsage: jest.fn().mockResolvedValue(3),
+    });
+    const useCase = new InviteUserUseCase(repo, makeClerk(), makeResolveOrg(), entitlements);
+
+    await useCase.execute({ callerAccountId: "acc_1", email: "new@example.com", role: "viewer" });
+    expect(repo.createPending).toHaveBeenCalled();
   });
 });

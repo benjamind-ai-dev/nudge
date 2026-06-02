@@ -32,6 +32,7 @@ import {
   EmailAlreadyInUseError,
   InviteSendFailedError,
   PendingUserNotFoundError,
+  SeatLimitReachedError,
   UserNotFoundError,
 } from "./domain/user.errors";
 import {
@@ -96,6 +97,9 @@ export class UsersController {
       };
     } catch (err) {
       if (err instanceof EmailAlreadyInUseError) {
+        throw new ConflictException(err.message);
+      }
+      if (err instanceof SeatLimitReachedError) {
         throw new ConflictException(err.message);
       }
       if (err instanceof InviteSendFailedError) {

@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { SEQUENCE_REPOSITORY, type SequenceRepository, type CreateStepData } from "../domain/sequence.repository";
 import { RELATIONSHIP_TIER_REPOSITORY, type RelationshipTierRepository } from "../../relationship-tiers/domain/relationship-tier.repository";
+import { EntitlementsService } from "../../../common/entitlements/entitlements.service";
 import {
-  MAX_SEQUENCES_PER_BUSINESS,
   MAX_STEPS_PER_SEQUENCE,
   type SequenceSummary,
   type SequenceWithSteps,
@@ -25,12 +25,14 @@ export class CreateSequenceUseCase {
   constructor(
     @Inject(SEQUENCE_REPOSITORY) private readonly repo: SequenceRepository,
     @Inject(RELATIONSHIP_TIER_REPOSITORY) private readonly tierRepo: RelationshipTierRepository,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   async execute(businessId: string, input: CreateSequenceInput): Promise<SequenceSummary | SequenceWithSteps> {
+    const limits = await this.entitlements.limitsForBusiness(businessId);
     const count = await this.repo.countByBusiness(businessId);
-    if (count >= MAX_SEQUENCES_PER_BUSINESS) {
-      throw new SequenceLimitReachedError();
+    if (count >= limits.maxSequencesPerBusiness) {
+      throw new SequenceLimitReachedError(limits.maxSequencesPerBusiness);
     }
 
     const steps = input.steps ?? [];

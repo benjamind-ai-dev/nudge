@@ -8,10 +8,12 @@ import {
   type ClerkInvitationService,
 } from "../domain/clerk-invitation.service";
 import { ResolveOrgIdForAccountUseCase } from "../../clerk-webhook/application/resolve-org-id-for-account.use-case";
+import { EntitlementsService } from "../../../common/entitlements/entitlements.service";
 import type { UserListItem } from "../domain/user.entity";
 import {
   EmailAlreadyInUseError,
   InviteSendFailedError,
+  SeatLimitReachedError,
 } from "../domain/user.errors";
 
 export interface InviteUserInput {
@@ -35,6 +37,7 @@ export class InviteUserUseCase {
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLERK_INVITATION_SERVICE) private readonly clerk: ClerkInvitationService,
     private readonly resolveOrg: ResolveOrgIdForAccountUseCase,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   async execute(input: InviteUserInput): Promise<InviteUserResult> {
@@ -45,6 +48,13 @@ export class InviteUserUseCase {
         return { user: existing, clerkInvitationId: null };
       }
       throw new EmailAlreadyInUseError(input.email);
+    }
+
+    // Seat entitlement: block when the account is already at its plan's cap.
+    const limits = await this.entitlements.limitsForAccount(input.callerAccountId);
+    const seatsUsed = await this.entitlements.seatUsage(input.callerAccountId);
+    if (seatsUsed >= limits.maxSeats) {
+      throw new SeatLimitReachedError(limits.maxSeats);
     }
 
     const organizationId = await this.resolveOrg.execute(input.callerAccountId);

@@ -28,6 +28,7 @@ import { MessagesModule } from "./modules/messages/messages.module";
 import { SequenceRunsModule } from "./modules/sequence-runs/sequence-runs.module";
 import { DevModule } from "./modules/dev/dev.module";
 import { AuthContextModule } from "./common/auth-context/auth-context.module";
+import { EntitlementsModule } from "./common/entitlements/entitlements.module";
 import { UsersModule } from "./modules/users/users.module";
 import { TemplatesModule } from "./modules/templates/templates.module";
 import { ThrottlerConfigModule } from "./common/throttler/throttler.module";
@@ -94,6 +95,7 @@ import { ThrottlerConfigModule } from "./common/throttler/throttler.module";
     SequenceRunsModule,
     DevModule,
     AuthContextModule,
+    EntitlementsModule,
     UsersModule,
     TemplatesModule,
   ],
