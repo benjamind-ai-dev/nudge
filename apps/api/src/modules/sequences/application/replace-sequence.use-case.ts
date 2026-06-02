@@ -1,14 +1,16 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { SEQUENCE_REPOSITORY, type SequenceRepository, type CreateStepData } from "../domain/sequence.repository";
 import { RELATIONSHIP_TIER_REPOSITORY, type RelationshipTierRepository } from "../../relationship-tiers/domain/relationship-tier.repository";
-import { MAX_STEPS_PER_SEQUENCE, type SequenceWithSteps } from "../domain/sequence.entity";
+import { MAX_STEPS_PER_SEQUENCE, channelUsesSms, type SequenceWithSteps } from "../domain/sequence.entity";
 import {
   SequenceNotFoundError,
   SequenceHasActiveRunsError,
   StepLimitReachedError,
   InvalidStepOrderError,
+  SmsNotAvailableOnPlanError,
 } from "../domain/sequence.errors";
 import { RelationshipTierNotFoundError } from "../../relationship-tiers/domain/relationship-tier.errors";
+import { EntitlementsService } from "../../../common/entitlements/entitlements.service";
 
 export interface ReplaceSequenceInput {
   name: string;
@@ -21,6 +23,7 @@ export class ReplaceSequenceUseCase {
   constructor(
     @Inject(SEQUENCE_REPOSITORY) private readonly repo: SequenceRepository,
     @Inject(RELATIONSHIP_TIER_REPOSITORY) private readonly tierRepo: RelationshipTierRepository,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   async execute(id: string, businessId: string, input: ReplaceSequenceInput): Promise<SequenceWithSteps> {
@@ -29,6 +32,11 @@ export class ReplaceSequenceUseCase {
     }
 
     this.validateStepOrder(input.steps);
+
+    if (input.steps.some((s) => channelUsesSms(s.channel))) {
+      const limits = await this.entitlements.limitsForBusiness(businessId);
+      if (!limits.sms) throw new SmsNotAvailableOnPlanError();
+    }
 
     const existing = await this.repo.findById(id, businessId);
     if (!existing) {

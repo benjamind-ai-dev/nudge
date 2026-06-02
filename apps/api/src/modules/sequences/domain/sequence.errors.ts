@@ -52,3 +52,10 @@ export class InvalidStepOrderError extends Error {
     this.name = "InvalidStepOrderError";
   }
 }
+
+export class SmsNotAvailableOnPlanError extends Error {
+  constructor() {
+    super("SMS reminders aren't included in your plan. Upgrade to use SMS.");
+    this.name = "SmsNotAvailableOnPlanError";
+  }
+}
