@@ -1,3 +1,4 @@
+import { PLAN_LIMITS } from "@nudge/shared";
 import { ReplaceSequenceUseCase } from "./replace-sequence.use-case";
 import type { SequenceRepository } from "../domain/sequence.repository";
 import type { RelationshipTierRepository } from "../../relationship-tiers/domain/relationship-tier.repository";
@@ -6,8 +7,20 @@ import {
   SequenceHasActiveRunsError,
   StepLimitReachedError,
   InvalidStepOrderError,
+  SmsNotAvailableOnPlanError,
 } from "../domain/sequence.errors";
 import { RelationshipTierNotFoundError } from "../../relationship-tiers/domain/relationship-tier.errors";
+import type { EntitlementsService } from "../../../common/entitlements/entitlements.service";
+
+const makeEntitlements = (
+  over: Partial<EntitlementsService> = {},
+): EntitlementsService =>
+  ({
+    limitsForAccount: jest.fn().mockResolvedValue(PLAN_LIMITS.growth),
+    limitsForBusiness: jest.fn().mockResolvedValue(PLAN_LIMITS.growth),
+    seatUsage: jest.fn().mockResolvedValue(1),
+    ...over,
+  }) as unknown as EntitlementsService;
 
 const mkWithSteps = (over: Partial<SequenceWithSteps> = {}): SequenceWithSteps => ({
   id: "seq-1",
@@ -70,7 +83,7 @@ describe("ReplaceSequenceUseCase", () => {
     const result = mkWithSteps({ name: "Updated", steps: [{ id: "step-1", stepOrder: 1, delayDays: 1, channel: "email", subjectTemplate: null, bodyTemplate: "Body", smsBodyTemplate: null, isOwnerAlert: false, includePaymentLink: false, createdAt: new Date(), updatedAt: new Date() }] });
     const repo = createMockRepo({ replaceSteps: jest.fn().mockResolvedValue(result) });
     const tierRepo = createMockTierRepo();
-    const useCase = new ReplaceSequenceUseCase(repo, tierRepo);
+    const useCase = new ReplaceSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     const outcome = await useCase.execute("seq-1", "biz-1", {
       name: "Updated",
@@ -90,7 +103,7 @@ describe("ReplaceSequenceUseCase", () => {
   it("rejects with SequenceHasActiveRunsError when sequence has active runs", async () => {
     const repo = createMockRepo({ countActiveRuns: jest.fn().mockResolvedValue(3) });
     const tierRepo = createMockTierRepo();
-    const useCase = new ReplaceSequenceUseCase(repo, tierRepo);
+    const useCase = new ReplaceSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     await expect(
       useCase.execute("seq-1", "biz-1", {
@@ -103,7 +116,7 @@ describe("ReplaceSequenceUseCase", () => {
   it("rejects with StepLimitReachedError when more than 10 steps are provided", async () => {
     const repo = createMockRepo();
     const tierRepo = createMockTierRepo();
-    const useCase = new ReplaceSequenceUseCase(repo, tierRepo);
+    const useCase = new ReplaceSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     const steps = Array.from({ length: 11 }, (_, i) => mkStep(i + 1));
     await expect(
@@ -114,7 +127,7 @@ describe("ReplaceSequenceUseCase", () => {
   it("rejects with InvalidStepOrderError when step order is not sequential starting at 1", async () => {
     const repo = createMockRepo();
     const tierRepo = createMockTierRepo();
-    const useCase = new ReplaceSequenceUseCase(repo, tierRepo);
+    const useCase = new ReplaceSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     await expect(
       useCase.execute("seq-1", "biz-1", {
@@ -127,7 +140,7 @@ describe("ReplaceSequenceUseCase", () => {
   it("rejects with InvalidStepOrderError when step orders have gaps", async () => {
     const repo = createMockRepo();
     const tierRepo = createMockTierRepo();
-    const useCase = new ReplaceSequenceUseCase(repo, tierRepo);
+    const useCase = new ReplaceSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     await expect(
       useCase.execute("seq-1", "biz-1", {
@@ -142,7 +155,7 @@ describe("ReplaceSequenceUseCase", () => {
     const tierRepo = createMockTierRepo({
       findAllByBusiness: jest.fn().mockResolvedValue([{ id: "tier-2", businessId: "biz-1" }]),
     });
-    const useCase = new ReplaceSequenceUseCase(repo, tierRepo);
+    const useCase = new ReplaceSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     await expect(
       useCase.execute("seq-1", "biz-1", {
@@ -151,5 +164,25 @@ describe("ReplaceSequenceUseCase", () => {
         steps: [mkStep(1)],
       }),
     ).rejects.toThrow(RelationshipTierNotFoundError);
+  });
+
+  it("rejects SMS steps when the plan does not include SMS", async () => {
+    const repo = createMockRepo();
+    const tierRepo = createMockTierRepo();
+    const useCase = new ReplaceSequenceUseCase(
+      repo,
+      tierRepo,
+      makeEntitlements({
+        limitsForBusiness: jest.fn().mockResolvedValue(PLAN_LIMITS.starter), // sms: false
+      }),
+    );
+
+    await expect(
+      useCase.execute("seq-1", "biz-1", {
+        name: "Test",
+        steps: [{ ...mkStep(1), channel: "email_and_sms" as const }],
+      }),
+    ).rejects.toThrow(SmsNotAvailableOnPlanError);
+    expect(repo.replaceSteps).not.toHaveBeenCalled();
   });
 });

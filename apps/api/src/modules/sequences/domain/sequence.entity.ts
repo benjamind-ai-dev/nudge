@@ -3,6 +3,11 @@ export const MAX_STEPS_PER_SEQUENCE = 10;
 
 export type Channel = "email" | "sms" | "email_and_sms";
 
+/** Whether a channel sends SMS (gated by the plan's `sms` entitlement). */
+export function channelUsesSms(channel: Channel): boolean {
+  return channel === "sms" || channel === "email_and_sms";
+}
+
 export interface SequenceStep {
   id: string;
   stepOrder: number;

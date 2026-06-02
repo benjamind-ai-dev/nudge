@@ -4,6 +4,7 @@ import { RELATIONSHIP_TIER_REPOSITORY, type RelationshipTierRepository } from ".
 import { EntitlementsService } from "../../../common/entitlements/entitlements.service";
 import {
   MAX_STEPS_PER_SEQUENCE,
+  channelUsesSms,
   type SequenceSummary,
   type SequenceWithSteps,
 } from "../domain/sequence.entity";
@@ -11,6 +12,7 @@ import {
   SequenceLimitReachedError,
   StepLimitReachedError,
   InvalidStepOrderError,
+  SmsNotAvailableOnPlanError,
 } from "../domain/sequence.errors";
 import { RelationshipTierNotFoundError } from "../../relationship-tiers/domain/relationship-tier.errors";
 
@@ -39,6 +41,10 @@ export class CreateSequenceUseCase {
 
     if (steps.length > MAX_STEPS_PER_SEQUENCE) {
       throw new StepLimitReachedError();
+    }
+
+    if (!limits.sms && steps.some((s) => channelUsesSms(s.channel))) {
+      throw new SmsNotAvailableOnPlanError();
     }
 
     if (steps.length > 0) {

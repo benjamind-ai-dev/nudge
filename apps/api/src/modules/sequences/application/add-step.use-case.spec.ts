@@ -1,7 +1,19 @@
+import { PLAN_LIMITS } from "@nudge/shared";
 import { AddStepUseCase } from "./add-step.use-case";
 import type { SequenceRepository } from "../domain/sequence.repository";
 import type { SequenceWithSteps, SequenceStep } from "../domain/sequence.entity";
-import { StepLimitReachedError } from "../domain/sequence.errors";
+import { StepLimitReachedError, SmsNotAvailableOnPlanError } from "../domain/sequence.errors";
+import type { EntitlementsService } from "../../../common/entitlements/entitlements.service";
+
+const makeEntitlements = (
+  over: Partial<EntitlementsService> = {},
+): EntitlementsService =>
+  ({
+    limitsForAccount: jest.fn().mockResolvedValue(PLAN_LIMITS.growth),
+    limitsForBusiness: jest.fn().mockResolvedValue(PLAN_LIMITS.growth),
+    seatUsage: jest.fn().mockResolvedValue(1),
+    ...over,
+  }) as unknown as EntitlementsService;
 
 const mkStep = (over: Partial<SequenceStep> = {}): SequenceStep => ({
   id: "step-1",
@@ -56,7 +68,7 @@ describe("AddStepUseCase", () => {
     const repo = createMockRepo({
       findById: jest.fn().mockResolvedValue(mkWithSteps(existing)),
     });
-    const useCase = new AddStepUseCase(repo);
+    const useCase = new AddStepUseCase(repo, makeEntitlements());
 
     const result = await useCase.execute("seq-1", "biz-1", {
       stepOrder: 4,
@@ -74,7 +86,7 @@ describe("AddStepUseCase", () => {
     const repo = createMockRepo({
       findById: jest.fn().mockResolvedValue(mkWithSteps(existing)),
     });
-    const useCase = new AddStepUseCase(repo);
+    const useCase = new AddStepUseCase(repo, makeEntitlements());
 
     await expect(
       useCase.execute("seq-1", "biz-1", {
@@ -84,5 +96,38 @@ describe("AddStepUseCase", () => {
         bodyTemplate: "Body",
       }),
     ).rejects.toThrow(StepLimitReachedError);
+  });
+
+  it("rejects an SMS step when the plan does not include SMS", async () => {
+    const repo = createMockRepo();
+    const useCase = new AddStepUseCase(
+      repo,
+      makeEntitlements({
+        limitsForBusiness: jest.fn().mockResolvedValue(PLAN_LIMITS.starter), // sms: false
+      }),
+    );
+
+    await expect(
+      useCase.execute("seq-1", "biz-1", {
+        stepOrder: 1,
+        delayDays: 1,
+        channel: "email_and_sms",
+        bodyTemplate: "Body",
+      }),
+    ).rejects.toThrow(SmsNotAvailableOnPlanError);
+    expect(repo.addStep).not.toHaveBeenCalled();
+  });
+
+  it("allows an SMS step when the plan includes SMS", async () => {
+    const repo = createMockRepo();
+    const useCase = new AddStepUseCase(repo, makeEntitlements()); // growth, sms: true
+
+    await useCase.execute("seq-1", "biz-1", {
+      stepOrder: 1,
+      delayDays: 1,
+      channel: "sms",
+      bodyTemplate: "Body",
+    });
+    expect(repo.addStep).toHaveBeenCalled();
   });
 });

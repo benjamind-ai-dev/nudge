@@ -13,6 +13,7 @@ import {
   Put,
   Query,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { AccountId } from "../../common/decorators/account-id.decorator";
@@ -38,6 +39,7 @@ import {
   SequenceLimitReachedError,
   StepLimitReachedError,
   InvalidStepOrderError,
+  SmsNotAvailableOnPlanError,
 } from "./domain/sequence.errors";
 import { RelationshipTierNotFoundError } from "../relationship-tiers/domain/relationship-tier.errors";
 import {
@@ -123,6 +125,7 @@ export class SequencesController {
       if (error instanceof SequenceLimitReachedError) throw new BadRequestException(error.message);
       if (error instanceof StepLimitReachedError) throw new BadRequestException(error.message);
       if (error instanceof InvalidStepOrderError) throw new BadRequestException(error.message);
+      if (error instanceof SmsNotAvailableOnPlanError) throw new UnprocessableEntityException(error.message);
       if (error instanceof RelationshipTierNotFoundError) throw new NotFoundException(error.message);
       throw error;
     }
@@ -186,6 +189,7 @@ export class SequencesController {
       if (error instanceof BusinessNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof SmsNotAvailableOnPlanError) throw new UnprocessableEntityException(error.message);
       throw error;
     }
   }
@@ -207,6 +211,7 @@ export class SequencesController {
       if (error instanceof CallerNotProvisionedError) throw new UnauthorizedException(error.message);
       if (error instanceof SequenceNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof SequenceStepNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof SmsNotAvailableOnPlanError) throw new UnprocessableEntityException(error.message);
       throw error;
     }
   }
@@ -271,6 +276,7 @@ export class SequencesController {
       if (error instanceof SequenceHasActiveRunsError) throw new BadRequestException(error.message);
       if (error instanceof StepLimitReachedError) throw new BadRequestException(error.message);
       if (error instanceof InvalidStepOrderError) throw new BadRequestException(error.message);
+      if (error instanceof SmsNotAvailableOnPlanError) throw new UnprocessableEntityException(error.message);
       if (error instanceof RelationshipTierNotFoundError) throw new NotFoundException(error.message);
       throw error;
     }
