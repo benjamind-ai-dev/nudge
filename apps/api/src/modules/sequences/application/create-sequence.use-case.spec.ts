@@ -1,3 +1,4 @@
+import { PLAN_LIMITS } from "@nudge/shared";
 import { CreateSequenceUseCase } from "./create-sequence.use-case";
 import type { SequenceRepository } from "../domain/sequence.repository";
 import type { RelationshipTierRepository } from "../../relationship-tiers/domain/relationship-tier.repository";
@@ -8,6 +9,17 @@ import {
   InvalidStepOrderError,
 } from "../domain/sequence.errors";
 import { RelationshipTierNotFoundError } from "../../relationship-tiers/domain/relationship-tier.errors";
+import type { EntitlementsService } from "../../../common/entitlements/entitlements.service";
+
+const makeEntitlements = (
+  over: Partial<EntitlementsService> = {},
+): EntitlementsService =>
+  ({
+    limitsForAccount: jest.fn().mockResolvedValue(PLAN_LIMITS.growth),
+    limitsForBusiness: jest.fn().mockResolvedValue(PLAN_LIMITS.growth),
+    seatUsage: jest.fn().mockResolvedValue(1),
+    ...over,
+  }) as unknown as EntitlementsService;
 
 const mkSummary = (over: Partial<SequenceSummary> = {}): SequenceSummary => ({
   id: "seq-1",
@@ -74,7 +86,7 @@ describe("CreateSequenceUseCase", () => {
   it("creates a sequence with no steps when only name is provided", async () => {
     const repo = createMockRepo();
     const tierRepo = createMockTierRepo();
-    const useCase = new CreateSequenceUseCase(repo, tierRepo);
+    const useCase = new CreateSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     const result = await useCase.execute("biz-1", { name: "Simple" });
 
@@ -86,7 +98,7 @@ describe("CreateSequenceUseCase", () => {
     const resultWithSteps = mkWithSteps({ steps: [{ id: "s1", stepOrder: 1, delayDays: 1, channel: "email", subjectTemplate: null, bodyTemplate: "Body", smsBodyTemplate: null, isOwnerAlert: false, includePaymentLink: false, createdAt: new Date(), updatedAt: new Date() }] });
     const repo = createMockRepo({ createWithSteps: jest.fn().mockResolvedValue(resultWithSteps) });
     const tierRepo = createMockTierRepo();
-    const useCase = new CreateSequenceUseCase(repo, tierRepo);
+    const useCase = new CreateSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     const result = await useCase.execute("biz-1", {
       name: "With Steps",
@@ -97,18 +109,30 @@ describe("CreateSequenceUseCase", () => {
     expect(result).toMatchObject({ steps: expect.arrayContaining([expect.objectContaining({ stepOrder: 1 })]) });
   });
 
-  it("rejects with SequenceLimitReachedError when business already has 5 sequences", async () => {
-    const repo = createMockRepo({ countByBusiness: jest.fn().mockResolvedValue(5) });
+  it("rejects with SequenceLimitReachedError when business is at its plan sequence cap", async () => {
+    const repo = createMockRepo({ countByBusiness: jest.fn().mockResolvedValue(10) });
     const tierRepo = createMockTierRepo();
-    const useCase = new CreateSequenceUseCase(repo, tierRepo);
+    // growth cap = 10
+    const useCase = new CreateSequenceUseCase(repo, tierRepo, makeEntitlements());
 
-    await expect(useCase.execute("biz-1", { name: "Sixth", steps: [mkStep(1)] })).rejects.toThrow(SequenceLimitReachedError);
+    await expect(useCase.execute("biz-1", { name: "Eleventh", steps: [mkStep(1)] })).rejects.toThrow(SequenceLimitReachedError);
+  });
+
+  it("enforces the starter cap (2 sequences per business)", async () => {
+    const repo = createMockRepo({ countByBusiness: jest.fn().mockResolvedValue(2) });
+    const tierRepo = createMockTierRepo();
+    const entitlements = makeEntitlements({
+      limitsForBusiness: jest.fn().mockResolvedValue(PLAN_LIMITS.starter),
+    });
+    const useCase = new CreateSequenceUseCase(repo, tierRepo, entitlements);
+
+    await expect(useCase.execute("biz-1", { name: "Third" })).rejects.toThrow(SequenceLimitReachedError);
   });
 
   it("rejects with StepLimitReachedError when more than 10 steps are provided", async () => {
     const repo = createMockRepo();
     const tierRepo = createMockTierRepo();
-    const useCase = new CreateSequenceUseCase(repo, tierRepo);
+    const useCase = new CreateSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     const steps = Array.from({ length: 11 }, (_, i) => mkStep(i + 1));
     await expect(useCase.execute("biz-1", { name: "Test", steps })).rejects.toThrow(StepLimitReachedError);
@@ -117,7 +141,7 @@ describe("CreateSequenceUseCase", () => {
   it("rejects with InvalidStepOrderError when step order is not sequential starting at 1", async () => {
     const repo = createMockRepo();
     const tierRepo = createMockTierRepo();
-    const useCase = new CreateSequenceUseCase(repo, tierRepo);
+    const useCase = new CreateSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     await expect(
       useCase.execute("biz-1", { name: "Test", steps: [mkStep(2)] }),
@@ -129,7 +153,7 @@ describe("CreateSequenceUseCase", () => {
     const tierRepo = createMockTierRepo({
       findAllByBusiness: jest.fn().mockResolvedValue([{ id: "tier-2", businessId: "biz-1" }]),
     });
-    const useCase = new CreateSequenceUseCase(repo, tierRepo);
+    const useCase = new CreateSequenceUseCase(repo, tierRepo, makeEntitlements());
 
     await expect(
       useCase.execute("biz-1", {

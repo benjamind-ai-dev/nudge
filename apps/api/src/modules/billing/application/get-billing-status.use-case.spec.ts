@@ -59,9 +59,15 @@ describe("GetBillingStatusUseCase", () => {
       createPortalSession: jest.fn(),
       getSubscriptionInfo: jest.fn(),
     };
+    const entitlements = {
+      seatUsage: jest.fn().mockResolvedValue(1),
+      limitsForAccount: jest.fn(),
+      limitsForBusiness: jest.fn(),
+    };
     useCase = new GetBillingStatusUseCase(
       billingRepo as never,
       stripeService as never,
+      entitlements as never,
     );
   });
 
@@ -73,7 +79,7 @@ describe("GetBillingStatusUseCase", () => {
 
       const result = await useCase.execute("acc-1");
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         plan: null,
         status: "trial",
         currentPeriodEnd: null,
@@ -94,7 +100,7 @@ describe("GetBillingStatusUseCase", () => {
 
       const result = await useCase.execute("acc-1");
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         plan: null,
         status: "trial",
         currentPeriodEnd: null,
@@ -117,7 +123,7 @@ describe("GetBillingStatusUseCase", () => {
 
       const result = await useCase.execute("acc-1");
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         plan: "starter",
         status: "active",
         currentPeriodEnd: PERIOD_END,

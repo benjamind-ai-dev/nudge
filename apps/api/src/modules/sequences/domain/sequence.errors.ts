@@ -29,8 +29,12 @@ export class SequenceHasActiveRunsError extends Error {
 }
 
 export class SequenceLimitReachedError extends Error {
-  constructor() {
-    super(`Maximum ${MAX_SEQUENCES_PER_BUSINESS} sequences per business reached`);
+  constructor(max: number = MAX_SEQUENCES_PER_BUSINESS) {
+    super(
+      Number.isFinite(max)
+        ? `Your plan includes ${max} sequence${max === 1 ? "" : "s"} per business. Upgrade for more.`
+        : `Maximum sequences per business reached`,
+    );
     this.name = "SequenceLimitReachedError";
   }
 }

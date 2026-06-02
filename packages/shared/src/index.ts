@@ -32,3 +32,10 @@ export {
   SEQUENCE_RUN_STATUSES,
   type SequenceRunStatus,
 } from "./constants/sequence-run";
+export {
+  PLAN_LIMITS,
+  DEFAULT_PLAN_LIMITS,
+  limitsForPlan,
+  type BillingPlan,
+  type PlanLimits,
+} from "./constants/plan-limits";

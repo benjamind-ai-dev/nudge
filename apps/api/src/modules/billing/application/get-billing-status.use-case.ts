@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { limitsForPlan, type PlanLimits } from "@nudge/shared";
 import {
   BillingRepository,
   BILLING_REPOSITORY,
@@ -6,6 +7,7 @@ import {
 import { StripeService, STRIPE_SERVICE } from "../domain/stripe.service";
 import { AccountNotFoundError } from "../domain/billing.errors";
 import { BillingPlan, BillingStatus } from "../domain/billing.entity";
+import { EntitlementsService } from "../../../common/entitlements/entitlements.service";
 
 export interface BillingStatusResult {
   plan: BillingPlan | null;
@@ -14,6 +16,8 @@ export interface BillingStatusResult {
   cancelAtPeriodEnd: boolean;
   trialEndsAt: Date | null;
   hasStripeCustomer: boolean;
+  limits: PlanLimits;
+  usage: { seats: { used: number; max: number } };
 }
 
 @Injectable()
@@ -23,6 +27,7 @@ export class GetBillingStatusUseCase {
     private readonly billingRepo: BillingRepository,
     @Inject(STRIPE_SERVICE)
     private readonly stripe: StripeService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   async execute(accountId: string): Promise<BillingStatusResult> {
@@ -30,6 +35,15 @@ export class GetBillingStatusUseCase {
     if (!account) {
       throw new AccountNotFoundError(accountId);
     }
+
+    const seatsUsed = await this.entitlements.seatUsage(accountId);
+    const entitlementsFor = (plan: BillingPlan | null) => {
+      const limits = limitsForPlan(plan);
+      return {
+        limits,
+        usage: { seats: { used: seatsUsed, max: limits.maxSeats } },
+      };
+    };
 
     if (!account.hasStripeCustomer()) {
       return {
@@ -39,6 +53,7 @@ export class GetBillingStatusUseCase {
         cancelAtPeriodEnd: false,
         trialEndsAt: account.trialEndsAt,
         hasStripeCustomer: false,
+        ...entitlementsFor(null),
       };
     }
 
@@ -55,6 +70,7 @@ export class GetBillingStatusUseCase {
         cancelAtPeriodEnd: false,
         trialEndsAt: account.trialEndsAt,
         hasStripeCustomer: true,
+        ...entitlementsFor(null),
       };
     }
 
@@ -67,6 +83,7 @@ export class GetBillingStatusUseCase {
       cancelAtPeriodEnd: stripeInfo.cancelAtPeriodEnd,
       trialEndsAt: stripeInfo.trialEnd,
       hasStripeCustomer: true,
+      ...entitlementsFor(stripeInfo.plan),
     };
   }
 }
