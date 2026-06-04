@@ -29,8 +29,10 @@ export class HandleCheckoutCompletedUseCase {
     const accountIdFromMeta = session.metadata?.["account_id"];
     const planFromMeta = session.metadata?.["plan"];
 
+    // metadata.account_id is the account UUID (set by the API's checkout
+    // session). Look it up by id; fall back to email for older sessions.
     let account = accountIdFromMeta
-      ? await this.accounts.findByClerkId(accountIdFromMeta)
+      ? await this.accounts.findById(accountIdFromMeta)
       : null;
 
     if (!account && session.customer_email) {
