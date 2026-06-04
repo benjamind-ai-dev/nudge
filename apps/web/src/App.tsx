@@ -7,6 +7,7 @@ import { AppLayout } from "./components/app-layout";
 import { SignInPage } from "./pages/sign-in";
 import { SignUpPage } from "./pages/sign-up";
 import Onboarding from "./pages/onboarding";
+import { OnboardingBillingPage } from "./pages/onboarding-billing/onboarding-billing.page";
 import OnboardingComplete from "./pages/onboarding-complete/onboarding-complete.page";
 import Dashboard from "./pages/dashboard";
 import Customers from "./pages/customers";
@@ -35,6 +36,7 @@ export default function App() {
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
+          <Route path="/onboarding/billing" element={<OnboardingBillingPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/onboarding/complete" element={<OnboardingComplete />} />
           <Route element={<AppLayout />}>

@@ -2,6 +2,13 @@ import { apiClient } from "./client";
 
 export type BillingPlan = "starter" | "growth" | "agency";
 
+export interface PlanLimits {
+  maxSeats: number;
+  maxSequencesPerBusiness: number;
+  sms: boolean;
+  maxBusinesses: number;
+}
+
 export interface BillingStatus {
   plan: BillingPlan | null;
   status: "trial" | "active" | "past_due" | "canceled" | "incomplete";
@@ -9,6 +16,8 @@ export interface BillingStatus {
   cancel_at_period_end: boolean;
   trial_ends_at: string | null;
   has_stripe_customer: boolean;
+  limits?: PlanLimits;
+  usage?: { seats: { used: number; max: number } };
 }
 
 export function getBillingStatus(): Promise<{ data: BillingStatus }> {
