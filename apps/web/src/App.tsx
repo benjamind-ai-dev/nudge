@@ -4,9 +4,11 @@ import { useAuth } from "@clerk/clerk-react";
 import { setTokenGetter } from "./api/client";
 import { ProtectedRoute } from "./components/protected-route";
 import { AppLayout } from "./components/app-layout";
+import { BillingGate } from "./components/billing-gate";
 import { SignInPage } from "./pages/sign-in";
 import { SignUpPage } from "./pages/sign-up";
 import Onboarding from "./pages/onboarding";
+import { OnboardingBillingPage } from "./pages/onboarding-billing/onboarding-billing.page";
 import OnboardingComplete from "./pages/onboarding-complete/onboarding-complete.page";
 import Dashboard from "./pages/dashboard";
 import Customers from "./pages/customers";
@@ -35,9 +37,11 @@ export default function App() {
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
+          <Route path="/onboarding/billing" element={<OnboardingBillingPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/onboarding/complete" element={<OnboardingComplete />} />
-          <Route element={<AppLayout />}>
+          <Route element={<BillingGate />}>
+            <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/invoices" element={<Invoices />} />
@@ -45,6 +49,7 @@ export default function App() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/billing" element={<BillingPage />} />
+            </Route>
           </Route>
         </Route>
 
