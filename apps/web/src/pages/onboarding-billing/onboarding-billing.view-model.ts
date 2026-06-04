@@ -4,6 +4,19 @@ import { useCreateCheckout } from "../../queries/use-billing";
 import type { BillingPlan } from "../../api/billing.api";
 import type { PlanCardData } from "../../components/plan-card";
 
+// Maps raw backend/network errors to user-facing copy. Keeps the raw message
+// out of the UI for known cases; falls back to a generic line otherwise.
+function checkoutErrorMessage(e: unknown): string {
+  const raw = e instanceof Error ? e.message : "";
+  if (/not provisioned/i.test(raw)) {
+    return "Your account isn't finished setting up yet. Refresh the page — if it keeps happening, contact support.";
+  }
+  if (/unauthor/i.test(raw) || /401/.test(raw)) {
+    return "Your session expired. Refresh the page and try again.";
+  }
+  return "We couldn't start checkout. Please try again in a moment.";
+}
+
 // Plan copy mirrors the enforced backend limits (PLAN_LIMITS):
 // seats, sequences-per-business, SMS gate. No unenforced claims.
 const PLANS: PlanCardData[] = [
@@ -68,9 +81,7 @@ export function useOnboardingBillingViewModel() {
         window.location.href = checkout_url;
       } catch (e) {
         setPendingPlan(null);
-        setError(
-          e instanceof Error ? e.message : "Couldn't start checkout. Try again.",
-        );
+        setError(checkoutErrorMessage(e));
       }
     },
     [checkout],

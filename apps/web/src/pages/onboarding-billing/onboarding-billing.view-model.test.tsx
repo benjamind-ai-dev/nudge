@@ -58,7 +58,7 @@ describe("useOnboardingBillingViewModel", () => {
     expect(window.location.href).toBe("https://checkout.stripe/x");
   });
 
-  it("surfaces an error when checkout fails", async () => {
+  it("shows a generic friendly error when checkout fails", async () => {
     mutateAsync.mockRejectedValue(new Error("Stripe down"));
     const { result } = renderHook(() => useOnboardingBillingViewModel(), {
       wrapper: wrapper(["/onboarding/billing"]),
@@ -68,7 +68,24 @@ describe("useOnboardingBillingViewModel", () => {
       await result.current.handleChoose("starter");
     });
 
-    await waitFor(() => expect(result.current.error).toBe("Stripe down"));
+    await waitFor(() =>
+      expect(result.current.error).toMatch(/couldn't start checkout/i),
+    );
     expect(result.current.pendingPlan).toBeNull();
+  });
+
+  it("maps the 'not provisioned' error to setup copy", async () => {
+    mutateAsync.mockRejectedValue(new Error("Caller not provisioned"));
+    const { result } = renderHook(() => useOnboardingBillingViewModel(), {
+      wrapper: wrapper(["/onboarding/billing"]),
+    });
+
+    await act(async () => {
+      await result.current.handleChoose("growth");
+    });
+
+    await waitFor(() =>
+      expect(result.current.error).toMatch(/isn't finished setting up/i),
+    );
   });
 });
