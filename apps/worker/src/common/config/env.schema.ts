@@ -37,6 +37,7 @@ export const envSchema = z.object({
   STRIPE_PRICE_GROWTH: z.string().min(1),
   STRIPE_PRICE_AGENCY: z.string().min(1),
   FRONTEND_URL: z.string().url(),
+  STALE_BUSINESS_THRESHOLD_HOURS: z.coerce.number().int().positive().default(24),
 });
 
 export type Env = z.infer<typeof envSchema>;
