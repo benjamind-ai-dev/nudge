@@ -33,7 +33,6 @@ export class CreateCheckoutUseCase {
       accountId,
       plan,
       stripeCustomerId: account.stripeCustomerId,
-      isNewCustomer: !account.hasStripeCustomer(),
     });
 
     if (result.stripeCustomerId) {

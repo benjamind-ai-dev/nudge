@@ -4,7 +4,6 @@ export interface CreateCheckoutSessionParams {
   accountId: string;
   plan: BillingPlan;
   stripeCustomerId: string | null;
-  isNewCustomer: boolean;
 }
 
 export interface CheckoutSessionResult {
