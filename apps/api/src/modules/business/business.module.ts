@@ -6,9 +6,11 @@ import { ConnectionsCommonModule } from "../connections-common/connections-commo
 import { PrismaConnectionRepository } from "../connections-common/infrastructure/prisma-connection.repository";
 import { TemplatesModule } from "../templates/templates.module";
 import { BUSINESS_REPOSITORY } from "./domain/business.repository";
+import { ACCOUNT_READER } from "./domain/account-reader";
 import { DISCONNECT_REPOSITORY } from "./domain/disconnect.repository";
 import { PrismaBusinessRepository } from "./infrastructure/prisma-business.repository";
 import { PrismaDisconnectRepository } from "./infrastructure/prisma-disconnect.repository";
+import { PrismaAccountReader } from "./infrastructure/prisma-account-reader";
 import { SyncRateLimitService } from "./infrastructure/sync-rate-limit.service";
 import { GetBusinessUseCase } from "./application/get-business.use-case";
 import { CreateBusinessUseCase } from "./application/create-business.use-case";
@@ -32,6 +34,7 @@ import { BusinessController } from "./business.controller";
     TriggerManualSyncUseCase,
     SyncRateLimitService,
     { provide: BUSINESS_REPOSITORY, useClass: PrismaBusinessRepository },
+    { provide: ACCOUNT_READER, useClass: PrismaAccountReader },
     { provide: DISCONNECT_REPOSITORY, useClass: PrismaDisconnectRepository },
     { provide: CONNECTION_REPOSITORY, useClass: PrismaConnectionRepository },
   ],

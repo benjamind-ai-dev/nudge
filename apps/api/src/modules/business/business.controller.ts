@@ -29,6 +29,8 @@ import {
   BusinessNotFoundError,
   NoActiveConnectionError,
   SyncRateLimitedError,
+  BusinessLimitReachedError,
+  AccountNotFoundError,
 } from "./domain/business.errors";
 import {
   createBusinessSchema,
@@ -83,11 +85,21 @@ export class BusinessController {
   ) {
     const ctx = await this.callerCtx.resolve(clerkUserId);
     if (!ctx) throw new UnauthorizedException("Caller not provisioned");
-    const result = await this.createBusiness.execute({
-      ...dto,
-      accountId: ctx.accountId,
-    });
-    return { data: result };
+    try {
+      const result = await this.createBusiness.execute({
+        ...dto,
+        accountId: ctx.accountId,
+      });
+      return { data: result };
+    } catch (error) {
+      if (error instanceof BusinessLimitReachedError) {
+        throw new ConflictException("Business limit reached for this account");
+      }
+      if (error instanceof AccountNotFoundError) {
+        throw new UnauthorizedException("Caller not provisioned");
+      }
+      throw error;
+    }
   }
 
   @Patch(":id")
