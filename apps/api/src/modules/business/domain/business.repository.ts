@@ -34,7 +34,7 @@ export interface CreateBusinessData {
   name: string;
   accountingProvider: string;
   senderName: string;
-  senderEmail: string;
+  senderEmail?: string;
   timezone: string;
   emailSignature?: string;
 }
@@ -52,4 +52,5 @@ export interface BusinessRepository {
   create(data: CreateBusinessData): Promise<BusinessWithConnections>;
   updateSettings(id: string, data: UpdateBusinessSettingsData): Promise<BusinessSettings>;
   softDelete(id: string): Promise<void>;
+  countByAccountId(accountId: string): Promise<number>;
 }
