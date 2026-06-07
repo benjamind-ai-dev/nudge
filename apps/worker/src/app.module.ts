@@ -19,6 +19,7 @@ import { ResendEventsModule } from "./modules/resend-events/resend-events.module
 import { TwilioEventsModule } from "./modules/twilio-events/twilio-events.module";
 import { WeeklySummaryModule } from "./modules/weekly-summary/weekly-summary.module";
 import { AiDraftModule } from "./modules/ai-draft/ai-draft.module";
+import { BusinessCleanupModule } from "./modules/business-cleanup/business-cleanup.module";
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { AiDraftModule } from "./modules/ai-draft/ai-draft.module";
     AiDraftModule,
     DeadLetterMonitorModule,
     DaysRecalcModule,
+    BusinessCleanupModule,
     StripeEventsModule,
     ResendEventsModule,
     TwilioEventsModule,

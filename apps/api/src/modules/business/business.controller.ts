@@ -25,10 +25,13 @@ import { CreateBusinessUseCase } from "./application/create-business.use-case";
 import { UpdateBusinessSettingsUseCase } from "./application/update-business-settings.use-case";
 import { DeleteBusinessUseCase } from "./application/delete-business.use-case";
 import { TriggerManualSyncUseCase } from "./application/trigger-manual-sync.use-case";
+import { ListBusinessesUseCase } from "./application/list-businesses.use-case";
 import {
   BusinessNotFoundError,
   NoActiveConnectionError,
   SyncRateLimitedError,
+  BusinessLimitReachedError,
+  AccountNotFoundError,
 } from "./domain/business.errors";
 import {
   createBusinessSchema,
@@ -48,12 +51,21 @@ export class BusinessController {
   constructor(
     private readonly getBusiness: GetBusinessUseCase,
     private readonly createBusiness: CreateBusinessUseCase,
+    private readonly listBusinesses: ListBusinessesUseCase,
     private readonly updateSettings: UpdateBusinessSettingsUseCase,
     private readonly deleteBusiness: DeleteBusinessUseCase,
     private readonly triggerSync: TriggerManualSyncUseCase,
     private readonly businessAuth: BusinessAuthorizationService,
     private readonly callerCtx: CallerContextService,
   ) {}
+
+  @Get()
+  async list(@AccountId() clerkUserId: string) {
+    const ctx = await this.callerCtx.resolve(clerkUserId);
+    if (!ctx) throw new UnauthorizedException("Caller not provisioned");
+    const result = await this.listBusinesses.execute(ctx.accountId);
+    return { data: result };
+  }
 
   @Get(":id")
   async getById(
@@ -83,11 +95,21 @@ export class BusinessController {
   ) {
     const ctx = await this.callerCtx.resolve(clerkUserId);
     if (!ctx) throw new UnauthorizedException("Caller not provisioned");
-    const result = await this.createBusiness.execute({
-      ...dto,
-      accountId: ctx.accountId,
-    });
-    return { data: result };
+    try {
+      const result = await this.createBusiness.execute({
+        ...dto,
+        accountId: ctx.accountId,
+      });
+      return { data: result };
+    } catch (error) {
+      if (error instanceof BusinessLimitReachedError) {
+        throw new ConflictException("Business limit reached for this account");
+      }
+      if (error instanceof AccountNotFoundError) {
+        throw new UnauthorizedException("Caller not provisioned");
+      }
+      throw error;
+    }
   }
 
   @Patch(":id")

@@ -1,9 +1,7 @@
 import { SignUp } from "@clerk/clerk-react";
-import { ChevronLeft } from "lucide-react";
 import { OnboardingBrandPanel } from "../components/onboarding-brand-panel";
+import { BackToMarketingLink } from "../components/back-to-marketing-link";
 import { clerkAppearance } from "../lib/clerk-appearance";
-
-const MARKETING_URL = import.meta.env.VITE_MARKETING_URL ?? "https://nudge.com";
 
 export function SignUpPage() {
   return (
@@ -11,13 +9,7 @@ export function SignUpPage() {
       <OnboardingBrandPanel />
 
       <main className="flex flex-1 flex-col px-6 py-8 md:px-12">
-        <a
-          href={MARKETING_URL}
-          className="inline-flex items-center gap-1.5 text-[13px] text-[#45464E] transition-colors hover:text-[#1A1C1C]"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-          Back to nudge.com
-        </a>
+        <BackToMarketingLink />
 
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-[400px]">

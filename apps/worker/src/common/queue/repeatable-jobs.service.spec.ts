@@ -12,6 +12,7 @@ describe("RepeatableJobsService", () => {
   const mockTokenRefreshQueue = { upsertJobScheduler: jest.fn().mockResolvedValue(undefined) };
   const mockDaysRecalcQueue = { upsertJobScheduler: jest.fn().mockResolvedValue(undefined) };
   const mockWeeklySummaryQueue = { upsertJobScheduler: jest.fn().mockResolvedValue(undefined) };
+  const mockBusinessCleanupQueue = { upsertJobScheduler: jest.fn().mockResolvedValue(undefined) };
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -23,6 +24,7 @@ describe("RepeatableJobsService", () => {
         { provide: getQueueToken(QUEUE_NAMES.TOKEN_REFRESH), useValue: mockTokenRefreshQueue },
         { provide: getQueueToken(QUEUE_NAMES.DAYS_RECALC), useValue: mockDaysRecalcQueue },
         { provide: getQueueToken(QUEUE_NAMES.WEEKLY_SUMMARY), useValue: mockWeeklySummaryQueue },
+        { provide: getQueueToken(QUEUE_NAMES.BUSINESS_CLEANUP), useValue: mockBusinessCleanupQueue },
       ],
     }).compile();
 
@@ -98,6 +100,23 @@ describe("RepeatableJobsService", () => {
         opts: {
           attempts: 1,
           removeOnComplete: { count: 100 },
+          removeOnFail: { count: 50 },
+        },
+      },
+    );
+  });
+
+  it("should register business-cleanup hourly", async () => {
+    await service.onModuleInit();
+
+    expect(mockBusinessCleanupQueue.upsertJobScheduler).toHaveBeenCalledWith(
+      "business-cleanup-scheduler",
+      { pattern: "0 * * * *" },
+      {
+        name: "business-cleanup-tick",
+        opts: {
+          attempts: 1,
+          removeOnComplete: { count: 50 },
           removeOnFail: { count: 50 },
         },
       },

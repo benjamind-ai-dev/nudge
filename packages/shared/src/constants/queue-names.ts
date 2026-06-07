@@ -15,6 +15,7 @@ export const QUEUE_NAMES = {
   SMS_SEND: "sms-send",
   DEAD_LETTER: "dead-letter",
   DEAD_LETTER_CHECK: "dead-letter-check",
+  BUSINESS_CLEANUP: "business-cleanup",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
