@@ -20,3 +20,15 @@ export class SyncRateLimitedError extends Error {
     );
   }
 }
+
+export class BusinessLimitReachedError extends Error {
+  constructor(accountId: string, max: number) {
+    super(`Account ${accountId} has reached its business limit of ${max}`);
+  }
+}
+
+export class AccountNotFoundError extends Error {
+  constructor(accountId: string) {
+    super(`Account ${accountId} not found`);
+  }
+}
