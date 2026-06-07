@@ -5,6 +5,7 @@ import { setTokenGetter } from "./api/client";
 import { ProtectedRoute } from "./components/protected-route";
 import { AppLayout } from "./components/app-layout";
 import { BillingGate } from "./components/billing-gate";
+import { ConnectionGate } from "./components/connection-gate";
 import { SignInPage } from "./pages/sign-in";
 import { SignUpPage } from "./pages/sign-up";
 import { OnboardingPage } from "./pages/onboarding/onboarding.page";
@@ -41,14 +42,16 @@ export default function App() {
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/onboarding/complete" element={<OnboardingComplete />} />
           <Route element={<BillingGate />}>
-            <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/sequences" element={<Sequences />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/settings/billing" element={<BillingPage />} />
+            <Route element={<ConnectionGate />}>
+              <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/invoices" element={<Invoices />} />
+              <Route path="/sequences" element={<Sequences />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/billing" element={<BillingPage />} />
+              </Route>
             </Route>
           </Route>
         </Route>
