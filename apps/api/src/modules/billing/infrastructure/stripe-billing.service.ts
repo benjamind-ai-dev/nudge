@@ -56,7 +56,6 @@ export class StripeBillingService implements StripeService {
       metadata: { account_id: params.accountId, plan: params.plan },
       subscription_data: {
         metadata: { account_id: params.accountId, plan: params.plan },
-        ...(!customerId && params.isNewCustomer && { trial_period_days: 14 }),
       },
       ...(customerId ? { customer: customerId } : {}),
     });

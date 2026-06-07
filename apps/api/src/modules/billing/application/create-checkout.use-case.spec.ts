@@ -65,7 +65,6 @@ describe("CreateCheckoutUseCase", () => {
         accountId: "acc-1",
         plan: "starter",
         stripeCustomerId: null,
-        isNewCustomer: true,
       }),
     );
   });
@@ -97,7 +96,6 @@ describe("CreateCheckoutUseCase", () => {
     expect(stripeService.createCheckoutSession).toHaveBeenCalledWith(
       expect.objectContaining({
         stripeCustomerId: "cus_existing",
-        isNewCustomer: false,
       }),
     );
     expect(billingRepo.updateStripeCustomerId).toHaveBeenCalledWith(
