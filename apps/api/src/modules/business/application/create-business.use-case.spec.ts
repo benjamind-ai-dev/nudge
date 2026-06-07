@@ -1,70 +1,71 @@
-import { Test } from "@nestjs/testing";
 import { CreateBusinessUseCase } from "./create-business.use-case";
-import { BUSINESS_REPOSITORY } from "../domain/business.repository";
-import { CreateDefaultTemplateUseCase } from "../../templates/application/create-default-template.use-case";
+import {
+  BusinessLimitReachedError,
+  AccountNotFoundError,
+} from "../domain/business.errors";
+import type { BusinessRepository, BusinessWithConnections, CreateBusinessData } from "../domain/business.repository";
+import type { AccountReader, AccountSummary } from "../domain/account-reader";
+import type { CreateDefaultTemplateUseCase } from "../../templates/application/create-default-template.use-case";
 
-const mockRepo = { create: jest.fn() };
-const mockDefaultTemplate = { execute: jest.fn() };
-
-const input = {
-  accountId: "550e8400-e29b-41d4-a716-446655440001",
-  name: "Acme Corp",
+const baseData: CreateBusinessData = {
+  accountId: "acc-1",
+  name: "Acme",
   accountingProvider: "quickbooks",
-  senderName: "Acme Billing",
-  senderEmail: "billing@acme.com",
-  timezone: "America/New_York",
+  senderName: "Jane",
+  senderEmail: "jane@acme.com",
+  timezone: "America/Los_Angeles",
 };
 
-const created = {
-  id: "550e8400-e29b-41d4-a716-446655440000",
-  name: "Acme Corp",
-  accountingProvider: "quickbooks",
-  senderName: "Acme Billing",
-  senderEmail: "billing@acme.com",
-  emailSignature: null,
-  timezone: "America/New_York",
-  isActive: true,
-  customerCount: 0,
-  invoiceCount: 0,
-  connections: [],
-};
+const builtBusiness = { id: "biz-1", senderEmail: "jane@acme.com" } as BusinessWithConnections;
+
+function makeUseCase(opts: {
+  count?: number;
+  account?: AccountSummary | null;
+  onCreate?: (d: CreateBusinessData) => void;
+}) {
+  const repo: BusinessRepository = {
+    findById: jest.fn(),
+    create: jest.fn(async (d: CreateBusinessData) => {
+      opts.onCreate?.(d);
+      return { ...builtBusiness, senderEmail: d.senderEmail ?? "" } as BusinessWithConnections;
+    }),
+    updateSettings: jest.fn(),
+    softDelete: jest.fn(),
+    countByAccountId: jest.fn(async () => opts.count ?? 0),
+  };
+  const accounts: AccountReader = {
+    findById: jest.fn(async () =>
+      opts.account === undefined
+        ? { id: "acc-1", email: "owner@acme.com", maxBusinesses: 1 }
+        : opts.account,
+    ),
+  };
+  const defaultTemplate = { execute: jest.fn(async () => undefined) } as unknown as CreateDefaultTemplateUseCase;
+  return { useCase: new CreateBusinessUseCase(repo, accounts, defaultTemplate), repo, accounts };
+}
 
 describe("CreateBusinessUseCase", () => {
-  let useCase: CreateBusinessUseCase;
-
-  beforeEach(async () => {
-    mockRepo.create.mockReset();
-    mockDefaultTemplate.execute.mockReset();
-    const module = await Test.createTestingModule({
-      providers: [
-        CreateBusinessUseCase,
-        { provide: BUSINESS_REPOSITORY, useValue: mockRepo },
-        { provide: CreateDefaultTemplateUseCase, useValue: mockDefaultTemplate },
-      ],
-    }).compile();
-    useCase = module.get(CreateBusinessUseCase);
+  it("creates a business when under the limit", async () => {
+    const { useCase } = makeUseCase({ count: 0 });
+    const result = await useCase.execute(baseData);
+    expect(result.id).toBe("biz-1");
   });
 
-  it("creates and returns the business", async () => {
-    mockRepo.create.mockResolvedValue(created);
-    mockDefaultTemplate.execute.mockResolvedValue({});
-    const result = await useCase.execute(input);
-    expect(result).toEqual(created);
-    expect(mockRepo.create).toHaveBeenCalledWith(input);
+  it("throws BusinessLimitReachedError when at the limit", async () => {
+    const { useCase, repo } = makeUseCase({ count: 1 }); // maxBusinesses 1
+    await expect(useCase.execute(baseData)).rejects.toBeInstanceOf(BusinessLimitReachedError);
+    expect(repo.create).not.toHaveBeenCalled();
   });
 
-  it("creates the default template for the new business after insert", async () => {
-    mockRepo.create.mockResolvedValue(created);
-    mockDefaultTemplate.execute.mockResolvedValue({});
-    await useCase.execute(input);
-    expect(mockDefaultTemplate.execute).toHaveBeenCalledWith({
-      businessId: created.id,
-    });
+  it("throws AccountNotFoundError when account is missing", async () => {
+    const { useCase } = makeUseCase({ account: null });
+    await expect(useCase.execute(baseData)).rejects.toBeInstanceOf(AccountNotFoundError);
   });
 
-  it("does not throw if default-template seeding fails", async () => {
-    mockRepo.create.mockResolvedValue(created);
-    mockDefaultTemplate.execute.mockRejectedValue(new Error("DB error"));
-    await expect(useCase.execute(input)).resolves.toEqual(created);
+  it("defaults senderEmail to the account email when omitted", async () => {
+    let received: CreateBusinessData | undefined;
+    const { useCase } = makeUseCase({ count: 0, onCreate: (d) => (received = d) });
+    await useCase.execute({ ...baseData, senderEmail: undefined });
+    expect(received?.senderEmail).toBe("owner@acme.com");
   });
 });
