@@ -16,7 +16,7 @@ export const createBusinessSchema = z.object({
   name: z.string().min(1),
   accountingProvider: z.enum(["quickbooks", "xero"]),
   senderName: z.string().min(1),
-  senderEmail: z.string().email(),
+  senderEmail: z.string().email().optional(),
   timezone: ianaTimezone,
   emailSignature: z.string().optional(),
 });

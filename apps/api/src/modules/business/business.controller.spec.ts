@@ -7,6 +7,7 @@ import { CreateBusinessUseCase } from "./application/create-business.use-case";
 import { UpdateBusinessSettingsUseCase } from "./application/update-business-settings.use-case";
 import { DeleteBusinessUseCase } from "./application/delete-business.use-case";
 import { TriggerManualSyncUseCase } from "./application/trigger-manual-sync.use-case";
+import { ListBusinessesUseCase } from "./application/list-businesses.use-case";
 import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
 import { CallerContextService } from "../../common/auth-context/caller-context.service";
 import {
@@ -45,6 +46,7 @@ describe("BusinessController", () => {
   let app: INestApplication;
   let getUseCase: { execute: jest.Mock };
   let createUseCase: { execute: jest.Mock };
+  let listUseCase: { execute: jest.Mock };
   let updateUseCase: { execute: jest.Mock };
   let deleteUseCase: { execute: jest.Mock };
   let triggerSyncUseCase: { execute: jest.Mock };
@@ -54,6 +56,7 @@ describe("BusinessController", () => {
   beforeEach(async () => {
     getUseCase = { execute: jest.fn() };
     createUseCase = { execute: jest.fn() };
+    listUseCase = { execute: jest.fn() };
     updateUseCase = { execute: jest.fn() };
     deleteUseCase = { execute: jest.fn() };
     triggerSyncUseCase = { execute: jest.fn() };
@@ -69,6 +72,7 @@ describe("BusinessController", () => {
       providers: [
         { provide: GetBusinessUseCase, useValue: getUseCase },
         { provide: CreateBusinessUseCase, useValue: createUseCase },
+        { provide: ListBusinessesUseCase, useValue: listUseCase },
         { provide: UpdateBusinessSettingsUseCase, useValue: updateUseCase },
         { provide: DeleteBusinessUseCase, useValue: deleteUseCase },
         { provide: TriggerManualSyncUseCase, useValue: triggerSyncUseCase },
@@ -226,6 +230,7 @@ describe("BusinessController", () => {
       providers: [
         { provide: GetBusinessUseCase, useValue: getUseCase },
         { provide: CreateBusinessUseCase, useValue: createUseCase },
+        { provide: ListBusinessesUseCase, useValue: listUseCase },
         { provide: UpdateBusinessSettingsUseCase, useValue: updateUseCase },
         { provide: DeleteBusinessUseCase, useValue: deleteUseCase },
         { provide: TriggerManualSyncUseCase, useValue: triggerSyncUseCase },
@@ -294,6 +299,7 @@ describe("BusinessController", () => {
       providers: [
         { provide: GetBusinessUseCase, useValue: getUseCase },
         { provide: CreateBusinessUseCase, useValue: createUseCase },
+        { provide: ListBusinessesUseCase, useValue: listUseCase },
         { provide: UpdateBusinessSettingsUseCase, useValue: updateUseCase },
         { provide: DeleteBusinessUseCase, useValue: deleteUseCase },
         { provide: TriggerManualSyncUseCase, useValue: triggerSyncUseCase },
@@ -308,6 +314,22 @@ describe("BusinessController", () => {
       .send({})
       .expect(401);
     await unauthApp.close();
+  });
+
+  it("GET /v1/businesses returns 200 with the account's businesses", async () => {
+    listUseCase.execute.mockResolvedValue([businessWithConnections]);
+    await request(app.getHttpServer())
+      .get("/v1/businesses")
+      .expect(200, { data: [businessWithConnections] });
+    expect(listUseCase.execute).toHaveBeenCalledWith(ACCOUNT_ID);
+  });
+
+  it("GET /v1/businesses returns 401 when caller is not provisioned", async () => {
+    callerCtx.resolve.mockResolvedValueOnce(null);
+    await request(app.getHttpServer())
+      .get("/v1/businesses")
+      .expect(401);
+    expect(listUseCase.execute).not.toHaveBeenCalled();
   });
 
   it("GET /v1/businesses/:id returns 404 when business belongs to a different account", async () => {
