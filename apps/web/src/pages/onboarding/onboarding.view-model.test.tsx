@@ -7,8 +7,13 @@ import { useOnboardingViewModel } from "./onboarding.view-model";
 // --- Mock query hooks ---
 const createBusinessMutateAsync = vi.fn();
 const authorizeConnectionMutateAsync = vi.fn();
+let mockBusinessesData: import("../../queries/use-businesses").BusinessWithConnections[] = [];
 
 vi.mock("../../queries/use-businesses", () => ({
+  useBusinesses: () => ({
+    data: mockBusinessesData,
+    isLoading: false,
+  }),
   useCreateBusiness: () => ({
     mutateAsync: createBusinessMutateAsync,
     isPending: false,
@@ -42,6 +47,7 @@ describe("useOnboardingViewModel", () => {
   beforeEach(() => {
     createBusinessMutateAsync.mockReset();
     authorizeConnectionMutateAsync.mockReset();
+    mockBusinessesData = [];
     Object.defineProperty(window, "location", {
       writable: true,
       value: { href: "" },
@@ -201,5 +207,131 @@ describe("useOnboardingViewModel", () => {
     });
 
     expect(result.current.isValid).toBe(true);
+  });
+
+  // --- Resume mode ---
+  describe("resume mode", () => {
+    const resumeBusiness: import("../../queries/use-businesses").BusinessWithConnections = {
+      id: "biz-resume",
+      name: "Resume Corp",
+      accountingProvider: "quickbooks",
+      senderName: "Resume Name",
+      senderEmail: "resume@example.com",
+      timezone: "America/Chicago",
+      emailSignature: "Thanks,\nResume Corp",
+      isActive: true,
+      connections: [], // no connected connection → resume business
+    };
+
+    it("isResume is false when no businesses exist", () => {
+      mockBusinessesData = [];
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      expect(result.current.isResume).toBe(false);
+    });
+
+    it("isResume is false when business has a connected connection", () => {
+      mockBusinessesData = [
+        {
+          ...resumeBusiness,
+          connections: [{ provider: "quickbooks", status: "connected" }],
+        },
+      ];
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      expect(result.current.isResume).toBe(false);
+    });
+
+    it("isResume is true and fields prefilled when a connection-less business exists", async () => {
+      mockBusinessesData = [resumeBusiness];
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isResume).toBe(true);
+        expect(result.current.businessName).toBe("Resume Corp");
+        expect(result.current.senderName).toBe("Resume Name");
+        expect(result.current.senderEmail).toBe("resume@example.com");
+        expect(result.current.timezone).toBe("America/Chicago");
+        expect(result.current.emailSignature).toBe("Thanks,\nResume Corp");
+        expect(result.current.provider).toBe("quickbooks");
+      });
+    });
+
+    it("submitLabel is 'Connect' in resume mode and 'Continue →' otherwise", async () => {
+      mockBusinessesData = [resumeBusiness];
+      const { result: resumeResult } = renderHook(() => useOnboardingViewModel(), { wrapper });
+
+      await waitFor(() => expect(resumeResult.current.isResume).toBe(true));
+      expect(resumeResult.current.submitLabel).toBe("Connect");
+
+      mockBusinessesData = [];
+      const { result: freshResult } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      expect(freshResult.current.submitLabel).toBe("Continue →");
+    });
+
+    it("resume submit skips createBusiness and calls authorizeConnection with existing businessId", async () => {
+      mockBusinessesData = [resumeBusiness];
+      authorizeConnectionMutateAsync.mockResolvedValue({ oauthUrl: "https://qbo.example.com/resume-oauth" });
+
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+
+      await waitFor(() => expect(result.current.isResume).toBe(true));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(createBusinessMutateAsync).not.toHaveBeenCalled();
+        expect(authorizeConnectionMutateAsync).toHaveBeenCalledWith({
+          businessId: "biz-resume",
+          provider: "quickbooks",
+        });
+        expect(window.location.href).toBe("https://qbo.example.com/resume-oauth");
+      });
+    });
+
+    it("non-resume submit still creates a business first", async () => {
+      mockBusinessesData = [];
+      createBusinessMutateAsync.mockResolvedValue({ id: "biz-new" });
+      authorizeConnectionMutateAsync.mockResolvedValue({ oauthUrl: "https://qbo.example.com/new-oauth" });
+
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      expect(result.current.isResume).toBe(false);
+
+      act(() => {
+        result.current.setBusinessName("New Biz");
+        result.current.setSenderName("Bob");
+        result.current.setSenderEmail("bob@newbiz.com");
+        result.current.setProvider("xero");
+      });
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(createBusinessMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({ name: "New Biz" }),
+        );
+        expect(authorizeConnectionMutateAsync).toHaveBeenCalledWith({
+          businessId: "biz-new",
+          provider: "xero",
+        });
+      });
+    });
+
+    it("prefill does not clobber user edits if they already changed a field", async () => {
+      mockBusinessesData = [resumeBusiness];
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+
+      await waitFor(() => expect(result.current.isResume).toBe(true));
+
+      // user edits business name after prefill
+      act(() => {
+        result.current.setBusinessName("My Custom Name");
+      });
+
+      // re-render should not overwrite user's edit (prefilledIdRef guards it)
+      expect(result.current.businessName).toBe("My Custom Name");
+    });
   });
 });

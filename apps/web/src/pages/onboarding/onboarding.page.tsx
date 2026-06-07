@@ -1,4 +1,4 @@
-import { AlertCircle, BookOpen, Building2, Loader2 } from "lucide-react";
+import { AlertCircle, BookOpen, Building2, Info, Loader2 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { OnboardingBrandPanel } from "../../components/onboarding-brand-panel";
 import { ProviderCard } from "../../components/provider-card";
@@ -65,6 +65,14 @@ export function OnboardingPage() {
 
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 md:px-12">
         <div className="box-border w-full max-w-[520px]">
+          {/* Resume banner */}
+          {vm.isResume && (
+            <div className="mb-6 flex items-start gap-2 rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-[13px] text-[#2E75B6]">
+              <Info className="h-4 w-4 mt-0.5 shrink-0" />
+              Your business is saved. Finish connecting your books to continue.
+            </div>
+          )}
+
           {/* Headline */}
           <h1 className="text-[28px] font-semibold text-[#1B2A4A]">
             Tell us about your business.
@@ -236,7 +244,7 @@ export function OnboardingPage() {
                 Connecting…
               </span>
             ) : (
-              "Continue →"
+              vm.submitLabel
             )}
           </button>
 
