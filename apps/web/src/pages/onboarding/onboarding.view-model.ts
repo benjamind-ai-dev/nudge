@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "@clerk/clerk-react";
-import { useCreateBusiness } from "../../queries/use-businesses";
+import { useBusinesses, useCreateBusiness } from "../../queries/use-businesses";
 import { useAuthorizeConnection } from "../../queries/use-connections";
 
 // Curated timezone list covering common US zones + London/Sydney/Auckland.
@@ -75,6 +75,7 @@ export function useOnboardingViewModel() {
 
   const clerkEmail = user?.primaryEmailAddress?.emailAddress ?? "";
 
+  const businessesQuery = useBusinesses();
   const createBusiness = useCreateBusiness();
   const authorizeConnection = useAuthorizeConnection();
 
@@ -91,6 +92,39 @@ export function useOnboardingViewModel() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Derive the first business that has no "connected" connection (resume candidate)
+  const resumeBusiness = useMemo(() => {
+    const businesses = businessesQuery.data ?? [];
+    return (
+      businesses.find(
+        (b) => !b.connections.some((c) => c.status === "connected"),
+      ) ?? null
+    );
+  }, [businessesQuery.data]);
+
+  const isResume = Boolean(resumeBusiness);
+
+  // Track which businessId we've already prefilled for — prevents clobbering user edits
+  const prefilledIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!resumeBusiness) return;
+    if (prefilledIdRef.current === resumeBusiness.id) return;
+    prefilledIdRef.current = resumeBusiness.id;
+
+    setBusinessName(resumeBusiness.name);
+    setSenderName(resumeBusiness.senderName);
+    setSenderEmail(resumeBusiness.senderEmail);
+    setTimezone(resumeBusiness.timezone);
+    setEmailSignature(resumeBusiness.emailSignature ?? "");
+    setProvider(resumeBusiness.accountingProvider);
+    if (resumeBusiness.emailSignature) {
+      setSignatureOpen(true);
+    }
+  }, [resumeBusiness]);
+
+  const submitLabel = isResume ? "Connect" : "Continue →";
+
   const toggleSignature = useCallback(() => {
     setSignatureOpen((prev) => !prev);
   }, []);
@@ -105,6 +139,31 @@ export function useOnboardingViewModel() {
   }, [businessName, senderName, senderEmail, timezone, provider]);
 
   const handleSubmit = useCallback(async () => {
+    // In resume mode only the provider needs validating — other fields are prefilled
+    if (isResume) {
+      if (!provider) {
+        setErrors({ provider: "Select an accounting provider." });
+        return;
+      }
+      setErrors({});
+      setSubmitError(null);
+      setIsSubmitting(true);
+
+      try {
+        const { oauthUrl } = await authorizeConnection.mutateAsync({
+          businessId: resumeBusiness!.id,
+          provider,
+        });
+        window.location.href = oauthUrl;
+      } catch {
+        setSubmitError(
+          "Something went wrong setting up your business. Please try again.",
+        );
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     const validationErrors = validateFields(
       businessName,
       senderName,
@@ -145,6 +204,8 @@ export function useOnboardingViewModel() {
       setIsSubmitting(false);
     }
   }, [
+    isResume,
+    resumeBusiness,
     businessName,
     senderName,
     senderEmail,
@@ -182,5 +243,8 @@ export function useOnboardingViewModel() {
     handleSubmit,
     // Data
     timezones: TIMEZONES,
+    // Resume mode
+    isResume,
+    submitLabel,
   };
 }

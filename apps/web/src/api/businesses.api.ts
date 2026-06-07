@@ -1,5 +1,22 @@
 import { apiClient } from "./client";
 
+export interface BusinessConnection {
+  provider: string;
+  status: string;
+}
+
+export interface BusinessWithConnections {
+  id: string;
+  name: string;
+  accountingProvider: "quickbooks" | "xero";
+  senderName: string;
+  senderEmail: string;
+  timezone: string;
+  emailSignature: string | null;
+  isActive: boolean;
+  connections: BusinessConnection[];
+}
+
 export interface CreateBusinessInput {
   name: string;
   accountingProvider: "quickbooks" | "xero";
@@ -26,4 +43,8 @@ export function createBusiness(
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function listBusinesses(): Promise<{ data: BusinessWithConnections[] }> {
+  return apiClient<{ data: BusinessWithConnections[] }>("/v1/businesses");
 }
