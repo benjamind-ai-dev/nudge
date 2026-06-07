@@ -17,6 +17,7 @@ import { CreateBusinessUseCase } from "./application/create-business.use-case";
 import { UpdateBusinessSettingsUseCase } from "./application/update-business-settings.use-case";
 import { DeleteBusinessUseCase } from "./application/delete-business.use-case";
 import { TriggerManualSyncUseCase } from "./application/trigger-manual-sync.use-case";
+import { ListBusinessesUseCase } from "./application/list-businesses.use-case";
 import { BusinessController } from "./business.controller";
 
 @Module({
@@ -29,6 +30,7 @@ import { BusinessController } from "./business.controller";
   providers: [
     GetBusinessUseCase,
     CreateBusinessUseCase,
+    ListBusinessesUseCase,
     UpdateBusinessSettingsUseCase,
     DeleteBusinessUseCase,
     TriggerManualSyncUseCase,

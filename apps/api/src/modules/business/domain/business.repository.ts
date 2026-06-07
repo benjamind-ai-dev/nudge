@@ -49,6 +49,7 @@ export interface UpdateBusinessSettingsData {
 
 export interface BusinessRepository {
   findById(id: string): Promise<BusinessWithConnections | null>;
+  findByAccountId(accountId: string): Promise<BusinessWithConnections[]>;
   create(data: CreateBusinessData): Promise<BusinessWithConnections>;
   updateSettings(id: string, data: UpdateBusinessSettingsData): Promise<BusinessSettings>;
   softDelete(id: string): Promise<void>;

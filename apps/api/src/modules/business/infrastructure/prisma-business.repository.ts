@@ -88,6 +88,15 @@ export class PrismaBusinessRepository implements BusinessRepository {
     return row ? toBusinessWithConnections(row) : null;
   }
 
+  async findByAccountId(accountId: string): Promise<BusinessWithConnections[]> {
+    const rows = await this.prisma.business.findMany({
+      where: { accountId, isActive: true },
+      select: BUSINESS_WITH_CONNECTIONS_SELECT,
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map(toBusinessWithConnections);
+  }
+
   async create(data: CreateBusinessData): Promise<BusinessWithConnections> {
     const row = await this.prisma.business.create({
       data: {

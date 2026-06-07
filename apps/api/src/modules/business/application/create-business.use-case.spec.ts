@@ -25,6 +25,7 @@ function makeUseCase(opts: {
 }) {
   const repo: BusinessRepository = {
     findById: jest.fn(),
+    findByAccountId: jest.fn(),
     create: jest.fn(async (d: CreateBusinessData) => {
       opts.onCreate?.(d);
       return { ...builtBusiness, senderEmail: d.senderEmail ?? "" } as BusinessWithConnections;
