@@ -7,7 +7,7 @@ import { AppLayout } from "./components/app-layout";
 import { BillingGate } from "./components/billing-gate";
 import { SignInPage } from "./pages/sign-in";
 import { SignUpPage } from "./pages/sign-up";
-import Onboarding from "./pages/onboarding";
+import { OnboardingPage } from "./pages/onboarding/onboarding.page";
 import { OnboardingBillingPage } from "./pages/onboarding-billing/onboarding-billing.page";
 import OnboardingComplete from "./pages/onboarding-complete/onboarding-complete.page";
 import Dashboard from "./pages/dashboard";
@@ -38,7 +38,7 @@ export default function App() {
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
           <Route path="/onboarding/billing" element={<OnboardingBillingPage />} />
-          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/onboarding/complete" element={<OnboardingComplete />} />
           <Route element={<BillingGate />}>
             <Route element={<AppLayout />}>
