@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "crypto";
 import { addDays } from "date-fns";
-import { nextBusinessHour } from "@nudge/shared";
+import { nextBusinessHour, newlinesToHtml } from "@nudge/shared";
 import {
   MESSAGE_REPOSITORY,
   type MessageRepository,
@@ -120,7 +120,8 @@ export class SendReplyUseCase {
   }
 
   private composeBody(body: string, signature: string | null): string {
-    return signature ? `${body}\n\n${signature}` : body;
+    const html = newlinesToHtml(body);
+    return signature ? `${html}<br><br>${newlinesToHtml(signature)}` : html;
   }
 
   private async maybeResume(context: ReplyContext, now: Date): Promise<void> {

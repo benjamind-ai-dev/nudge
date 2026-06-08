@@ -97,7 +97,7 @@ describe("SendReplyUseCase", () => {
         businessId: "biz-1",
         recipientEmail: "client@example.com",
         subject: "Re: Reminder: Invoice INV-001",
-        body: "Thanks for flagging this.\n\n— Sandra",
+        body: "Thanks for flagging this.<br><br>— Sandra",
       }),
     );
     expect(email.send).toHaveBeenCalledWith(
@@ -106,7 +106,7 @@ describe("SendReplyUseCase", () => {
         replyTo: "reply@reply.nudge.io",
         to: "client@example.com",
         subject: "Re: Reminder: Invoice INV-001",
-        html: "Thanks for flagging this.\n\n— Sandra",
+        html: "Thanks for flagging this.<br><br>— Sandra",
       }),
     );
     expect(repo.markMessageSent).toHaveBeenCalledWith(
@@ -257,8 +257,31 @@ describe("SendReplyUseCase", () => {
 
     await useCase.execute("msg-1", "biz-1", { body: "Just my body.", resumeSequence: false });
 
+    // No signature — body passes through newlinesToHtml (no newlines here, unchanged)
     expect(email.send).toHaveBeenCalledWith(
       expect.objectContaining({ html: "Just my body." }),
+    );
+  });
+
+  it("converts newlines in body and signature to <br> for HTML email", async () => {
+    const repo = createMockRepo({
+      findReplyContext: jest.fn().mockResolvedValue(
+        mkContext({
+          business: {
+            senderName: "Sandra @ Widgets Inc.",
+            emailSignature: "Line one\nLine two",
+            timezone: "America/New_York",
+          },
+        }),
+      ),
+    });
+    const email = createMockEmail();
+    const useCase = new SendReplyUseCase(repo, email, env);
+
+    await useCase.execute("msg-1", "biz-1", { body: "Hi there\n\nSecond para.", resumeSequence: false });
+
+    expect(email.send).toHaveBeenCalledWith(
+      expect.objectContaining({ html: "Hi there<br><br>Second para.<br><br>Line one<br>Line two" }),
     );
   });
 
