@@ -10,11 +10,14 @@ import { useBusinesses } from "../queries/use-businesses";
  * to /onboarding, where resume mode detects that business and lets them finish
  * connecting without creating a duplicate.
  *
- * /onboarding itself is NOT behind this gate (sibling route), so there's no
- * redirect loop.
+ * Fails CLOSED: the dashboard renders only once a connected business is
+ * confirmed. While loading we show a spinner; on no-connection OR a query
+ * error we route to /onboarding (an unconnected dashboard has no data anyway,
+ * and /onboarding surfaces the real state). /onboarding is NOT behind this
+ * gate (sibling route), so there's no redirect loop.
  */
 export function ConnectionGate() {
-  const { data, isLoading, isError } = useBusinesses();
+  const { data, isLoading } = useBusinesses();
 
   if (isLoading) {
     return (
@@ -28,8 +31,7 @@ export function ConnectionGate() {
     business.connections.some((connection) => connection.status === "connected"),
   );
 
-  // On error, don't hard-lock the user out on a transient blip.
-  if (!isError && !hasConnectedBusiness) {
+  if (!hasConnectedBusiness) {
     return <Navigate to="/onboarding" replace />;
   }
 
