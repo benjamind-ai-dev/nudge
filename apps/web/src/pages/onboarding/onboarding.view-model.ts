@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useBusinesses, useCreateBusiness } from "../../queries/use-businesses";
 import { useAuthorizeConnection } from "../../queries/use-connections";
+import { onboardingFormSchema } from "./onboarding-form.schema";
 
 // Curated timezone list covering common US zones + London/Sydney/Auckland.
 // The auto-detected zone is prepended if not already present.
@@ -30,10 +31,6 @@ function buildTimezones() {
 
 const TIMEZONES = buildTimezones();
 
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
 type TouchableField = "businessName" | "senderName" | "senderEmail" | "timezone" | "provider";
 
 interface TouchedState {
@@ -50,34 +47,6 @@ interface FormErrors {
   senderEmail?: string;
   timezone?: string;
   provider?: string;
-}
-
-function validateFields(
-  businessName: string,
-  senderName: string,
-  senderEmail: string,
-  timezone: string,
-  provider: "quickbooks" | "xero" | null,
-): FormErrors {
-  const errors: FormErrors = {};
-
-  if (!businessName.trim()) {
-    errors.businessName = "Enter your business name.";
-  }
-  if (!senderName.trim()) {
-    errors.senderName = "Enter a sender name.";
-  }
-  if (!isValidEmail(senderEmail)) {
-    errors.senderEmail = "Enter a valid email address.";
-  }
-  if (!timezone) {
-    errors.timezone = "Select a timezone.";
-  }
-  if (!provider) {
-    errors.provider = "Select an accounting provider.";
-  }
-
-  return errors;
 }
 
 const ALL_TOUCHED: TouchedState = {
@@ -152,11 +121,31 @@ export function useOnboardingViewModel() {
     setTouched((prev) => ({ ...prev, [field]: true }));
   }, []);
 
-  // All raw validation errors (computed from current values)
-  const allErrors = useMemo(
-    () => validateFields(businessName, senderName, senderEmail, timezone, provider),
-    [businessName, senderName, senderEmail, timezone, provider],
+  // All raw validation errors (computed from current values via Zod)
+  const parseResult = useMemo(
+    () =>
+      onboardingFormSchema.safeParse({
+        businessName,
+        senderName,
+        senderEmail,
+        timezone,
+        provider,
+        emailSignature,
+      }),
+    [businessName, senderName, senderEmail, timezone, provider, emailSignature],
   );
+
+  const allErrors = useMemo<FormErrors>(() => {
+    if (parseResult.success) return {};
+    const flat = parseResult.error.flatten().fieldErrors;
+    return {
+      businessName: flat.businessName?.[0],
+      senderName: flat.senderName?.[0],
+      senderEmail: flat.senderEmail?.[0],
+      timezone: flat.timezone?.[0],
+      provider: flat.provider?.[0],
+    };
+  }, [parseResult]);
 
   // Touched-gated errors: only show an error for a field once it has been touched.
   // On submit we set all fields touched (see handleSubmit), so all errors surface.
@@ -170,14 +159,7 @@ export function useOnboardingViewModel() {
     return gated;
   }, [touched, allErrors]);
 
-  const isValid = useMemo(() => {
-    if (!businessName.trim()) return false;
-    if (!senderName.trim()) return false;
-    if (!isValidEmail(senderEmail)) return false;
-    if (!timezone) return false;
-    if (!provider) return false;
-    return true;
-  }, [businessName, senderName, senderEmail, timezone, provider]);
+  const isValid = parseResult.success;
 
   const handleSubmit = useCallback(async () => {
     // In resume mode only the provider needs validating — other fields are prefilled
@@ -207,7 +189,7 @@ export function useOnboardingViewModel() {
     // Mark all fields touched so errors surface on submit
     setTouched(ALL_TOUCHED);
 
-    if (Object.keys(allErrors).length > 0) {
+    if (!parseResult.success) {
       return;
     }
 
@@ -245,7 +227,7 @@ export function useOnboardingViewModel() {
     timezone,
     provider,
     emailSignature,
-    allErrors,
+    parseResult,
     createBusiness,
     authorizeConnection,
   ]);
