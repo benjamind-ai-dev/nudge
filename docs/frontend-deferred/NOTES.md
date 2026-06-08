@@ -14,11 +14,13 @@ Frontend tasks that are **designed/wanted but blocked** because the page or surf
 - Loads current values (reuse `useBusinesses`).
 - Once this exists: optionally add a one-line note on onboarding ("You can edit this later in Settings"). Not before — would be a dead-end promise.
 
-## Multi-business — Part 2 (in-app)
-**Blocked on:** the Settings page + the app being multi-business-aware. (Part 1 = the onboarding "add another business" flow, which IS being built now.)
-**Backend: ready** — Account→Business is one-to-many; `Account.maxBusinesses` is synced from plan by the Stripe webhook (agency = 5, growth/starter = 1); `create-business` enforces the limit; `GET /v1/businesses` lists; `POST /v1/connections/authorize` connects each business. No backend work needed.
-**To build:**
-- **Business switcher** — sidebar dropdown listing the account's businesses + a selected-business indicator.
-- **Selected-business state** — a Zustand store (`stores/`) holding the current business id; persists across navigation.
-- **Scope every query to the selected business** — dashboard, invoices, customers, sequences, etc. currently assume a single business; thread the selected business id through their query hooks / API calls.
-- **Settings → "Connect another business"** — reuse the onboarding create + OAuth flow per business, gated on `account.maxBusinesses > current count`.
+## Multi-business — in-app display (dashboard)
+**Blocked on:** dashboard multi-business design. (The onboarding multi-connect for agency IS being built now — that's the separate, current piece.)
+**Backend: ready** — Account→Business is one-to-many; `Account.maxBusinesses` synced from plan by the Stripe webhook (agency = 5, growth/starter = 1); `create-business` enforces the limit; `GET /v1/businesses` lists; `POST /v1/connections/authorize` connects each. No backend work needed.
+**To build (NOT a business switcher — a combined, labeled view):**
+- When an account has multiple connected businesses, the dashboard / invoice / customer views should show **which business + provider** each row belongs to (a provider/business label or column), and present multiple providers cleanly.
+- Enhance the Stitch design prompts so multiple providers/businesses render nicely in those views.
+
+## Multi-business — Settings "connect another business"
+**Blocked on:** the Settings page.
+- From Settings, let an agency connect/add another business later (reuse the onboarding create + OAuth flow), gated on `account.maxBusinesses > current count`. Complements the onboarding multi-connect.
