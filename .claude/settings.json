@@ -37,13 +37,6 @@
           {
             "type": "agent",
             "if": "Bash(git commit *)",
-            "prompt": "You are an ADVISORY code reviewer. This review NEVER blocks a commit — it only surfaces notes. Run `git diff --cached` to see the staged changes. Review for:\n\n1. **Code quality**: Unused imports, dead code, overly complex logic, missing error handling\n2. **Architecture compliance**: Onion layer violations (domain importing infrastructure), business logic in controllers, missing business_id scoping\n3. **Convention violations**: class-validator usage, Passport.js, raw SQL, hardcoded queue names, float money values, localStorage usage\n4. **API contract**: incorrect response shape (should be { data: T })\n\nBefore reporting anything, verify it against the EXISTING patterns in this repo (read sibling files) — do not flag a pattern the codebase already uses deliberately (e.g. `window.location.href` for external redirects, manual client-side validation in view models, no client-side Zod). Frontend apps/web uses manual validation, not Zod.\n\nALWAYS respond with decision \"allow\". If you found genuine, repo-verified concerns, list them as advisory notes:\n{\"decision\": \"allow\", \"reason\": \"ADVISORY (non-blocking): <concise notes>\"}\n\nOtherwise:\n{\"decision\": \"allow\", \"reason\": \"Code review passed\"}",
-            "statusMessage": "Running code review...",
-            "timeout": 120
-          },
-          {
-            "type": "agent",
-            "if": "Bash(git commit *)",
             "prompt": "You are a security reviewer. Run `git diff --cached` to see the staged changes. Check for:\n\n1. **Hardcoded secrets**: API keys, tokens, passwords, connection strings in code (not .env)\n2. **PII exposure**: Logging of email addresses, names, phone numbers, or other PII. Check that PII is anonymized before Claude API calls.\n3. **Missing tenant isolation**: Any database query on tenant data without business_id in the WHERE clause\n4. **Injection risks**: Raw SQL without parameterization, unsanitized user input in queries\n5. **Auth bypass**: Endpoints missing auth guards, direct Clerk token access without middleware\n6. **Sensitive data in responses**: Tokens, internal IDs, or credentials leaked in API responses\n\nIf you find security issues, respond with:\n{\"decision\": \"block\", \"reason\": \"SECURITY: <concise list of issues found>\"}\n\nIf the code passes security review, respond with:\n{\"decision\": \"allow\", \"reason\": \"Security review passed\"}",
             "statusMessage": "Running security review...",
             "timeout": 120
