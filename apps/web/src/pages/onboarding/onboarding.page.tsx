@@ -64,10 +64,11 @@ export function OnboardingPage() {
       <OnboardingBrandPanel />
 
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 md:px-12">
-        <div className="box-border w-full max-w-[520px]">
-          {/* Resume banner */}
+        {/* Widened from 520px → 600px so inputs have more breathing room */}
+        <div className="box-border w-full max-w-[600px]">
+          {/* Resume banner — mb-4 (was mb-6) to save vertical space */}
           {vm.isResume && (
-            <div className="mb-6 flex items-start gap-2 rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-[13px] text-[#2E75B6]">
+            <div className="mb-4 flex items-start gap-2 rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-[13px] text-[#2E75B6]">
               <Info className="h-4 w-4 mt-0.5 shrink-0" />
               Your business is saved. Finish connecting your books to continue.
             </div>
@@ -88,7 +89,8 @@ export function OnboardingPage() {
             </div>
           )}
 
-          <div className="mt-8 flex flex-col gap-5">
+          {/* Form fields — gap-4 (was gap-5) to save vertical space */}
+          <div className="mt-8 flex flex-col gap-4">
             {/* Business name */}
             <div>
               <FieldLabel htmlFor="businessName">Business name</FieldLabel>
@@ -96,7 +98,11 @@ export function OnboardingPage() {
                 id="businessName"
                 type="text"
                 value={vm.businessName}
-                onChange={(e) => vm.setBusinessName(e.target.value)}
+                onChange={(e) => {
+                  vm.setBusinessName(e.target.value);
+                  vm.markTouched("businessName");
+                }}
+                onBlur={() => vm.markTouched("businessName")}
                 placeholder="Acme Plumbing Co."
                 className={cn(INPUT_BASE, vm.errors.businessName && INPUT_ERROR)}
               />
@@ -110,7 +116,11 @@ export function OnboardingPage() {
                 id="senderName"
                 type="text"
                 value={vm.senderName}
-                onChange={(e) => vm.setSenderName(e.target.value)}
+                onChange={(e) => {
+                  vm.setSenderName(e.target.value);
+                  vm.markTouched("senderName");
+                }}
+                onBlur={() => vm.markTouched("senderName")}
                 placeholder="Jane Smith"
                 className={cn(INPUT_BASE, vm.errors.senderName && INPUT_ERROR)}
               />
@@ -127,7 +137,11 @@ export function OnboardingPage() {
                 id="senderEmail"
                 type="email"
                 value={vm.senderEmail}
-                onChange={(e) => vm.setSenderEmail(e.target.value)}
+                onChange={(e) => {
+                  vm.setSenderEmail(e.target.value);
+                  vm.markTouched("senderEmail");
+                }}
+                onBlur={() => vm.markTouched("senderEmail")}
                 placeholder="jane@acme.com"
                 className={cn(INPUT_BASE, vm.errors.senderEmail && INPUT_ERROR)}
               />
@@ -143,7 +157,11 @@ export function OnboardingPage() {
               <select
                 id="timezone"
                 value={vm.timezone}
-                onChange={(e) => vm.setTimezone(e.target.value)}
+                onChange={(e) => {
+                  vm.setTimezone(e.target.value);
+                  vm.markTouched("timezone");
+                }}
+                onBlur={() => vm.markTouched("timezone")}
                 className={cn(
                   INPUT_BASE,
                   "cursor-pointer appearance-none",
@@ -167,7 +185,7 @@ export function OnboardingPage() {
               <button
                 type="button"
                 onClick={vm.toggleSignature}
-                className="text-[13px] font-medium text-[#2E75B6] transition-colors hover:text-[#2666a0]"
+                className="cursor-pointer text-[13px] font-medium text-[#2E75B6] transition-colors hover:text-[#2666a0]"
               >
                 {vm.signatureOpen ? "− Remove email signature" : "+ Add email signature"}
               </button>
@@ -186,8 +204,8 @@ export function OnboardingPage() {
             </div>
           </div>
 
-          {/* Connect section */}
-          <div className="mt-8 border-t border-gray-200 pt-6">
+          {/* Connect section — mt-6 pt-5 (was mt-8 pt-6) to save vertical space */}
+          <div className="mt-6 border-t border-gray-200 pt-5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
               Connect your books
             </p>
@@ -211,7 +229,10 @@ export function OnboardingPage() {
                   <BookOpen className="h-6 w-6 text-[#10B981]" />
                 }
                 selected={vm.provider === "quickbooks"}
-                onSelect={vm.setProvider}
+                onSelect={(p) => {
+                  vm.setProvider(p);
+                  vm.markTouched("provider");
+                }}
               />
               <ProviderCard
                 provider="xero"
@@ -221,20 +242,23 @@ export function OnboardingPage() {
                   <Building2 className="h-6 w-6 text-[#2E75B6]" />
                 }
                 selected={vm.provider === "xero"}
-                onSelect={vm.setProvider}
+                onSelect={(p) => {
+                  vm.setProvider(p);
+                  vm.markTouched("provider");
+                }}
               />
             </div>
           </div>
 
-          {/* Submit */}
+          {/* Submit — mt-6 (was mt-8) to save vertical space */}
           <button
             type="button"
             onClick={vm.handleSubmit}
             disabled={!vm.isValid || vm.isSubmitting}
             className={cn(
-              "mt-8 h-11 w-full rounded-[6px] text-sm font-semibold transition-colors",
+              "mt-6 h-11 w-full rounded-[6px] text-sm font-semibold transition-colors",
               vm.isValid && !vm.isSubmitting
-                ? "bg-[#2E75B6] text-white hover:bg-[#2666a0]"
+                ? "cursor-pointer bg-[#2E75B6] text-white hover:bg-[#2666a0]"
                 : "cursor-not-allowed bg-[#C5C6CF] text-white",
             )}
           >

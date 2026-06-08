@@ -334,4 +334,79 @@ describe("useOnboardingViewModel", () => {
       expect(result.current.businessName).toBe("My Custom Name");
     });
   });
+
+  // --- Live validation (touched state) ---
+  describe("live validation", () => {
+    it("email error is NOT shown for a pristine (untouched) field", () => {
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      // senderEmail starts as mockEmail (valid), but not yet touched by the user
+      // errors should be empty for untouched fields
+      expect(result.current.errors.senderEmail).toBeUndefined();
+    });
+
+    it("email error is NOT shown immediately after typing an invalid email before marking touched", async () => {
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      // Simulate typing (change fires but field not yet touched)
+      act(() => {
+        result.current.setSenderEmail("bad");
+      });
+      // Error should not appear until field is touched
+      expect(result.current.errors.senderEmail).toBeUndefined();
+    });
+
+    it("email error appears live after field is touched with an invalid value", async () => {
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      act(() => {
+        result.current.setSenderEmail("not-an-email");
+        result.current.markTouched("senderEmail");
+      });
+      expect(result.current.errors.senderEmail).toMatch(/valid email/i);
+    });
+
+    it("email error clears live when a valid email is typed after being touched", async () => {
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      act(() => {
+        result.current.setSenderEmail("bad");
+        result.current.markTouched("senderEmail");
+      });
+      expect(result.current.errors.senderEmail).toMatch(/valid email/i);
+
+      act(() => {
+        result.current.setSenderEmail("good@example.com");
+      });
+      expect(result.current.errors.senderEmail).toBeUndefined();
+    });
+
+    it("businessName error is NOT shown for untouched field", () => {
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      expect(result.current.errors.businessName).toBeUndefined();
+    });
+
+    it("businessName error appears after field is touched with empty value", () => {
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      act(() => {
+        result.current.setBusinessName("");
+        result.current.markTouched("businessName");
+      });
+      expect(result.current.errors.businessName).toMatch(/enter your business name/i);
+    });
+
+    it("submit marks all fields touched and surfaces all errors", async () => {
+      const { result } = renderHook(() => useOnboardingViewModel(), { wrapper });
+      act(() => {
+        result.current.setBusinessName("");
+        result.current.setSenderName("");
+        result.current.setSenderEmail("invalid");
+      });
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      // After submit, all fields are marked touched and errors visible
+      expect(result.current.errors.businessName).toBeDefined();
+      expect(result.current.errors.senderName).toBeDefined();
+      expect(result.current.errors.senderEmail).toBeDefined();
+    });
+  });
 });
