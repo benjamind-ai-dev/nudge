@@ -1,12 +1,9 @@
 import { useSearchParams } from "react-router";
+import { useBusinesses } from "../../queries/use-businesses";
+import { useBillingStatus } from "../../queries/use-billing";
+import type { BusinessWithConnections } from "../../api/businesses.api";
 
-export interface OnboardingCompleteViewModel {
-  status: "success" | "error";
-  title: string;
-  body: string;
-  ctaLabel: string;
-  ctaHref: string;
-}
+// ─── Error branch ────────────────────────────────────────────────────────────
 
 const ERROR_COPY: Record<
   string,
@@ -45,18 +42,65 @@ const GENERIC_ERROR = {
   ctaLabel: "Try again",
 };
 
+// ─── Discriminated return types ───────────────────────────────────────────────
+
+interface ConnectedBusiness {
+  name: string;
+  accountingProvider: BusinessWithConnections["accountingProvider"];
+}
+
+interface SuccessViewModel {
+  status: "success";
+  title: string;
+  businesses: ConnectedBusiness[];
+  canAddMore: boolean;
+  isLoading: boolean;
+  dashboardHref: string;
+  addMoreHref: string;
+}
+
+interface ErrorViewModel {
+  status: "error";
+  title: string;
+  body: string;
+  ctaLabel: string;
+  ctaHref: string;
+}
+
+export type OnboardingCompleteViewModel = SuccessViewModel | ErrorViewModel;
+
+// ─── Hook ────────────────────────────────────────────────────────────────────
+
 export function useOnboardingCompleteViewModel(): OnboardingCompleteViewModel {
   const [params] = useSearchParams();
   const status = params.get("status");
   const reason = params.get("reason") ?? "";
 
+  // Call both hooks unconditionally (no conditional hooks).
+  // They are harmless on the error path — small data, fast cache.
+  const businessesQuery = useBusinesses();
+  const billingQuery = useBillingStatus();
+
   if (status === "success") {
+    const businesses: ConnectedBusiness[] = (businessesQuery.data ?? []).map(
+      (b) => ({ name: b.name, accountingProvider: b.accountingProvider }),
+    );
+
+    const maxBusinesses =
+      billingQuery.data?.limits?.maxBusinesses ?? 1;
+
+    const canAddMore = businesses.length < maxBusinesses;
+
+    const isLoading = businessesQuery.isLoading || billingQuery.isLoading;
+
     return {
       status: "success",
       title: "Connected!",
-      body: "We're syncing your invoices now. You'll see them appear in the dashboard shortly.",
-      ctaLabel: "Go to dashboard",
-      ctaHref: "/dashboard",
+      businesses,
+      canAddMore,
+      isLoading,
+      dashboardHref: "/dashboard",
+      addMoreHref: "/onboarding",
     };
   }
 
