@@ -524,6 +524,82 @@ describe("SendMessageUseCase", () => {
     expect(sent.to).toBe("bob@bobsplumbing.com"); // businessSenderEmail from factory — confirms it routed to owner
   });
 
+  describe("newline → <br> conversion in HTML email", () => {
+    it("converts \\n in the body to <br>", async () => {
+      const run = createMockRun({ stepIncludePaymentLink: false, businessEmailSignature: null });
+      repo.findRunById.mockResolvedValue(run);
+      repo.findNextStep.mockResolvedValue(null);
+      // render is called in order: subject, body (no signature)
+      templateService.render
+        .mockReturnValueOnce("Re: Invoice INV-001")              // subject
+        .mockReturnValueOnce("Hi Sarah,\n\nYour invoice is overdue."); // body
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const sent = emailService.send.mock.calls[0][0];
+      expect(sent.html).toBe("Hi Sarah,<br><br>Your invoice is overdue.");
+    });
+
+    it("joins body and signature with <br><br> (not \\n\\n)", async () => {
+      const run = createMockRun({
+        stepIncludePaymentLink: false,
+        businessEmailSignature: "Thanks,\nBob",
+      });
+      repo.findRunById.mockResolvedValue(run);
+      repo.findNextStep.mockResolvedValue(null);
+      // render is called in order: subject, body, signature
+      templateService.render
+        .mockReturnValueOnce("Re: Invoice INV-001") // subject
+        .mockReturnValueOnce("Invoice body.")       // body
+        .mockReturnValueOnce("Thanks,\nBob");       // signature
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const sent = emailService.send.mock.calls[0][0];
+      expect(sent.html).toBe("Invoice body.<br><br>Thanks,<br>Bob");
+    });
+
+    it("joins body and payment link button with <br><br> (not \\n\\n)", async () => {
+      const run = createMockRun({
+        paymentLinkUrl: "https://pay.example.com/inv-1",
+        stepIncludePaymentLink: true,
+        businessEmailSignature: null,
+      });
+      repo.findRunById.mockResolvedValue(run);
+      repo.findNextStep.mockResolvedValue(null);
+      // render is called in order: subject, body (no signature)
+      templateService.render
+        .mockReturnValueOnce("Re: Invoice INV-001") // subject
+        .mockReturnValueOnce("Invoice body.");       // body
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const sent = emailService.send.mock.calls[0][0];
+      expect(sent.html).toMatch(/^Invoice body\.<br><br><p/);
+      expect(sent.html).toContain("Pay Invoice");
+    });
+
+    it("joins body, signature, and payment link with <br><br> separators", async () => {
+      const run = createMockRun({
+        paymentLinkUrl: "https://pay.example.com/inv-1",
+        stepIncludePaymentLink: true,
+        businessEmailSignature: "— Bob",
+      });
+      repo.findRunById.mockResolvedValue(run);
+      repo.findNextStep.mockResolvedValue(null);
+      // render is called in order: subject, body, signature
+      templateService.render
+        .mockReturnValueOnce("Re: Invoice INV-001") // subject
+        .mockReturnValueOnce("Invoice body.")       // body
+        .mockReturnValueOnce("— Bob");              // signature
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const sent = emailService.send.mock.calls[0][0];
+      expect(sent.html).toMatch(/^Invoice body\.<br><br>— Bob<br><br><p/);
+    });
+  });
+
   describe("when the step has an attached template", () => {
     it("uses the template's subject + body + signature instead of inline content", async () => {
       const run = createMockRun({

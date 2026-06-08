@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "crypto";
 import { addDays, differenceInDays, format } from "date-fns";
-import { formatCents } from "@nudge/shared";
+import { formatCents, newlinesToHtml } from "@nudge/shared";
 import {
   MESSAGE_SEND_REPOSITORY,
   type MessageSendRepository,
@@ -254,17 +254,17 @@ export class SendMessageUseCase {
       ? this.templateService.render(`${run.stepId}-subject`, subjectSource, templateData)
       : `Reminder: Invoice ${run.invoiceNumber ?? ""}`;
 
-    let body = this.templateService.render(`${run.stepId}-body`, bodySource, templateData);
+    let body = newlinesToHtml(this.templateService.render(`${run.stepId}-body`, bodySource, templateData));
 
     // Signature precedence: template signature > business email signature.
     const signatureSource = run.stepTemplateSignature ?? run.businessEmailSignature;
     if (signatureSource) {
-      const renderedSig = this.templateService.render(
+      const renderedSig = newlinesToHtml(this.templateService.render(
         `${run.stepId}-signature`,
         signatureSource,
         templateData,
-      );
-      body = `${body}\n\n${renderedSig}`;
+      ));
+      body = `${body}<br><br>${renderedSig}`;
     }
 
     if (
@@ -272,7 +272,7 @@ export class SendMessageUseCase {
       run.paymentLinkUrl &&
       !run.stepIsOwnerAlert
     ) {
-      body = `${body}\n\n${renderPaymentLinkButton(run.paymentLinkUrl)}`;
+      body = `${body}<br><br>${renderPaymentLinkButton(run.paymentLinkUrl)}`;
     }
 
     const messageId = randomUUID();
