@@ -82,6 +82,12 @@ Detailed coding rules are in `.claude/rules/` and are loaded automatically:
 - `testing.rule.md` — Test frameworks, conventions, what to test where
 - `pr-size.rule.md` — Per-PR file cap (≤16 target, ≤20 hard) and Part-N split process
 
+## Deferred Frontend Work
+
+Some frontend work is designed and wanted but **blocked** because the page it belongs to doesn't exist yet (e.g. the Settings page). It's tracked in `docs/frontend-deferred/NOTES.md`.
+
+**Before starting any frontend task, read that file.** If your task relates to a note there — or your change touches a page/feature it mentions — account for it (build the deferred piece, or wire the seam so it isn't forgotten). When you defer a new piece of frontend work for the same reason, add it there.
+
 ## Skills
 
 Two expert skills carry the exact code patterns (the rules above say *what*; these show *how*). Invoke the matching skill when building in that area — and when dispatching a subagent for backend or frontend work, instruct it to invoke the relevant skill first:
