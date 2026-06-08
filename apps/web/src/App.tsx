@@ -5,7 +5,9 @@ import { setTokenGetter } from "./api/client";
 import { ProtectedRoute } from "./components/protected-route";
 import { AppLayout } from "./components/app-layout";
 import { BillingGate } from "./components/billing-gate";
+import { BillingPaywallGate } from "./components/billing-paywall-gate";
 import { ConnectionGate } from "./components/connection-gate";
+import { OnboardingGate } from "./components/onboarding-gate";
 import { SignInPage } from "./pages/sign-in";
 import { SignUpPage } from "./pages/sign-up";
 import { OnboardingPage } from "./pages/onboarding/onboarding.page";
@@ -38,19 +40,23 @@ export default function App() {
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/onboarding/billing" element={<OnboardingBillingPage />} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route element={<BillingPaywallGate />}>
+            <Route path="/onboarding/billing" element={<OnboardingBillingPage />} />
+          </Route>
           <Route path="/onboarding/complete" element={<OnboardingComplete />} />
           <Route element={<BillingGate />}>
+            <Route element={<OnboardingGate />}>
+              <Route path="/onboarding" element={<OnboardingPage />} />
+            </Route>
             <Route element={<ConnectionGate />}>
               <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/invoices" element={<Invoices />} />
-              <Route path="/sequences" element={<Sequences />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/settings/billing" element={<BillingPage />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/invoices" element={<Invoices />} />
+                <Route path="/sequences" element={<Sequences />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/settings/billing" element={<BillingPage />} />
               </Route>
             </Route>
           </Route>
