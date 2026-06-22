@@ -24,7 +24,7 @@ export function ArAgingBar({
         <button
           type="button"
           onClick={onViewReport}
-          className="text-xs font-semibold text-[#0B61A1] hover:underline"
+          className="text-sm font-semibold text-[#0B61A1] hover:underline"
         >
           View Detailed Report
         </button>
