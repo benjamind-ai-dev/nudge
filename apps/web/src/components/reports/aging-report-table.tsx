@@ -117,7 +117,7 @@ export function AgingReportTable({
                 <th className={cn(HEAD, "pr-6")}>Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#C5C6CF] text-sm">
+            <tbody className="divide-y divide-[#C5C6CF] text-[15px]">
               {rows.map((row) => (
                 <tr
                   key={row.id}

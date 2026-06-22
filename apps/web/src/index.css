@@ -8,3 +8,14 @@
   /* Display / hero headings: Geist Light. */
   --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
 }
+
+/* Every interactive control gets a pointer cursor (Tailwind preflight leaves
+   native buttons/selects on the default arrow). Disabled controls stay default. */
+@layer base {
+  button:not(:disabled),
+  select:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href] {
+    cursor: pointer;
+  }
+}
