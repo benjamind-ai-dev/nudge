@@ -35,7 +35,7 @@ export function AgingReportTable({
 }: AgingReportTableProps) {
 
   return (
-    <section className="overflow-hidden rounded-xl border border-[#C5C6CF] bg-white shadow-sm">
+    <section className="overflow-hidden rounded-xl md:border md:border-[#C5C6CF] md:bg-white md:shadow-sm">
       {error ? (
         <p className="px-6 py-12 text-sm text-[#45464E]">
           Couldn&apos;t load invoices.{" "}
@@ -58,7 +58,52 @@ export function AgingReportTable({
           No invoices match these filters. 🎉
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Mobile: card list */}
+        <div className="flex flex-col gap-3 md:hidden">
+          {rows.map((row) => (
+            <button
+              key={row.id}
+              type="button"
+              onClick={() => onRowClick(row.id)}
+              className="flex flex-col gap-3 rounded-xl border border-[#C5C6CF] bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col">
+                  <span className="font-bold text-[#041534]">{row.customerName}</span>
+                  <span className="text-[11px] text-[#45464E]">
+                    Invoice {row.invoiceNumber}
+                  </span>
+                </div>
+                <span className={cn(PILL, row.statusClass)}>{row.statusLabel}</span>
+              </div>
+              <div className="flex items-end justify-between gap-2">
+                <div className="flex flex-col">
+                  <span className="mb-1 text-[11px] text-[#45464E]">
+                    Due {row.dueDate}
+                  </span>
+                  <span className="text-lg font-extrabold text-[#041534]">
+                    {row.amount}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold uppercase",
+                      row.isOverdue ? "text-[#BA1A1A]" : "text-[#047857]",
+                    )}
+                  >
+                    {row.isOverdue ? `${row.overdueLabel} late` : "On time"}
+                  </span>
+                  <span className={cn(PILL, row.bucketClass)}>{row.bucketLabel}</span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[840px] border-collapse text-left">
             <thead>
               <tr className="border-b border-[#C5C6CF] bg-[#F3F3F3]">
@@ -113,6 +158,7 @@ export function AgingReportTable({
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {!isLoading && !error && filteredTotal > 0 && (
