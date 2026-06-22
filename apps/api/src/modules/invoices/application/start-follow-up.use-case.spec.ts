@@ -102,6 +102,29 @@ describe("StartFollowUpUseCase", () => {
     );
   });
 
+  it("falls through to tier sequence when override is present but inactive", async () => {
+    // override present but inactive → skip override
+    // tier sequence present and active → use tier sequence
+    const repo = makeRepo({
+      getFollowUpContext: jest.fn().mockResolvedValue(
+        baseContext({
+          customerSequenceId: "seq-override",
+          customerSequenceIsActive: false,
+          customerTierSequenceId: "seq-tier",
+          customerTierSequenceIsActive: true,
+        }),
+      ),
+    });
+    const useCase = new StartFollowUpUseCase(repo);
+
+    await useCase.execute(INVOICE_ID, BUSINESS_ID);
+
+    expect(repo.createSequenceRun).toHaveBeenCalledWith(
+      expect.objectContaining({ sequenceId: "seq-tier" }),
+    );
+    expect(repo.findDefaultTierSequenceId).not.toHaveBeenCalled();
+  });
+
   it("returns already_running when a run already exists (dedup)", async () => {
     const repo = makeRepo({
       createSequenceRun: jest.fn().mockResolvedValue({ created: false, runId: null }),

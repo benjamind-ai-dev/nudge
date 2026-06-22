@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { nextBusinessHour, firstSendAt } from "./business-hours";
 
 describe("nextBusinessHour", () => {
@@ -63,8 +63,38 @@ describe("firstSendAt", () => {
   });
 
   it("floors to now when the computed time is in the past", () => {
-    const due = new Date("2000-01-01T00:00:00Z");
-    const result = firstSendAt(due, 0, TZ);
-    expect(result.getTime()).toBeGreaterThan(Date.now());
+    // Freeze clock to a Saturday so nextBusinessHour always advances to Monday 9am,
+    // ensuring the result is strictly after the frozen "now" regardless of wall-clock time.
+    // Saturday 2026-04-25 14:00 UTC → in ET it's Saturday, so nextBusinessHour pushes to
+    // Monday 2026-04-27 09:00 ET = 13:00 UTC.
+    const frozenNow = new Date("2026-04-25T14:00:00.000Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(frozenNow);
+    try {
+      const due = new Date("2000-01-01T00:00:00Z");
+      const result = firstSendAt(due, 0, TZ);
+      // Floored to now (Saturday), then pushed to Monday 9am ET = 13:00 UTC
+      expect(result.toISOString()).toBe("2026-04-27T13:00:00.000Z");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("ahead-of-UTC timezone: Asia/Tokyo delay 3 days", () => {
+    // due 2099-01-10, delay 3 days => 2099-01-13 09:00 JST
+    // JST = UTC+9, so 9am JST = 00:00 UTC → 2099-01-13T00:00:00.000Z
+    // 2099-01-13 is a Tuesday → already a business hour → returned as-is
+    const due = new Date("2099-01-10T00:00:00Z");
+    const result = firstSendAt(due, 3, "Asia/Tokyo");
+    expect(result.toISOString()).toBe("2099-01-13T00:00:00.000Z");
+  });
+
+  it("DST week behind-UTC: America/New_York delay 0 days in summer", () => {
+    // due 2099-07-10, delay 0 => 2099-07-10 09:00 EDT (UTC-4)
+    // 9am EDT = 13:00 UTC → 2099-07-10T13:00:00.000Z
+    // 2099-07-10 is a Friday → within business hours → returned as-is
+    const due = new Date("2099-07-10T00:00:00Z");
+    const result = firstSendAt(due, 0, "America/New_York");
+    expect(result.toISOString()).toBe("2099-07-10T13:00:00.000Z");
   });
 });
