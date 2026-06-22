@@ -11,7 +11,8 @@ export type InvoiceSortField =
   | "amount_cents"
   | "days_overdue"
   | "status"
-  | "paid_at";
+  | "paid_at"
+  | "customer_name";
 
 export type InvoiceSortOrder = "asc" | "desc";
 
