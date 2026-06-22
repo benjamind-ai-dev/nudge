@@ -5,6 +5,7 @@ import request from "supertest";
 import { DashboardController } from "./dashboard.controller";
 import { GetDashboardSummaryUseCase } from "./application/get-dashboard-summary.use-case";
 import { GetNeedsAttentionUseCase } from "./application/get-needs-attention.use-case";
+import { GetRecentWinsUseCase } from "./application/get-recent-wins.use-case";
 import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
 import { CallerNotProvisionedError } from "../../common/auth-context/business-authorization.errors";
 import { BusinessNotFoundError } from "../business/domain/business.errors";
@@ -30,11 +31,13 @@ describe("DashboardController", () => {
   let app: INestApplication;
   let summaryUseCase: { execute: jest.Mock };
   let needsAttentionUseCase: jest.Mocked<GetNeedsAttentionUseCase>;
+  let recentWinsUseCase: jest.Mocked<GetRecentWinsUseCase>;
   let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     summaryUseCase = { execute: jest.fn() };
     needsAttentionUseCase = { execute: jest.fn() } as never;
+    recentWinsUseCase = { execute: jest.fn() } as never;
     businessAuth = {
       assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined),
     };
@@ -44,6 +47,7 @@ describe("DashboardController", () => {
       providers: [
         { provide: GetDashboardSummaryUseCase, useValue: summaryUseCase },
         { provide: GetNeedsAttentionUseCase, useValue: needsAttentionUseCase },
+        { provide: GetRecentWinsUseCase, useValue: recentWinsUseCase },
         { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
@@ -192,6 +196,70 @@ describe("DashboardController", () => {
       needsAttentionUseCase.execute.mockResolvedValue([]);
       const res = await request(app.getHttpServer())
         .get("/v1/dashboard/needs-attention")
+        .query({ businessId: BIZ_ID });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ data: [] });
+    });
+  });
+
+  describe("GET /v1/dashboard/recent-wins", () => {
+    const SAMPLE_WINS = [
+      {
+        id: "inv-1",
+        invoiceId: "inv-1",
+        invoiceNumber: "INV-001",
+        customerId: "cust-1",
+        customerName: "Acme Corp",
+        amountCents: 420_000,
+        paidAt: "2026-06-20T10:00:00.000Z",
+      },
+    ];
+
+    it("returns 200 with the wins envelope (default limit 5)", async () => {
+      recentWinsUseCase.execute.mockResolvedValue(SAMPLE_WINS);
+
+      const res = await request(app.getHttpServer())
+        .get("/v1/dashboard/recent-wins")
+        .query({ businessId: BIZ_ID });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ data: SAMPLE_WINS });
+      expect(recentWinsUseCase.execute).toHaveBeenCalledWith(BIZ_ID, 5);
+    });
+
+    it("forwards an explicit limit to the use case", async () => {
+      recentWinsUseCase.execute.mockResolvedValue([]);
+
+      await request(app.getHttpServer())
+        .get("/v1/dashboard/recent-wins")
+        .query({ businessId: BIZ_ID, limit: 20 });
+
+      expect(recentWinsUseCase.execute).toHaveBeenCalledWith(BIZ_ID, 20);
+    });
+
+    it("returns 400 when limit > 50", async () => {
+      const res = await request(app.getHttpServer())
+        .get("/v1/dashboard/recent-wins")
+        .query({ businessId: BIZ_ID, limit: 51 });
+      expect(res.status).toBe(400);
+      expect(recentWinsUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it("returns 401 when caller does not own the business", async () => {
+      businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+        new CallerNotProvisionedError(USER_ID),
+      );
+      const res = await request(app.getHttpServer())
+        .get("/v1/dashboard/recent-wins")
+        .query({ businessId: BIZ_ID });
+      expect(res.status).toBe(401);
+      expect(recentWinsUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it("returns { data: [] } when there are no recent wins", async () => {
+      recentWinsUseCase.execute.mockResolvedValue([]);
+      const res = await request(app.getHttpServer())
+        .get("/v1/dashboard/recent-wins")
         .query({ businessId: BIZ_ID });
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ data: [] });
