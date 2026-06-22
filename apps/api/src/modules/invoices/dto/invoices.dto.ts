@@ -15,6 +15,7 @@ const sortByEnum = z.enum([
   "days_overdue",
   "status",
   "paid_at",
+  "customer_name",
 ]);
 
 const sortOrderEnum = z.enum(["asc", "desc"]);
@@ -22,7 +23,7 @@ const sortOrderEnum = z.enum(["asc", "desc"]);
 export const listInvoicesQuerySchema = z
   .object({
     businessId: z.string().uuid(),
-    page: z.coerce.number().int().positive().default(1),
+    cursor: z.string().uuid().optional(),
     limit: z.coerce.number().int().positive().max(100).default(25),
     status: invoiceStatusEnum.optional(),
     customerId: z.string().uuid().optional(),
