@@ -122,6 +122,13 @@ describe("useReportsViewModel", () => {
     expect(lastInvoiceParams?.dueAfter).toBeUndefined();
   });
 
+  it("defaults to due-date ascending (oldest first)", () => {
+    const { result } = renderHook(() => useReportsViewModel(), { wrapper });
+    expect(result.current.sortValue).toBe("due_date:asc");
+    expect(lastInvoiceParams?.sortBy).toBe("due_date");
+    expect(lastInvoiceParams?.sortOrder).toBe("asc");
+  });
+
   it("filters loaded rows by customer search (FE-side)", () => {
     mockInvoices = [
       invoice({ id: "a", customer: { id: "c1", companyName: "Acme Corp" } }),

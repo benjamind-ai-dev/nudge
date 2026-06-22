@@ -157,13 +157,16 @@ const STATUS_OPTIONS: { value: "" | InvoiceStatus; label: string }[] = [
   { value: "paid", label: "Paid" },
 ];
 
-// "Customer A-Z" from the design is dropped — the invoices endpoint can't sort
-// by customer name. These are the supported server sorts.
+// Default sort is due date ascending — oldest-due (most overdue) first, the
+// collections worklist order.
 const SORT_OPTIONS: { value: string; label: string; sortBy: InvoiceSortBy; sortOrder: SortOrder }[] = [
-  { value: "due_date:desc", label: "Sort: Due date", sortBy: "due_date", sortOrder: "desc" },
+  { value: "due_date:asc", label: "Due date (oldest first)", sortBy: "due_date", sortOrder: "asc" },
+  { value: "due_date:desc", label: "Due date (newest first)", sortBy: "due_date", sortOrder: "desc" },
   { value: "amount_cents:desc", label: "Amount: High–Low", sortBy: "amount_cents", sortOrder: "desc" },
   { value: "days_overdue:desc", label: "Most overdue", sortBy: "days_overdue", sortOrder: "desc" },
 ];
+
+const DEFAULT_SORT = "due_date:asc";
 
 function toAgingSegments(aging: AgingBuckets): AgingSegment[] {
   const total = BUCKET_ORDER.reduce((s, k) => s + aging[k].totalCents, 0);
@@ -243,7 +246,7 @@ export function useReportsViewModel() {
 
   const bucket = (params.get("bucket") ?? "all") as BucketFilter;
   const status = (params.get("status") ?? "") as "" | InvoiceStatus;
-  const sortValue = params.get("sort") ?? "due_date:desc";
+  const sortValue = params.get("sort") ?? DEFAULT_SORT;
   const page = Math.max(1, Number(params.get("page") ?? "1"));
 
   const sortOption =
