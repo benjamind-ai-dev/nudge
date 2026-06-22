@@ -151,22 +151,29 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
   ): Promise<InvoiceListResult> {
     const where = this.buildWhere(filter);
     const orderBy = this.buildOrderBy(filter);
-    const skip = (filter.page - 1) * filter.limit;
 
+    // Fetch one extra row to detect whether another page exists.
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.invoice.findMany({
         where,
         select: LIST_SELECT,
         orderBy,
-        skip,
-        take: filter.limit,
+        take: filter.limit + 1,
+        ...(filter.cursor
+          ? { cursor: { id: filter.cursor }, skip: 1 }
+          : {}),
       }),
       this.prisma.invoice.count({ where }),
     ]);
 
+    const hasMore = rows.length > filter.limit;
+    const pageRows = hasMore ? rows.slice(0, filter.limit) : rows;
+    const nextCursor = hasMore ? pageRows[pageRows.length - 1].id : null;
+
     return {
-      items: rows.map((row) => this.toListItem(row)),
+      items: pageRows.map((row) => this.toListItem(row)),
       total,
+      nextCursor,
     };
   }
 
@@ -254,7 +261,9 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
             ? { daysOverdue: order }
             : filter.sortBy === "paid_at"
               ? { paidAt: order }
-              : { status: order };
+              : filter.sortBy === "customer_name"
+                ? { customer: { companyName: order } }
+                : { status: order };
 
     // Always tie-break on id desc so pagination is deterministic.
     return [primary, { id: "desc" }];

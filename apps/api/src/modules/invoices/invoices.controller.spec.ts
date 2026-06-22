@@ -112,7 +112,7 @@ describe("InvoicesController", () => {
     it("returns 200 with paginated data", async () => {
       listUseCase.execute.mockResolvedValue({
         data: [listItem],
-        pagination: { page: 1, limit: 25, total: 1, totalPages: 1 },
+        pagination: { limit: 25, total: 1, nextCursor: null, hasMore: false },
       });
 
       const res = await request(app.getHttpServer())
@@ -123,10 +123,10 @@ describe("InvoicesController", () => {
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].id).toBe(INV_ID);
       expect(res.body.pagination).toEqual({
-        page: 1,
         limit: 25,
         total: 1,
-        totalPages: 1,
+        nextCursor: null,
+        hasMore: false,
       });
     });
 
@@ -151,7 +151,7 @@ describe("InvoicesController", () => {
     it("forwards filters and sort to the use case", async () => {
       listUseCase.execute.mockResolvedValue({
         data: [],
-        pagination: { page: 1, limit: 25, total: 0, totalPages: 1 },
+        pagination: { limit: 25, total: 0, nextCursor: null, hasMore: false },
       });
 
       await request(app.getHttpServer())
@@ -164,9 +164,9 @@ describe("InvoicesController", () => {
           maxAmount: "100000",
           dueAfter: "2026-04-01",
           dueBefore: "2026-06-01",
-          sortBy: "days_overdue",
+          sortBy: "customer_name",
           sortOrder: "asc",
-          page: "2",
+          cursor: "550e8400-e29b-41d4-a716-446655440011",
           limit: "10",
         })
         .expect(200);
@@ -178,9 +178,9 @@ describe("InvoicesController", () => {
           customerId: "550e8400-e29b-41d4-a716-446655440099",
           minAmount: 1000,
           maxAmount: 100_000,
-          sortBy: "days_overdue",
+          sortBy: "customer_name",
           sortOrder: "asc",
-          page: 2,
+          cursor: "550e8400-e29b-41d4-a716-446655440011",
           limit: 10,
         }),
       );
@@ -189,7 +189,7 @@ describe("InvoicesController", () => {
     it("accepts disputed as a status filter", async () => {
       listUseCase.execute.mockResolvedValue({
         data: [],
-        pagination: { page: 1, limit: 25, total: 0, totalPages: 1 },
+        pagination: { limit: 25, total: 0, nextCursor: null, hasMore: false },
       });
       await request(app.getHttpServer())
         .get("/v1/invoices")
@@ -200,7 +200,7 @@ describe("InvoicesController", () => {
     it("accepts sortBy=paid_at and forwards it to the use case", async () => {
       listUseCase.execute.mockResolvedValueOnce({
         data: [],
-        pagination: { page: 1, limit: 25, total: 0, totalPages: 1 },
+        pagination: { limit: 25, total: 0, nextCursor: null, hasMore: false },
       });
 
       const res = await request(app.getHttpServer())
