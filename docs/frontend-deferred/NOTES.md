@@ -26,6 +26,37 @@ Frontend tasks that are **designed/wanted but blocked** because the page or surf
 **Blocked on:** the Settings page.
 - From Settings, let an agency connect/add another business later (reuse the onboarding create + OAuth flow), gated on `account.maxBusinesses > current count`. Complements the onboarding multi-connect.
 
+## Get Paid page (overdue worklist) — landing screen
+**Blocked on:** Stitch designs (in progress) + the start-follow-up endpoint
+(backend being built now — see `docs/superpowers/specs/2026-06-22-get-paid-start-follow-up-design.md`).
+**Backend: being built** — `POST /v1/invoices/:id/start-follow-up` creates a
+`SequenceRun` on the resolved default sequence. Template preview reuses the existing
+`POST /v1/sequences/:id/steps/:stepId/preview`. Overdue invoice list reuses
+`GET /v1/invoices` (status filter).
+**To build when designs land:**
+- A `/get-paid` page: table of **overdue invoices only**, sorted by amount desc,
+  red/urgency styling; thin red total strip on top; row expands to invoice detail;
+  per-row **Start follow-up** button → modal (template preview + Send & start sequence,
+  **no** payment-link/channel toggles) wired to the start-follow-up endpoint.
+- **Landing route swap:** make `/get-paid` the post-onboarding landing route (demote
+  `/dashboard`) in `apps/web/src/App.tsx`.
+
+## Sequences editor UI
+**Blocked on:** nothing technical — the page is a stub
+(`apps/web/src/pages/sequences.tsx` returns `<h1>Sequences</h1>`).
+**Backend: ready** — full CRUD: list/get/create/update/delete sequences; add/update/
+delete/reorder steps (subject, body, channel, delay); `POST /v1/sequences/:id/steps/:stepId/preview`.
+**To build:** sequences list + sequence editor (steps, channels, delays, template
+text) wired to the sequences API. Lets users change their follow-up sequences after
+the Get Paid one-click start uses the default.
+
+## Templates editor UI
+**Blocked on:** no templates page/route exists.
+**Backend: ready** — full CRUD: `GET/POST/PATCH/DELETE /v1/templates`,
+`POST /v1/templates/generate` (AI draft), attach/detach to customer.
+**To build:** a templates page (list + create/edit form, optional AI-generate) wired to
+the templates API. Complements the Sequences editor.
+
 ## Invoice detail page (row click target)
 **Blocked on:** no invoice detail page / route yet (`/invoices/:id`).
 **Backend: ready** — `GET /v1/invoices/:id` returns full `InvoiceDetail`.
