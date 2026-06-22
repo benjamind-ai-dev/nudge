@@ -9,7 +9,7 @@ export function DashboardPage() {
   const vm = useDashboardViewModel();
 
   return (
-    <div className="mx-auto flex max-w-[1040px] flex-col gap-8 p-8">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-6 py-8 lg:px-10">
       <DashboardHeader
         firstName={vm.firstName}
         isSyncing={vm.isSyncing}
