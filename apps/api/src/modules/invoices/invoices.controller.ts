@@ -12,13 +12,16 @@ import { BusinessAuthorizationService } from "../../common/auth-context/business
 import { ListInvoicesUseCase } from "./application/list-invoices.use-case";
 import { GetInvoiceUseCase } from "./application/get-invoice.use-case";
 import { CreatePaymentLinkUseCase } from "./application/create-payment-link.use-case";
+import { StartFollowUpUseCase } from "./application/start-follow-up.use-case";
 import {
   createPaymentLinkQuerySchema,
   getInvoiceQuerySchema,
   listInvoicesQuerySchema,
+  startFollowUpQuerySchema,
   type CreatePaymentLinkQuery,
   type GetInvoiceQuery,
   type ListInvoicesQuery,
+  type StartFollowUpQuery,
 } from "./dto/invoices.dto";
 
 @Controller("v1/invoices")
@@ -27,6 +30,7 @@ export class InvoicesController {
     private readonly listInvoices: ListInvoicesUseCase,
     private readonly getInvoice: GetInvoiceUseCase,
     private readonly createPaymentLink: CreatePaymentLinkUseCase,
+    private readonly startFollowUp: StartFollowUpUseCase,
     private readonly businessAuth: BusinessAuthorizationService,
   ) {}
 
@@ -62,6 +66,19 @@ export class InvoicesController {
   ) {
     await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
     const data = await this.createPaymentLink.execute(id, query.businessId);
+    return { data };
+  }
+
+  @Post(":id/start-follow-up")
+  @HttpCode(200)
+  async startFollowUpRoute(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+    @Query(new ZodValidationPipe(startFollowUpQuerySchema))
+    query: StartFollowUpQuery,
+  ) {
+    await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
+    const data = await this.startFollowUp.execute(id, query.businessId);
     return { data };
   }
 }

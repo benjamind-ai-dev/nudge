@@ -61,3 +61,8 @@ export const createPaymentLinkQuerySchema = z.object({
 export type CreatePaymentLinkQuery = z.infer<
   typeof createPaymentLinkQuerySchema
 >;
+
+export const startFollowUpQuerySchema = z.object({
+  businessId: z.string().uuid(),
+});
+export type StartFollowUpQuery = z.infer<typeof startFollowUpQuerySchema>;
