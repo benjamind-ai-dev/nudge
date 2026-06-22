@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
 import { formatCents } from "../../lib/format";
 import { useActiveBusinessId } from "../../lib/hooks/use-active-business-id";
 import { useDashboardSummary, useTriggerSync } from "../../queries/use-dashboard";
@@ -197,7 +196,6 @@ function downloadCsv(rows: InvoiceRow[]): void {
 }
 
 export function useReportsViewModel() {
-  const navigate = useNavigate();
   const { businessId, isLoading: businessLoading } = useActiveBusinessId();
 
   const summaryQuery = useDashboardSummary(businessId);
@@ -278,10 +276,6 @@ export function useReportsViewModel() {
   }, [businessId, triggerSync]);
 
   const handleExportCsv = useCallback(() => downloadCsv(rows), [rows]);
-  const handleRowClick = useCallback(
-    (id: string) => navigate(`/invoices/${id}`),
-    [navigate],
-  );
 
   return {
     agingSegments,
@@ -331,6 +325,5 @@ export function useReportsViewModel() {
     syncError,
     handleSyncNow,
     handleExportCsv,
-    handleRowClick,
   };
 }

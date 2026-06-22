@@ -83,7 +83,6 @@ export function ReportsPage() {
         isLoadingMore={vm.isLoadingMore}
         error={vm.tableError}
         onRetry={vm.refetchTable}
-        onRowClick={vm.handleRowClick}
         onPageChange={vm.setPage}
       />
     </div>

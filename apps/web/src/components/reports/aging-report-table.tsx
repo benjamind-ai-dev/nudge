@@ -12,7 +12,6 @@ interface AgingReportTableProps {
   isLoadingMore: boolean;
   error: unknown;
   onRetry: () => void;
-  onRowClick: (id: string) => void;
   onPageChange: (p: number) => void;
 }
 
@@ -30,7 +29,6 @@ export function AgingReportTable({
   isLoadingMore,
   error,
   onRetry,
-  onRowClick,
   onPageChange,
 }: AgingReportTableProps) {
 
@@ -62,11 +60,9 @@ export function AgingReportTable({
         {/* Mobile: card list */}
         <div className="flex flex-col gap-3 md:hidden">
           {rows.map((row) => (
-            <button
+            <div
               key={row.id}
-              type="button"
-              onClick={() => onRowClick(row.id)}
-              className="flex flex-col gap-3 rounded-xl border border-[#C5C6CF] bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md"
+              className="flex flex-col gap-3 rounded-xl border border-[#C5C6CF] bg-white p-4 text-left shadow-sm"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex flex-col">
@@ -98,7 +94,7 @@ export function AgingReportTable({
                   <span className={cn(PILL, row.bucketClass)}>{row.bucketLabel}</span>
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
 
@@ -119,11 +115,7 @@ export function AgingReportTable({
             </thead>
             <tbody className="divide-y divide-[#C5C6CF] text-[15px]">
               {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  onClick={() => onRowClick(row.id)}
-                  className="cursor-pointer transition-colors hover:bg-black/[0.02]"
-                >
+                <tr key={row.id} className="transition-colors hover:bg-black/[0.02]">
                   <td className="px-4 py-4 pl-6 font-semibold text-[#041534]">
                     {row.customerName}
                   </td>

@@ -25,3 +25,12 @@ Frontend tasks that are **designed/wanted but blocked** because the page or surf
 ## Multi-business — Settings "connect another business"
 **Blocked on:** the Settings page.
 - From Settings, let an agency connect/add another business later (reuse the onboarding create + OAuth flow), gated on `account.maxBusinesses > current count`. Complements the onboarding multi-connect.
+
+## Invoice detail page (row click target)
+**Blocked on:** no invoice detail page / route yet (`/invoices/:id`).
+**Backend: ready** — `GET /v1/invoices/:id` returns full `InvoiceDetail`.
+The Reports aging table + Dashboard would link rows to it. Rows are currently
+**non-clickable** (linking to a missing route bounced users to /dashboard).
+**To build:** an invoice detail page at `/invoices/:id`, then re-enable row
+click in `aging-report-table.tsx` (navigate to `/invoices/${id}`) and wire the
+detail view model to `getInvoice`.
