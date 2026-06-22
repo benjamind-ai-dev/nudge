@@ -13,7 +13,7 @@ import { SignUpPage } from "./pages/sign-up";
 import { OnboardingPage } from "./pages/onboarding/onboarding.page";
 import { OnboardingBillingPage } from "./pages/onboarding-billing/onboarding-billing.page";
 import OnboardingComplete from "./pages/onboarding-complete/onboarding-complete.page";
-import Dashboard from "./pages/dashboard";
+import { DashboardPage } from "./pages/dashboard/dashboard.page";
 import Customers from "./pages/customers";
 import Invoices from "./pages/invoices";
 import Sequences from "./pages/sequences";
@@ -50,7 +50,7 @@ export default function App() {
             </Route>
             <Route element={<ConnectionGate />}>
               <Route element={<AppLayout />}>
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/invoices" element={<Invoices />} />
                 <Route path="/sequences" element={<Sequences />} />

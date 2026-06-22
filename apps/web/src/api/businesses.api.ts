@@ -48,3 +48,17 @@ export function createBusiness(
 export function listBusinesses(): Promise<{ data: BusinessWithConnections[] }> {
   return apiClient<{ data: BusinessWithConnections[] }>("/v1/businesses");
 }
+
+export interface ManualSyncResult {
+  message: string;
+  jobId: string;
+}
+
+export function triggerManualSync(
+  businessId: string,
+): Promise<{ data: ManualSyncResult }> {
+  return apiClient<{ data: ManualSyncResult }>(`/v1/businesses/${businessId}/sync`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}

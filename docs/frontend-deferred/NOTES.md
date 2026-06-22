@@ -20,6 +20,7 @@ Frontend tasks that are **designed/wanted but blocked** because the page or surf
 **To build (NOT a business switcher — a combined, labeled view):**
 - When an account has multiple connected businesses, the dashboard / invoice / customer views should show **which business + provider** each row belongs to (a provider/business label or column), and present multiple providers cleanly.
 - Enhance the Stitch design prompts so multiple providers/businesses render nicely in those views.
+- **Seam exists:** `apps/web/src/lib/hooks/use-active-business-id.ts` resolves the single business the dashboard renders for and already exposes `hasMultiple`. The dashboard (built 2026-06-22) renders for that one business only. When the multi-business design lands, branch on `hasMultiple` there (and swap the "first connected" pick for a selected-business id).
 
 ## Multi-business — Settings "connect another business"
 **Blocked on:** the Settings page.
