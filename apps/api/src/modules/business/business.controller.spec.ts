@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { GlobalExceptionFilter } from "../../common/filters/global-exception.filter";
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { BusinessController } from "./business.controller";
@@ -82,6 +83,8 @@ describe("BusinessController", () => {
     }).compile();
 
     app = module.createNestApplication();
+
+    app.useGlobalFilters(new GlobalExceptionFilter());
     // Stub Clerk auth — @AccountId() reads req.auth().userId.
     app.use((req: { auth: () => { userId: string } }, _res: unknown, next: () => void) => {
       req.auth = () => ({ userId: "user_test_123" });
@@ -239,6 +242,7 @@ describe("BusinessController", () => {
       ],
     }).compile();
     const unauthApp = module.createNestApplication();
+    unauthApp.useGlobalFilters(new GlobalExceptionFilter());
     await unauthApp.init();
     await request(unauthApp.getHttpServer())
       .delete(`/v1/businesses/${BIZ_ID}`)
@@ -308,6 +312,7 @@ describe("BusinessController", () => {
       ],
     }).compile();
     const unauthApp = module.createNestApplication();
+    unauthApp.useGlobalFilters(new GlobalExceptionFilter());
     await unauthApp.init();
     await request(unauthApp.getHttpServer())
       .post(`/v1/businesses/${BIZ_ID}/sync`)

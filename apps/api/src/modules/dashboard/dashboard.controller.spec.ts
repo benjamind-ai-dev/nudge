@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { GlobalExceptionFilter } from "../../common/filters/global-exception.filter";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { DashboardController } from "./dashboard.controller";
@@ -48,6 +49,8 @@ describe("DashboardController", () => {
     }).compile();
 
     app = module.createNestApplication();
+
+    app.useGlobalFilters(new GlobalExceptionFilter());
     // Stub Clerk auth — @AccountId() reads req.auth().userId
     app.use(
       (req: { auth: () => { userId: string } }, _res: unknown, next: () => void) => {

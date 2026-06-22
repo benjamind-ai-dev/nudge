@@ -1,11 +1,17 @@
-export class RelationshipTierNotFoundError extends Error {
+import { DomainError } from "../../../common/errors/domain.error";
+
+export class RelationshipTierNotFoundError extends DomainError {
+  readonly httpStatus = 404;
+
   constructor(public readonly tierId: string) {
     super(`RelationshipTier ${tierId} not found`);
     this.name = "RelationshipTierNotFoundError";
   }
 }
 
-export class TierNameAlreadyExistsError extends Error {
+export class TierNameAlreadyExistsError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor(
     public readonly name: string,
     public readonly businessId: string,
@@ -15,7 +21,9 @@ export class TierNameAlreadyExistsError extends Error {
   }
 }
 
-export class TierLimitReachedError extends Error {
+export class TierLimitReachedError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor(
     public readonly businessId: string,
     public readonly limit: number,
@@ -25,21 +33,27 @@ export class TierLimitReachedError extends Error {
   }
 }
 
-export class CannotDeleteDefaultTierError extends Error {
+export class CannotDeleteDefaultTierError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor(public readonly tierId: string) {
     super("Cannot delete the default tier. Set another tier as default first.");
     this.name = "CannotDeleteDefaultTierError";
   }
 }
 
-export class CannotDeleteTierWithActiveSequencesError extends Error {
+export class CannotDeleteTierWithActiveSequencesError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor(public readonly tierId: string) {
     super("Cannot delete tier with active sequences. Stop or reassign sequences first.");
     this.name = "CannotDeleteTierWithActiveSequencesError";
   }
 }
 
-export class BusinessHasNoDefaultTierError extends Error {
+export class BusinessHasNoDefaultTierError extends DomainError {
+  readonly httpStatus = 500;
+
   constructor(public readonly businessId: string) {
     super(`Business ${businessId} has no default tier — cannot reassign customers`);
     this.name = "BusinessHasNoDefaultTierError";

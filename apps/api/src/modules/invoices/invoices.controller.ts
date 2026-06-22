@@ -1,26 +1,17 @@
 import {
-  BadRequestException,
   Controller,
   Get,
   HttpCode,
-  NotFoundException,
   Param,
   Post,
   Query,
-  UnauthorizedException,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { AccountId } from "../../common/decorators/account-id.decorator";
 import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
-import { CallerNotProvisionedError } from "../../common/auth-context/business-authorization.errors";
-import { BusinessNotFoundError } from "../business/domain/business.errors";
 import { ListInvoicesUseCase } from "./application/list-invoices.use-case";
 import { GetInvoiceUseCase } from "./application/get-invoice.use-case";
 import { CreatePaymentLinkUseCase } from "./application/create-payment-link.use-case";
-import {
-  InvalidStateForPaymentLinkError,
-  InvoiceNotFoundError,
-} from "./domain/invoice.errors";
 import {
   createPaymentLinkQuerySchema,
   getInvoiceQuerySchema,
@@ -45,18 +36,8 @@ export class InvoicesController {
     @Query(new ZodValidationPipe(listInvoicesQuerySchema))
     query: ListInvoicesQuery,
   ) {
-    try {
-      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
-      return this.listInvoices.execute(query);
-    } catch (error) {
-      if (error instanceof BusinessNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      if (error instanceof CallerNotProvisionedError) {
-        throw new UnauthorizedException(error.message);
-      }
-      throw error;
-    }
+    await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
+    return this.listInvoices.execute(query);
   }
 
   @Get(":id")
@@ -66,22 +47,9 @@ export class InvoicesController {
     @Query(new ZodValidationPipe(getInvoiceQuerySchema))
     query: GetInvoiceQuery,
   ) {
-    try {
-      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
-      const data = await this.getInvoice.execute(id, query.businessId);
-      return { data };
-    } catch (error) {
-      if (error instanceof InvoiceNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      if (error instanceof BusinessNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      if (error instanceof CallerNotProvisionedError) {
-        throw new UnauthorizedException(error.message);
-      }
-      throw error;
-    }
+    await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
+    const data = await this.getInvoice.execute(id, query.businessId);
+    return { data };
   }
 
   @Post(":id/payment-link")
@@ -92,26 +60,8 @@ export class InvoicesController {
     @Query(new ZodValidationPipe(createPaymentLinkQuerySchema))
     query: CreatePaymentLinkQuery,
   ) {
-    try {
-      await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
-      const data = await this.createPaymentLink.execute(id, query.businessId);
-      return { data };
-    } catch (error) {
-      if (error instanceof InvoiceNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      if (error instanceof BusinessNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      if (error instanceof CallerNotProvisionedError) {
-        throw new UnauthorizedException(error.message);
-      }
-      if (error instanceof InvalidStateForPaymentLinkError) {
-        throw new BadRequestException(
-          "Cannot generate payment link for a paid or voided invoice",
-        );
-      }
-      throw error;
-    }
+    await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
+    const data = await this.createPaymentLink.execute(id, query.businessId);
+    return { data };
   }
 }

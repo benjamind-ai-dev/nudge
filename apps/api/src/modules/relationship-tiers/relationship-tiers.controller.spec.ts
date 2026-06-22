@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { GlobalExceptionFilter } from "../../common/filters/global-exception.filter";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { RelationshipTiersController } from "./relationship-tiers.controller";
@@ -63,6 +64,8 @@ describe("RelationshipTiersController", () => {
     }).compile();
 
     app = module.createNestApplication();
+
+    app.useGlobalFilters(new GlobalExceptionFilter());
     app.use(
       (req: { auth: () => { userId: string } }, _res: unknown, next: () => void) => {
         req.auth = () => ({ userId: "test-account-id" });
