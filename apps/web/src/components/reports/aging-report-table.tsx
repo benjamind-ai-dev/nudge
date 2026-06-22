@@ -1,0 +1,148 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "../../lib/utils";
+import type { InvoiceRow } from "../../pages/reports/reports.view-model";
+import type { InvoicePagination } from "../../api/invoices.api";
+
+interface AgingReportTableProps {
+  rows: InvoiceRow[];
+  pagination?: InvoicePagination;
+  page: number;
+  isLoading: boolean;
+  error: unknown;
+  onRetry: () => void;
+  onRowClick: (id: string) => void;
+  onPageChange: (p: number) => void;
+}
+
+const HEAD =
+  "px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#45464E]";
+const PILL = "inline-block rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide";
+
+export function AgingReportTable({
+  rows,
+  pagination,
+  page,
+  isLoading,
+  error,
+  onRetry,
+  onRowClick,
+  onPageChange,
+}: AgingReportTableProps) {
+  const totalPages = pagination?.totalPages ?? 1;
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-[#C5C6CF] bg-white shadow-sm">
+      {error ? (
+        <p className="px-6 py-12 text-sm text-[#45464E]">
+          Couldn&apos;t load invoices.{" "}
+          <button
+            type="button"
+            onClick={onRetry}
+            className="font-medium text-[#0B61A1] hover:underline"
+          >
+            Retry
+          </button>
+        </p>
+      ) : isLoading ? (
+        <div className="space-y-2 p-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-12 animate-pulse rounded bg-gray-50" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="px-6 py-16 text-center text-sm text-[#45464E]">
+          No invoices match these filters. 🎉
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[840px] border-collapse text-left">
+            <thead>
+              <tr className="border-b border-[#C5C6CF] bg-[#F3F3F3]">
+                <th className={cn(HEAD, "pl-6")}>Customer</th>
+                <th className={HEAD}>Invoice #</th>
+                <th className={HEAD}>Due Date</th>
+                <th className={cn(HEAD, "text-right")}>Amount</th>
+                <th className={cn(HEAD, "text-right")}>Balance Due</th>
+                <th className={HEAD}>Overdue</th>
+                <th className={HEAD}>Bucket</th>
+                <th className={cn(HEAD, "pr-6")}>Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#C5C6CF] text-sm">
+              {rows.map((row) => (
+                <tr
+                  key={row.id}
+                  onClick={() => onRowClick(row.id)}
+                  className="cursor-pointer transition-colors hover:bg-black/[0.02]"
+                >
+                  <td className="px-4 py-4 pl-6 font-semibold text-[#041534]">
+                    {row.customerName}
+                  </td>
+                  <td className="px-4 py-4 text-[#45464E]">{row.invoiceNumber}</td>
+                  <td className="px-4 py-4 text-[#1A1C1C]">{row.dueDate}</td>
+                  <td className="px-4 py-4 text-right text-[#1A1C1C]">
+                    {row.amount}
+                  </td>
+                  <td className="px-4 py-4 text-right font-bold text-[#1A1C1C]">
+                    {row.balanceDue}
+                  </td>
+                  <td
+                    className={cn(
+                      "px-4 py-4 font-medium",
+                      row.isOverdue ? "text-[#BA1A1A]" : "text-[#45464E]",
+                    )}
+                  >
+                    {row.overdueLabel}
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className={cn(PILL, row.bucketClass)}>
+                      {row.bucketLabel}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 pr-6">
+                    <span className={cn(PILL, row.statusClass)}>
+                      {row.statusLabel}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!isLoading && !error && pagination && pagination.total > 0 && (
+        <div className="flex items-center justify-between border-t border-[#C5C6CF] bg-[#F3F3F3] px-6 py-4">
+          <span className="text-sm text-[#45464E]">
+            Showing {(page - 1) * pagination.limit + 1} to{" "}
+            {Math.min(page * pagination.limit, pagination.total)} of{" "}
+            {pagination.total} invoices
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 1}
+              aria-label="Previous page"
+              className="rounded border border-[#C5C6CF] p-1.5 transition-colors hover:bg-white disabled:opacity-50"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="px-2 text-sm font-medium text-[#1A1C1C]">
+              {page} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages}
+              aria-label="Next page"
+              className="rounded border border-[#C5C6CF] p-1.5 transition-colors hover:bg-white disabled:opacity-50"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

@@ -3,6 +3,7 @@ import { useUser } from "@clerk/clerk-react";
 import {
   LayoutDashboard,
   FileText,
+  BarChart3,
   Users,
   Send,
   Settings,
@@ -25,6 +26,7 @@ interface SidebarProps {
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/invoices", label: "Invoices", icon: FileText },
+  { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/sequences", label: "Sequences", icon: Send },
   { to: "/settings", label: "Settings", icon: Settings },
