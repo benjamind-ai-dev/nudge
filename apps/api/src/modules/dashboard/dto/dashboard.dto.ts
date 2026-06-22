@@ -10,3 +10,9 @@ export const needsAttentionQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(10),
 });
 export type NeedsAttentionQuery = z.infer<typeof needsAttentionQuerySchema>;
+
+export const recentWinsQuerySchema = z.object({
+  businessId: z.string().uuid(),
+  limit: z.coerce.number().int().min(1).max(50).optional().default(5),
+});
+export type RecentWinsQuery = z.infer<typeof recentWinsQuerySchema>;
