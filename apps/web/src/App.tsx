@@ -17,7 +17,7 @@ import { DashboardPage } from "./pages/dashboard/dashboard.page";
 import Customers from "./pages/customers";
 import Invoices from "./pages/invoices";
 import Sequences from "./pages/sequences";
-import Reports from "./pages/reports";
+import { ReportsPage } from "./pages/reports/reports.page";
 import Settings from "./pages/settings";
 import { BillingPage } from "./pages/billing/billing.page";
 
@@ -54,7 +54,7 @@ export default function App() {
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/invoices" element={<Invoices />} />
                 <Route path="/sequences" element={<Sequences />} />
-                <Route path="/reports" element={<Reports />} />
+                <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/settings/billing" element={<BillingPage />} />
               </Route>

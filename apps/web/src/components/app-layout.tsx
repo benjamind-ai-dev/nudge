@@ -6,6 +6,7 @@ import { Topbar } from "./topbar";
 const ROUTE_TITLES: { prefix: string; title: string }[] = [
   { prefix: "/dashboard", title: "Dashboard" },
   { prefix: "/invoices", title: "Invoices" },
+  { prefix: "/reports", title: "Reports" },
   { prefix: "/customers", title: "Customers" },
   { prefix: "/sequences", title: "Sequences" },
   { prefix: "/settings", title: "Settings" },
