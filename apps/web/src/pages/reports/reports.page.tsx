@@ -61,11 +61,10 @@ export function ReportsPage() {
       />
 
       <ReportFilterBar
-        bucket={vm.bucket}
-        bucketOptions={vm.bucketOptions}
-        onBucketChange={vm.setBucket}
-        customerSearch={vm.customerSearch}
-        onCustomerSearchChange={vm.setCustomerSearch}
+        dateRange={vm.dateRange}
+        onDateRangeChange={vm.setDateRange}
+        search={vm.search}
+        onSearchChange={vm.setSearch}
         status={vm.status}
         statusOptions={vm.statusOptions}
         onStatusChange={vm.setStatus}
@@ -76,9 +75,12 @@ export function ReportsPage() {
 
       <AgingReportTable
         rows={vm.rows}
-        pagination={vm.pagination}
         page={vm.page}
+        pageSize={vm.pageSize}
+        totalPages={vm.totalPages}
+        filteredTotal={vm.filteredTotal}
         isLoading={vm.tableLoading}
+        isLoadingMore={vm.isLoadingMore}
         error={vm.tableError}
         onRetry={vm.refetchTable}
         onRowClick={vm.handleRowClick}
