@@ -304,6 +304,18 @@ describe("InvoicesController", () => {
     expect(getUseCase.execute).not.toHaveBeenCalled();
   });
 
+  it("POST /v1/invoices/:id/start-follow-up returns 404 when businessId belongs to a different account", async () => {
+    businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+      new BusinessNotFoundError(FOREIGN_BIZ_ID),
+    );
+
+    await request(app.getHttpServer())
+      .post(`/v1/invoices/${INV_ID}/start-follow-up?businessId=${FOREIGN_BIZ_ID}`)
+      .expect(404);
+
+    expect(startFollowUpUseCase.execute).not.toHaveBeenCalled();
+  });
+
   describe("POST /v1/invoices/:id/start-follow-up", () => {
     const RUN_ID = "550e8400-e29b-41d4-a716-446655440002";
 
