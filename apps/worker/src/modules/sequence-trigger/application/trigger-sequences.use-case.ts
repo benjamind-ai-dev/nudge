@@ -1,13 +1,11 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { addDays, setHours, setMinutes, setSeconds, setMilliseconds } from "date-fns";
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import {
   SEQUENCE_TRIGGER_REPOSITORY,
   type OverdueInvoiceRow,
   type SequenceTriggerRepository,
 } from "../domain/sequence-trigger.repository";
 import { NoActiveSequenceError, NoStepsError } from "../domain/sequence-trigger.errors";
-import { nextBusinessHour } from "@nudge/shared";
+import { firstSendAt } from "@nudge/shared";
 
 const BATCH_SIZE = 100;
 
@@ -112,7 +110,7 @@ export class TriggerSequencesUseCase {
       throw new NoStepsError(sequenceId);
     }
 
-    const nextSendAt = this.calculateNextSendAt(
+    const nextSendAt = firstSendAt(
       invoice.dueDate,
       firstStep.firstStepDelayDays,
       invoice.businessTimezone,
@@ -129,14 +127,5 @@ export class TriggerSequencesUseCase {
     });
 
     return created;
-  }
-
-  private calculateNextSendAt(dueDate: Date, delayDays: number, timezone: string): Date {
-    const zoned = toZonedTime(dueDate, timezone);
-    const withDelay = addDays(zoned, delayDays);
-    const at9am = setMilliseconds(setSeconds(setMinutes(setHours(withDelay, 9), 0), 0), 0);
-    const utc = fromZonedTime(at9am, timezone);
-    const now = new Date();
-    return nextBusinessHour(utc < now ? now : utc, timezone);
   }
 }

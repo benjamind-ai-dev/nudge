@@ -48,3 +48,23 @@ export function nextBusinessHour(dateUtc: Date, timezone: string): Date {
   
   return fromZonedTime(nextBusinessTime, timezone);
 }
+
+/**
+ * First send instant for a sequence's first step: dueDate + delayDays at 09:00
+ * in the business timezone, floored to now, snapped to the next business hour.
+ * Shared by the worker auto-trigger and the manual start-follow-up endpoint.
+ */
+export function firstSendAt(dueDate: Date, delayDays: number, timezone: string): Date {
+  // dueDate is a calendar date stored as midnight UTC. Add delay days in UTC
+  // to preserve the calendar date arithmetic, then construct 9am in the business
+  // timezone for that resulting calendar date.
+  const targetDateUtc = addDays(dueDate, delayDays);
+  const year = targetDateUtc.getUTCFullYear();
+  const month = targetDateUtc.getUTCMonth() + 1;
+  const day = targetDateUtc.getUTCDate();
+  // Build a local-clock date for 9am on that calendar date in the business timezone
+  const at9amLocalStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T09:00:00`;
+  const utc = fromZonedTime(new Date(at9amLocalStr), timezone);
+  const now = new Date();
+  return nextBusinessHour(utc < now ? now : utc, timezone);
+}

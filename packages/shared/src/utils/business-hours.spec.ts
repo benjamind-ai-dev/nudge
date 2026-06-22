@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nextBusinessHour } from "./business-hours";
+import { nextBusinessHour, firstSendAt } from "./business-hours";
 
 describe("nextBusinessHour", () => {
   const ET = "America/New_York";
@@ -49,5 +49,22 @@ describe("nextBusinessHour", () => {
     const result = nextBusinessHour(input, ET);
     // Monday April 27, 9am ET = 13:00 UTC
     expect(result).toEqual(new Date("2026-04-27T13:00:00.000Z"));
+  });
+});
+
+describe("firstSendAt", () => {
+  const TZ = "America/New_York";
+
+  it("schedules dueDate + delayDays at 9am business tz when in the future", () => {
+    // due 2099-01-10, delay 3 days => 2099-01-13 09:00 America/New_York = 14:00 UTC
+    const due = new Date("2099-01-10T00:00:00Z");
+    const result = firstSendAt(due, 3, TZ);
+    expect(result.toISOString()).toBe("2099-01-13T14:00:00.000Z");
+  });
+
+  it("floors to now when the computed time is in the past", () => {
+    const due = new Date("2000-01-01T00:00:00Z");
+    const result = firstSendAt(due, 0, TZ);
+    expect(result.getTime()).toBeGreaterThan(Date.now());
   });
 });
