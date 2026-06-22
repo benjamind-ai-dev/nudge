@@ -28,9 +28,11 @@ const mkItem = (over: Partial<InvoiceListItem> = {}): InvoiceListItem => ({
 const createMockRepo = (
   overrides: Partial<InvoiceRepository> = {},
 ): InvoiceRepository => ({
-  findManyByFilter: jest
-    .fn()
-    .mockResolvedValue({ items: [], total: 0 } satisfies InvoiceListResult),
+  findManyByFilter: jest.fn().mockResolvedValue({
+    items: [],
+    total: 0,
+    nextCursor: null,
+  } satisfies InvoiceListResult),
   findDetailById: jest.fn(),
   findForPaymentLink: jest.fn(),
   updatePaymentLinkUrl: jest.fn(),
@@ -39,17 +41,18 @@ const createMockRepo = (
 
 const baseFilter: InvoiceListFilter = {
   businessId: "biz-1",
-  page: 1,
   limit: 25,
   sortBy: "due_date",
   sortOrder: "desc",
 };
 
 describe("ListInvoicesUseCase", () => {
-  it("returns items and pagination metadata", async () => {
+  it("returns items and cursor pagination metadata", async () => {
     const items = [mkItem(), mkItem({ id: "inv-2" })];
     const repo = createMockRepo({
-      findManyByFilter: jest.fn().mockResolvedValue({ items, total: 42 }),
+      findManyByFilter: jest
+        .fn()
+        .mockResolvedValue({ items, total: 42, nextCursor: "inv-2" }),
     });
     const useCase = new ListInvoicesUseCase(repo);
 
@@ -57,11 +60,25 @@ describe("ListInvoicesUseCase", () => {
 
     expect(result.data).toEqual(items);
     expect(result.pagination).toEqual({
-      page: 1,
       limit: 25,
       total: 42,
-      totalPages: 2,
+      nextCursor: "inv-2",
+      hasMore: true,
     });
+  });
+
+  it("reports hasMore=false when the repository returns no next cursor", async () => {
+    const repo = createMockRepo({
+      findManyByFilter: jest
+        .fn()
+        .mockResolvedValue({ items: [mkItem()], total: 1, nextCursor: null }),
+    });
+    const useCase = new ListInvoicesUseCase(repo);
+
+    const result = await useCase.execute(baseFilter);
+
+    expect(result.pagination.hasMore).toBe(false);
+    expect(result.pagination.nextCursor).toBeNull();
   });
 
   it("forwards the filter to the repository unchanged", async () => {
@@ -70,7 +87,7 @@ describe("ListInvoicesUseCase", () => {
 
     const filter: InvoiceListFilter = {
       ...baseFilter,
-      page: 3,
+      cursor: "inv-9",
       limit: 10,
       status: "overdue",
       customerId: "cust-1",
@@ -78,31 +95,11 @@ describe("ListInvoicesUseCase", () => {
       maxAmount: 50_000,
       dueAfter: new Date("2026-04-01"),
       dueBefore: new Date("2026-06-01"),
-      sortBy: "days_overdue",
+      sortBy: "customer_name",
       sortOrder: "asc",
     };
     await useCase.execute(filter);
 
     expect(repo.findManyByFilter).toHaveBeenCalledWith(filter);
-  });
-
-  it("rounds totalPages up", async () => {
-    const repo = createMockRepo({
-      findManyByFilter: jest.fn().mockResolvedValue({ items: [], total: 26 }),
-    });
-    const useCase = new ListInvoicesUseCase(repo);
-
-    const result = await useCase.execute(baseFilter);
-
-    expect(result.pagination.totalPages).toBe(2);
-  });
-
-  it("computes totalPages = 1 when total is zero", async () => {
-    const repo = createMockRepo();
-    const useCase = new ListInvoicesUseCase(repo);
-
-    const result = await useCase.execute(baseFilter);
-
-    expect(result.pagination.totalPages).toBe(1);
   });
 });

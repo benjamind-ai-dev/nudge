@@ -9,10 +9,10 @@ import type { InvoiceListItem } from "../domain/invoice.entity";
 export interface ListInvoicesResult {
   data: InvoiceListItem[];
   pagination: {
-    page: number;
     limit: number;
     total: number;
-    totalPages: number;
+    nextCursor: string | null;
+    hasMore: boolean;
   };
 }
 
@@ -24,15 +24,14 @@ export class ListInvoicesUseCase {
   ) {}
 
   async execute(filter: InvoiceListFilter): Promise<ListInvoicesResult> {
-    const { items, total } = await this.repo.findManyByFilter(filter);
-    const totalPages = Math.max(1, Math.ceil(total / filter.limit));
+    const { items, total, nextCursor } = await this.repo.findManyByFilter(filter);
     return {
       data: items,
       pagination: {
-        page: filter.page,
         limit: filter.limit,
         total,
-        totalPages,
+        nextCursor,
+        hasMore: nextCursor !== null,
       },
     };
   }

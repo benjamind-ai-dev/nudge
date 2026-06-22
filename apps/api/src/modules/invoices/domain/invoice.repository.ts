@@ -10,8 +10,9 @@ export const INVOICE_REPOSITORY = Symbol("InvoiceRepository");
 
 export interface InvoiceListFilter {
   businessId: string;
-  page: number;
   limit: number;
+  /** Invoice id to page after (keyset cursor). Omitted for the first page. */
+  cursor?: string;
   status?: InvoiceStatus;
   customerId?: string;
   minAmount?: number;
@@ -25,6 +26,8 @@ export interface InvoiceListFilter {
 export interface InvoiceListResult {
   items: InvoiceListItem[];
   total: number;
+  /** Cursor for the next page, or null when there are no more rows. */
+  nextCursor: string | null;
 }
 
 // Minimal shape needed by CreatePaymentLinkUseCase to decide whether to skip
