@@ -1,0 +1,131 @@
+import { Clock, DollarSign, Send, TrendingDown, TrendingUp } from "lucide-react";
+
+interface Kpis {
+  outstanding: { value: string; count: number };
+  recovered: { value: string; pctChange: number };
+  avgDaysToPay: { current: number; previous: number };
+  activeSequences: number;
+}
+
+interface KpiCardsProps {
+  kpis: Kpis | null;
+  isLoading: boolean;
+  error: unknown;
+  onRetry: () => void;
+}
+
+function CardShell({
+  label,
+  icon,
+  children,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-32 flex-col justify-between rounded-xl border border-[#C5C6CF] bg-white p-6 shadow-sm">
+      <div className="flex items-start justify-between">
+        <span className="text-xs font-medium uppercase tracking-[0.05em] text-[#45464E]">
+          {label}
+        </span>
+        <span className="text-[#C5C6CF]">{icon}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export function KpiCards({ kpis, isLoading, error, onRetry }: KpiCardsProps) {
+  if (error) {
+    return (
+      <div className="rounded-xl border border-[#C5C6CF] bg-white p-6 text-sm text-[#45464E]">
+        Couldn&apos;t load your metrics.{" "}
+        <button
+          type="button"
+          onClick={onRetry}
+          className="font-medium text-[#0B61A1] hover:underline"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (isLoading || !kpis) {
+    return (
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-32 animate-pulse rounded-xl border border-[#C5C6CF] bg-white"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  const pct = kpis.recovered.pctChange;
+  const pctPositive = pct >= 0;
+
+  return (
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <CardShell label="Total outstanding" icon={<DollarSign className="h-5 w-5" />}>
+        <div className="flex items-end justify-between">
+          <span className="text-2xl font-bold text-[#1A1C1C]">
+            {kpis.outstanding.value}
+          </span>
+          <span className="rounded-full bg-[#FFDAD6] px-2 py-0.5 text-[11px] font-bold leading-tight text-[#93000A]">
+            {kpis.outstanding.count}{" "}
+            {kpis.outstanding.count === 1 ? "invoice" : "invoices"}
+          </span>
+        </div>
+      </CardShell>
+
+      <CardShell
+        label="Recovered this month"
+        icon={<TrendingUp className="h-5 w-5 text-[#0B61A1]" />}
+      >
+        <div className="flex flex-col gap-0.5">
+          <span className="text-2xl font-bold text-[#1A1C1C]">
+            {kpis.recovered.value}
+          </span>
+          <span className="flex items-center gap-1 text-[11px] font-medium">
+            {pctPositive ? (
+              <TrendingUp className="h-3 w-3 text-[#059669]" />
+            ) : (
+              <TrendingDown className="h-3 w-3 text-[#BA1A1A]" />
+            )}
+            <span className={pctPositive ? "text-[#059669]" : "text-[#BA1A1A]"}>
+              {pctPositive ? "+" : ""}
+              {pct}%
+            </span>
+            <span className="text-[#45464E]">vs last mo</span>
+          </span>
+        </div>
+      </CardShell>
+
+      <CardShell label="Avg days to pay" icon={<Clock className="h-5 w-5" />}>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-2xl font-bold text-[#1A1C1C]">
+            {kpis.avgDaysToPay.current} days
+          </span>
+          <span className="text-[11px] font-medium italic text-[#45464E]">
+            was {kpis.avgDaysToPay.previous} days
+          </span>
+        </div>
+      </CardShell>
+
+      <CardShell label="Active sequences" icon={<Send className="h-5 w-5" />}>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-2xl font-bold text-[#1A1C1C]">
+            {kpis.activeSequences}
+          </span>
+          <span className="text-[11px] font-medium text-[#45464E]">
+            Across all customers
+          </span>
+        </div>
+      </CardShell>
+    </div>
+  );
+}
