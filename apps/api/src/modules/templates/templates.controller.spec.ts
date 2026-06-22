@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { GlobalExceptionFilter } from "../../common/filters/global-exception.filter";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { TemplatesController } from "./templates.controller";
@@ -77,6 +78,8 @@ describe("TemplatesController", () => {
     }).compile();
 
     app = module.createNestApplication();
+
+    app.useGlobalFilters(new GlobalExceptionFilter());
     // Simulate Clerk middleware: @AccountId() calls req.auth().userId
     app.use(
       (req: { auth: () => { userId: string } }, _res: unknown, next: () => void) => {

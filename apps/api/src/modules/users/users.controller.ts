@@ -1,14 +1,10 @@
 import {
-  BadGatewayException,
-  BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Delete,
   ForbiddenException,
   Get,
   HttpCode,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -23,18 +19,6 @@ import { DeleteUserUseCase } from "./application/delete-user.use-case";
 import { InviteUserUseCase } from "./application/invite-user.use-case";
 import { CancelInviteUseCase } from "./application/cancel-invite.use-case";
 import { ResendInviteUseCase } from "./application/resend-invite.use-case";
-import {
-  CannotCancelAcceptedInviteError,
-  CannotChangeOwnRoleError,
-  CannotChangeOwnerRoleError,
-  CannotRemoveOwnerError,
-  CannotRemoveSelfError,
-  EmailAlreadyInUseError,
-  InviteSendFailedError,
-  PendingUserNotFoundError,
-  SeatLimitReachedError,
-  UserNotFoundError,
-} from "./domain/user.errors";
 import {
   inviteUserSchema,
   updateUserRoleSchema,
@@ -77,36 +61,23 @@ export class UsersController {
       throw new ForbiddenException("Only owners or admins can invite users");
     }
 
-    try {
-      const { user, clerkInvitationId } = await this.inviteUser.execute({
-        callerAccountId: caller.accountId,
-        email: dto.email,
-        role: dto.role,
-        ...(dto.name !== undefined && { name: dto.name }),
-      });
+    const { user, clerkInvitationId } = await this.inviteUser.execute({
+      callerAccountId: caller.accountId,
+      email: dto.email,
+      role: dto.role,
+      ...(dto.name !== undefined && { name: dto.name }),
+    });
 
-      return {
-        data: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          status: "pending" as const,
-          clerkInvitationId,
-        },
-      };
-    } catch (err) {
-      if (err instanceof EmailAlreadyInUseError) {
-        throw new ConflictException(err.message);
-      }
-      if (err instanceof SeatLimitReachedError) {
-        throw new ConflictException(err.message);
-      }
-      if (err instanceof InviteSendFailedError) {
-        throw new BadGatewayException(err.message);
-      }
-      throw err;
-    }
+    return {
+      data: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: "pending" as const,
+        clerkInvitationId,
+      },
+    };
   }
 
   @Delete("invites/:id")
@@ -123,20 +94,10 @@ export class UsersController {
       throw new ForbiddenException("Only owners or admins can cancel invites");
     }
 
-    try {
-      await this.cancelInvite.execute({
-        callerAccountId: caller.accountId,
-        targetId: id,
-      });
-    } catch (err) {
-      if (err instanceof PendingUserNotFoundError) {
-        throw new NotFoundException(err.message);
-      }
-      if (err instanceof CannotCancelAcceptedInviteError) {
-        throw new ConflictException(err.message);
-      }
-      throw err;
-    }
+    await this.cancelInvite.execute({
+      callerAccountId: caller.accountId,
+      targetId: id,
+    });
   }
 
   @Post("invites/:id/resend")
@@ -153,32 +114,19 @@ export class UsersController {
       throw new ForbiddenException("Only owners or admins can resend invites");
     }
 
-    try {
-      const { user, clerkInvitationId } = await this.resendInvite.execute({
-        callerAccountId: caller.accountId,
-        targetId: id,
-      });
-      return {
-        data: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          status: "pending" as const,
-          clerkInvitationId,
-        },
-      };
-    } catch (err) {
-      if (err instanceof PendingUserNotFoundError) {
-        throw new NotFoundException(err.message);
-      }
-      if (err instanceof CannotCancelAcceptedInviteError) {
-        throw new ConflictException(err.message);
-      }
-      if (err instanceof InviteSendFailedError) {
-        throw new BadGatewayException(err.message);
-      }
-      throw err;
-    }
+    const { user, clerkInvitationId } = await this.resendInvite.execute({
+      callerAccountId: caller.accountId,
+      targetId: id,
+    });
+    return {
+      data: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        status: "pending" as const,
+        clerkInvitationId,
+      },
+    };
   }
 
   @Patch(":id")
@@ -195,26 +143,13 @@ export class UsersController {
       throw new ForbiddenException("Only the account owner can change roles");
     }
 
-    try {
-      const data = await this.updateUserRole.execute({
-        callerUserId: caller.userId,
-        accountId: caller.accountId,
-        targetId: id,
-        newRole: dto.role,
-      });
-      return { data };
-    } catch (err) {
-      if (err instanceof UserNotFoundError) {
-        throw new NotFoundException(err.message);
-      }
-      if (
-        err instanceof CannotChangeOwnRoleError ||
-        err instanceof CannotChangeOwnerRoleError
-      ) {
-        throw new BadRequestException(err.message);
-      }
-      throw err;
-    }
+    const data = await this.updateUserRole.execute({
+      callerUserId: caller.userId,
+      accountId: caller.accountId,
+      targetId: id,
+      newRole: dto.role,
+    });
+    return { data };
   }
 
   @Delete(":id")
@@ -231,23 +166,10 @@ export class UsersController {
       throw new ForbiddenException("Only the account owner can remove users");
     }
 
-    try {
-      await this.deleteUser.execute({
-        callerUserId: caller.userId,
-        accountId: caller.accountId,
-        targetId: id,
-      });
-    } catch (err) {
-      if (err instanceof UserNotFoundError) {
-        throw new NotFoundException(err.message);
-      }
-      if (
-        err instanceof CannotRemoveSelfError ||
-        err instanceof CannotRemoveOwnerError
-      ) {
-        throw new BadRequestException(err.message);
-      }
-      throw err;
-    }
+    await this.deleteUser.execute({
+      callerUserId: caller.userId,
+      accountId: caller.accountId,
+      targetId: id,
+    });
   }
 }

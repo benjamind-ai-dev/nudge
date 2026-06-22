@@ -1,11 +1,17 @@
-export class CustomerNotFoundError extends Error {
+import { DomainError } from "../../../common/errors/domain.error";
+
+export class CustomerNotFoundError extends DomainError {
+  readonly httpStatus = 404;
+
   constructor(public readonly customerId: string) {
     super(`Customer ${customerId} not found`);
     this.name = "CustomerNotFoundError";
   }
 }
 
-export class TierBelongsToDifferentBusinessError extends Error {
+export class TierBelongsToDifferentBusinessError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor(
     public readonly tierId: string,
     public readonly businessId: string,
@@ -15,7 +21,9 @@ export class TierBelongsToDifferentBusinessError extends Error {
   }
 }
 
-export class SequenceBelongsToDifferentBusinessError extends Error {
+export class SequenceBelongsToDifferentBusinessError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor(
     public readonly sequenceId: string,
     public readonly businessId: string,

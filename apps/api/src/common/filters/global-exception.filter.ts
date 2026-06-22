@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import { ZodError } from "zod";
 import { Response, Request } from "express";
+import { DomainError } from "../errors/domain.error";
 
 const HTTP_STATUS_NAMES: Record<number, string> = {
   400: "Bad Request",
@@ -19,6 +20,7 @@ const HTTP_STATUS_NAMES: Record<number, string> = {
   422: "Unprocessable Entity",
   429: "Too Many Requests",
   500: "Internal Server Error",
+  502: "Bad Gateway",
 };
 
 const PRISMA_ERROR_MAP: Record<string, { status: number; error: string }> = {
@@ -33,6 +35,9 @@ interface ErrorEnvelope {
   error: string;
   message: string;
   details?: unknown;
+  // Custom HttpException responses may carry extra top-level fields
+  // (e.g. `retryAfterSeconds` on a 429) — preserve them.
+  [key: string]: unknown;
 }
 
 @Catch()
@@ -70,6 +75,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       return this.handleZodError(exception);
     }
 
+    if (exception instanceof DomainError) {
+      return this.handleDomainError(exception);
+    }
+
     if (this.isPrismaError(exception)) {
       return this.handlePrismaError(exception);
     }
@@ -88,10 +97,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (typeof exceptionResponse === "object" && exceptionResponse !== null) {
       const res = exceptionResponse as Record<string, unknown>;
       return {
+        ...res,
         statusCode: status,
         error: (res.error as string) ?? HTTP_STATUS_NAMES[status] ?? "Error",
         message: (res.message as string) ?? exception.message,
-        details: res.details as unknown,
       };
     }
 
@@ -99,6 +108,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       statusCode: status,
       error: HTTP_STATUS_NAMES[status] ?? "Error",
       message: typeof exceptionResponse === "string" ? exceptionResponse : exception.message,
+    };
+  }
+
+  private handleDomainError(error: DomainError): ErrorEnvelope {
+    const status = error.httpStatus;
+    return {
+      statusCode: status,
+      error: HTTP_STATUS_NAMES[status] ?? "Error",
+      message: error.message,
     };
   }
 

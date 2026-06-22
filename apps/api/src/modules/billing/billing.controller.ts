@@ -1,11 +1,9 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
   HttpCode,
   InternalServerErrorException,
-  NotFoundException,
   Post,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -16,7 +14,6 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CreateCheckoutUseCase } from './application/create-checkout.use-case';
 import { CreatePortalUseCase } from './application/create-portal.use-case';
 import { GetBillingStatusUseCase } from './application/get-billing-status.use-case';
-import { AccountNotFoundError, NoStripeCustomerError } from './domain/billing.errors';
 import { createCheckoutSchema, type CreateCheckoutDto } from './dto/create-checkout.dto';
 
 @Controller('v1/billing')
@@ -45,7 +42,7 @@ export class BillingController {
       const result = await this.createCheckout.execute(accountId, dto.plan);
       return { data: { checkout_url: result.checkoutUrl } };
     } catch (error) {
-      if (error instanceof AccountNotFoundError) throw new NotFoundException(error.message);
+      // Stripe SDK errors are third-party, not domain errors — map here.
       if (error instanceof Stripe.errors.StripeError) {
         throw new InternalServerErrorException(`Stripe: ${error.message}`);
       }
@@ -61,8 +58,6 @@ export class BillingController {
       const result = await this.createPortal.execute(accountId);
       return { data: { portal_url: result.portalUrl } };
     } catch (error) {
-      if (error instanceof AccountNotFoundError) throw new NotFoundException(error.message);
-      if (error instanceof NoStripeCustomerError) throw new BadRequestException(error.message);
       if (error instanceof Stripe.errors.StripeError) {
         throw new InternalServerErrorException(`Stripe: ${error.message}`);
       }
@@ -88,7 +83,6 @@ export class BillingController {
         },
       };
     } catch (error) {
-      if (error instanceof AccountNotFoundError) throw new NotFoundException(error.message);
       if (error instanceof Stripe.errors.StripeError) {
         throw new InternalServerErrorException(`Stripe: ${error.message}`);
       }

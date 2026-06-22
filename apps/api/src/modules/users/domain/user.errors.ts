@@ -1,46 +1,62 @@
-export class UserNotFoundError extends Error {
+import { DomainError } from "../../../common/errors/domain.error";
+
+export class UserNotFoundError extends DomainError {
+  readonly httpStatus = 404;
+
   constructor(public readonly userId: string) {
     super(`User ${userId} not found`);
     this.name = "UserNotFoundError";
   }
 }
 
-export class CannotChangeOwnRoleError extends Error {
+export class CannotChangeOwnRoleError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor() {
     super("You cannot change your own role");
     this.name = "CannotChangeOwnRoleError";
   }
 }
 
-export class CannotChangeOwnerRoleError extends Error {
+export class CannotChangeOwnerRoleError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor() {
     super("The account owner's role cannot be changed");
     this.name = "CannotChangeOwnerRoleError";
   }
 }
 
-export class CannotRemoveSelfError extends Error {
+export class CannotRemoveSelfError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor() {
     super("You cannot remove yourself");
     this.name = "CannotRemoveSelfError";
   }
 }
 
-export class CannotRemoveOwnerError extends Error {
+export class CannotRemoveOwnerError extends DomainError {
+  readonly httpStatus = 400;
+
   constructor() {
     super("The account owner cannot be removed");
     this.name = "CannotRemoveOwnerError";
   }
 }
 
-export class EmailAlreadyInUseError extends Error {
+export class EmailAlreadyInUseError extends DomainError {
+  readonly httpStatus = 409;
+
   constructor(public readonly email: string) {
     super(`This email is already in use`);
     this.name = "EmailAlreadyInUseError";
   }
 }
 
-export class InviteSendFailedError extends Error {
+export class InviteSendFailedError extends DomainError {
+  readonly httpStatus = 502;
+
   constructor(
     public readonly email: string,
     public readonly cause?: unknown,
@@ -50,7 +66,9 @@ export class InviteSendFailedError extends Error {
   }
 }
 
-export class SeatLimitReachedError extends Error {
+export class SeatLimitReachedError extends DomainError {
+  readonly httpStatus = 409;
+
   constructor(public readonly maxSeats: number) {
     super(
       `Your plan includes ${maxSeats} team member${maxSeats === 1 ? "" : "s"}. Upgrade to invite more.`,
@@ -59,14 +77,18 @@ export class SeatLimitReachedError extends Error {
   }
 }
 
-export class PendingUserNotFoundError extends Error {
+export class PendingUserNotFoundError extends DomainError {
+  readonly httpStatus = 404;
+
   constructor(public readonly userId: string) {
     super(`Pending user ${userId} not found`);
     this.name = "PendingUserNotFoundError";
   }
 }
 
-export class CannotCancelAcceptedInviteError extends Error {
+export class CannotCancelAcceptedInviteError extends DomainError {
+  readonly httpStatus = 409;
+
   constructor(public readonly userId: string) {
     super(`User ${userId} has already accepted their invitation`);
     this.name = "CannotCancelAcceptedInviteError";
