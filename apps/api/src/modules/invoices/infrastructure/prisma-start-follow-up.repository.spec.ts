@@ -94,15 +94,23 @@ async function seedMinimalFixture(
   };
 }
 
+// Scope every delete to the seeded account so this spec can run in parallel
+// (CI uses multiple Jest workers against one shared test DB) without wiping
+// rows seeded by sibling integration specs. Order respects the
+// SequenceRun -> Sequence Restrict FK: runs are deleted before sequences.
 async function cleanUp(prisma: PrismaClient, accountId: string): Promise<void> {
-  await prisma.sequenceRun.deleteMany({});
-  await prisma.message.deleteMany({});
-  await prisma.invoice.deleteMany({});
-  await prisma.sequenceStep.deleteMany({});
-  await prisma.sequence.deleteMany({});
-  await prisma.customer.deleteMany({});
-  await prisma.relationshipTier.deleteMany({});
-  await prisma.business.deleteMany({});
+  await prisma.sequenceRun.deleteMany({
+    where: { invoice: { business: { accountId } } },
+  });
+  await prisma.message.deleteMany({ where: { business: { accountId } } });
+  await prisma.invoice.deleteMany({ where: { business: { accountId } } });
+  await prisma.sequenceStep.deleteMany({
+    where: { sequence: { business: { accountId } } },
+  });
+  await prisma.sequence.deleteMany({ where: { business: { accountId } } });
+  await prisma.customer.deleteMany({ where: { business: { accountId } } });
+  await prisma.relationshipTier.deleteMany({ where: { business: { accountId } } });
+  await prisma.business.deleteMany({ where: { accountId } });
   await prisma.account.deleteMany({ where: { id: accountId } });
 }
 
