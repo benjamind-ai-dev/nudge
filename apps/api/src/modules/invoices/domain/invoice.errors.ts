@@ -22,3 +22,35 @@ export class InvalidStateForPaymentLinkError extends DomainError {
     this.name = "InvalidStateForPaymentLinkError";
   }
 }
+
+export class InvoiceNotChaseableError extends DomainError {
+  readonly httpStatus = 409;
+
+  constructor(
+    public readonly invoiceId: string,
+    public readonly status: string,
+  ) {
+    super(
+      `Cannot start follow-up for invoice ${invoiceId} (status=${status}); only open, overdue, or partial invoices can be chased`,
+    );
+    this.name = "InvoiceNotChaseableError";
+  }
+}
+
+export class NoActiveSequenceError extends DomainError {
+  readonly httpStatus = 422;
+
+  constructor(public readonly invoiceId: string) {
+    super(`No active follow-up sequence is configured for invoice ${invoiceId}`);
+    this.name = "NoActiveSequenceError";
+  }
+}
+
+export class NoStepsError extends DomainError {
+  readonly httpStatus = 422;
+
+  constructor(public readonly sequenceId: string) {
+    super(`Sequence ${sequenceId} has no steps`);
+    this.name = "NoStepsError";
+  }
+}

@@ -6,10 +6,13 @@ import { InvoicesController } from "./invoices.controller";
 import { ListInvoicesUseCase } from "./application/list-invoices.use-case";
 import { GetInvoiceUseCase } from "./application/get-invoice.use-case";
 import { CreatePaymentLinkUseCase } from "./application/create-payment-link.use-case";
+import { StartFollowUpUseCase } from "./application/start-follow-up.use-case";
 import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
 import {
   InvalidStateForPaymentLinkError,
+  InvoiceNotChaseableError,
   InvoiceNotFoundError,
+  NoActiveSequenceError,
 } from "./domain/invoice.errors";
 import { BusinessNotFoundError } from "../business/domain/business.errors";
 import type {
@@ -73,12 +76,14 @@ describe("InvoicesController", () => {
   let listUseCase: { execute: jest.Mock };
   let getUseCase: { execute: jest.Mock };
   let payLinkUseCase: { execute: jest.Mock };
+  let startFollowUpUseCase: { execute: jest.Mock };
   let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
     listUseCase = { execute: jest.fn() };
     getUseCase = { execute: jest.fn() };
     payLinkUseCase = { execute: jest.fn() };
+    startFollowUpUseCase = { execute: jest.fn() };
     businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
@@ -87,6 +92,7 @@ describe("InvoicesController", () => {
         { provide: ListInvoicesUseCase, useValue: listUseCase },
         { provide: GetInvoiceUseCase, useValue: getUseCase },
         { provide: CreatePaymentLinkUseCase, useValue: payLinkUseCase },
+        { provide: StartFollowUpUseCase, useValue: startFollowUpUseCase },
         { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
@@ -296,5 +302,90 @@ describe("InvoicesController", () => {
       .expect(404);
 
     expect(getUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it("POST /v1/invoices/:id/start-follow-up returns 404 when businessId belongs to a different account", async () => {
+    businessAuth.assertCallerOwnsBusiness.mockRejectedValueOnce(
+      new BusinessNotFoundError(FOREIGN_BIZ_ID),
+    );
+
+    await request(app.getHttpServer())
+      .post(`/v1/invoices/${INV_ID}/start-follow-up?businessId=${FOREIGN_BIZ_ID}`)
+      .expect(404);
+
+    expect(startFollowUpUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  describe("POST /v1/invoices/:id/start-follow-up", () => {
+    const RUN_ID = "550e8400-e29b-41d4-a716-446655440002";
+
+    it("returns 200 with created=true when a run is started", async () => {
+      startFollowUpUseCase.execute.mockResolvedValue({
+        runId: RUN_ID,
+        created: true,
+        status: "active",
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/v1/invoices/${INV_ID}/start-follow-up`)
+        .query({ businessId: BIZ_ID })
+        .expect(200);
+
+      expect(res.body.data).toEqual(
+        expect.objectContaining({ created: true, status: "active" }),
+      );
+      expect(res.body.data.runId).toBeTruthy();
+      expect(startFollowUpUseCase.execute).toHaveBeenCalledWith(INV_ID, BIZ_ID);
+    });
+
+    it("returns 200 with already_running on a second call (idempotent)", async () => {
+      startFollowUpUseCase.execute.mockResolvedValue({
+        runId: null,
+        created: false,
+        status: "already_running",
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/v1/invoices/${INV_ID}/start-follow-up`)
+        .query({ businessId: BIZ_ID })
+        .expect(200);
+
+      expect(res.body.data).toEqual({ runId: null, created: false, status: "already_running" });
+    });
+
+    it("returns 404 when the invoice does not belong to the business", async () => {
+      startFollowUpUseCase.execute.mockRejectedValue(new InvoiceNotFoundError(INV_ID));
+
+      await request(app.getHttpServer())
+        .post(`/v1/invoices/${INV_ID}/start-follow-up`)
+        .query({ businessId: BIZ_ID })
+        .expect(404);
+    });
+
+    it("returns 409 when the invoice is paid/voided", async () => {
+      startFollowUpUseCase.execute.mockRejectedValue(
+        new InvoiceNotChaseableError(INV_ID, "paid"),
+      );
+
+      await request(app.getHttpServer())
+        .post(`/v1/invoices/${INV_ID}/start-follow-up`)
+        .query({ businessId: BIZ_ID })
+        .expect(409);
+    });
+
+    it("returns 422 when no active sequence resolves", async () => {
+      startFollowUpUseCase.execute.mockRejectedValue(new NoActiveSequenceError(INV_ID));
+
+      await request(app.getHttpServer())
+        .post(`/v1/invoices/${INV_ID}/start-follow-up`)
+        .query({ businessId: BIZ_ID })
+        .expect(422);
+    });
+
+    it("returns 400 when businessId is missing", async () => {
+      await request(app.getHttpServer())
+        .post(`/v1/invoices/${INV_ID}/start-follow-up`)
+        .expect(400);
+    });
   });
 });
