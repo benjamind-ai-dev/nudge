@@ -1,16 +1,31 @@
-import { Bell } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 
 interface TopbarProps {
   title: string;
   hasNotifications?: boolean;
+  onMenuClick?: () => void;
 }
 
-export function Topbar({ title, hasNotifications = false }: TopbarProps) {
+export function Topbar({
+  title,
+  hasNotifications = false,
+  onMenuClick,
+}: TopbarProps) {
   return (
-    <header className="flex h-14 items-center justify-between border-b border-[#C5C6CF] bg-white px-6">
-      <h1 className="text-xl font-semibold tracking-[0.01em] text-[#1A1C1C]">
-        {title}
-      </h1>
+    <header className="flex h-14 items-center justify-between border-b border-[#C5C6CF] bg-white px-4 sm:px-6">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="Open menu"
+          onClick={onMenuClick}
+          className="flex items-center justify-center rounded-md p-2 text-[#45464E] transition-colors hover:bg-gray-100 lg:hidden"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-semibold tracking-[0.01em] text-[#1A1C1C]">
+          {title}
+        </h1>
+      </div>
       <button
         type="button"
         aria-label="Notifications"
