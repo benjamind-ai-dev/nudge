@@ -8,9 +8,9 @@ import type { InvoiceListItem } from "../../api/invoices.api";
 
 let mockSummary: DashboardSummary | undefined;
 let mockInvoices: InvoiceListItem[];
-let lastInvoiceParams: Record<string, unknown> | undefined;
 const refetchSummary = vi.fn();
 const refetchInvoices = vi.fn();
+const fetchNextPage = vi.fn();
 const syncMutateAsync = vi.fn();
 
 vi.mock("../../queries/use-dashboard", () => ({
@@ -24,15 +24,27 @@ vi.mock("../../queries/use-dashboard", () => ({
 }));
 
 vi.mock("../../queries/use-invoices", () => ({
-  useInvoices: (params: Record<string, unknown>) => {
-    lastInvoiceParams = params;
-    return {
-      data: { data: mockInvoices, pagination: { page: 1, limit: 10, total: mockInvoices.length, totalPages: 1 } },
-      isLoading: false,
-      error: null,
-      refetch: refetchInvoices,
-    };
-  },
+  useInvoicesInfinite: () => ({
+    data: {
+      pages: [
+        {
+          data: mockInvoices,
+          pagination: {
+            limit: 100,
+            total: mockInvoices.length,
+            nextCursor: null,
+            hasMore: false,
+          },
+        },
+      ],
+    },
+    isLoading: false,
+    error: null,
+    refetch: refetchInvoices,
+    fetchNextPage,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  }),
 }));
 
 vi.mock("../../lib/hooks/use-active-business-id", () => ({
@@ -79,9 +91,9 @@ describe("useReportsViewModel", () => {
   beforeEach(() => {
     mockSummary = SUMMARY;
     mockInvoices = [invoice()];
-    lastInvoiceParams = undefined;
     refetchSummary.mockReset();
     refetchInvoices.mockReset();
+    fetchNextPage.mockReset();
     syncMutateAsync.mockReset();
   });
 
@@ -93,57 +105,68 @@ describe("useReportsViewModel", () => {
     expect(seg.reduce((s, x) => s + x.widthPct, 0)).toBeCloseTo(100, 5);
   });
 
-  it("maps an invoice to a row with bucket + status badges", () => {
+  it("maps invoices (flattened from cursor pages) to rows with badges", () => {
     const { result } = renderHook(() => useReportsViewModel(), { wrapper });
     const row = result.current.rows[0];
     expect(row.customerName).toBe("Global Dynamics Inc.");
     expect(row.invoiceNumber).toBe("#9022");
     expect(row.amount).toBe("$12,450.00");
     expect(row.overdueLabel).toBe("94 days");
-    expect(row.isOverdue).toBe(true);
     expect(row.bucketLabel).toBe("90+ Days");
     expect(row.statusLabel).toBe("Overdue");
   });
 
-  it("shows an em dash and Current bucket for a not-overdue invoice", () => {
+  it("shows an em dash + Current bucket for a not-overdue invoice", () => {
     mockInvoices = [invoice({ daysOverdue: 0, status: "open", invoiceNumber: null })];
     const { result } = renderHook(() => useReportsViewModel(), { wrapper });
     const row = result.current.rows[0];
     expect(row.overdueLabel).toBe("—");
-    expect(row.isOverdue).toBe(false);
     expect(row.bucketLabel).toBe("Current");
     expect(row.invoiceNumber).toBe("—");
   });
 
-  it("passes a 90+ due-date range to the invoices query when that bucket is set", () => {
-    const { result } = renderHook(() => useReportsViewModel(), { wrapper });
-    act(() => result.current.setBucket("days90plus"));
-    expect(lastInvoiceParams?.dueBefore).toBeDefined();
-    expect(lastInvoiceParams?.dueAfter).toBeUndefined();
-  });
-
   it("defaults to due-date ascending (oldest first)", () => {
+    mockInvoices = [
+      invoice({ id: "late", dueDate: "2023-12-20T00:00:00.000Z", customer: { id: "c2", companyName: "Zeta" } }),
+      invoice({ id: "early", dueDate: "2023-10-12T00:00:00.000Z", customer: { id: "c1", companyName: "Alpha" } }),
+    ];
     const { result } = renderHook(() => useReportsViewModel(), { wrapper });
     expect(result.current.sortValue).toBe("due_date:asc");
-    expect(lastInvoiceParams?.sortBy).toBe("due_date");
-    expect(lastInvoiceParams?.sortOrder).toBe("asc");
+    expect(result.current.rows[0].customerName).toBe("Alpha");
+    expect(result.current.rows[1].customerName).toBe("Zeta");
   });
 
-  it("filters loaded rows by customer search (FE-side)", () => {
+  it("filters by due-date range", () => {
+    mockInvoices = [
+      invoice({ id: "a", dueDate: "2023-10-12T00:00:00.000Z", customer: { id: "c1", companyName: "October Co" } }),
+      invoice({ id: "b", dueDate: "2023-12-20T00:00:00.000Z", customer: { id: "c2", companyName: "December Co" } }),
+    ];
+    const { result } = renderHook(() => useReportsViewModel(), { wrapper });
+    act(() => result.current.setDateRange({ start: "2023-11-01", end: null }));
+    expect(result.current.rows).toHaveLength(1);
+    expect(result.current.rows[0].customerName).toBe("December Co");
+  });
+
+  it("filters by customer/invoice search", () => {
     mockInvoices = [
       invoice({ id: "a", customer: { id: "c1", companyName: "Acme Corp" } }),
       invoice({ id: "b", customer: { id: "c2", companyName: "Globex" } }),
     ];
     const { result } = renderHook(() => useReportsViewModel(), { wrapper });
-    act(() => result.current.setCustomerSearch("glob"));
+    act(() => result.current.setSearch("glob"));
     expect(result.current.rows).toHaveLength(1);
     expect(result.current.rows[0].customerName).toBe("Globex");
   });
 
-  it("forwards the selected status to the invoices query", () => {
+  it("filters by status", () => {
+    mockInvoices = [
+      invoice({ id: "a", status: "overdue", customer: { id: "c1", companyName: "Over" } }),
+      invoice({ id: "b", status: "paid", customer: { id: "c2", companyName: "Paid" } }),
+    ];
     const { result } = renderHook(() => useReportsViewModel(), { wrapper });
-    act(() => result.current.setStatus("disputed"));
-    expect(lastInvoiceParams?.status).toBe("disputed");
+    act(() => result.current.setStatus("paid"));
+    expect(result.current.rows).toHaveLength(1);
+    expect(result.current.rows[0].customerName).toBe("Paid");
   });
 
   it("surfaces the sync message on success", async () => {

@@ -1,13 +1,15 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../../lib/utils";
 import type { InvoiceRow } from "../../pages/reports/reports.view-model";
-import type { InvoicePagination } from "../../api/invoices.api";
 
 interface AgingReportTableProps {
   rows: InvoiceRow[];
-  pagination?: InvoicePagination;
   page: number;
+  pageSize: number;
+  totalPages: number;
+  filteredTotal: number;
   isLoading: boolean;
+  isLoadingMore: boolean;
   error: unknown;
   onRetry: () => void;
   onRowClick: (id: string) => void;
@@ -20,15 +22,17 @@ const PILL = "inline-block rounded-full px-2 py-0.5 text-[11px] font-bold upperc
 
 export function AgingReportTable({
   rows,
-  pagination,
   page,
+  pageSize,
+  totalPages,
+  filteredTotal,
   isLoading,
+  isLoadingMore,
   error,
   onRetry,
   onRowClick,
   onPageChange,
 }: AgingReportTableProps) {
-  const totalPages = pagination?.totalPages ?? 1;
 
   return (
     <section className="overflow-hidden rounded-xl border border-[#C5C6CF] bg-white shadow-sm">
@@ -111,12 +115,12 @@ export function AgingReportTable({
         </div>
       )}
 
-      {!isLoading && !error && pagination && pagination.total > 0 && (
+      {!isLoading && !error && filteredTotal > 0 && (
         <div className="flex items-center justify-between border-t border-[#C5C6CF] bg-[#F3F3F3] px-6 py-4">
           <span className="text-sm text-[#45464E]">
-            Showing {(page - 1) * pagination.limit + 1} to{" "}
-            {Math.min(page * pagination.limit, pagination.total)} of{" "}
-            {pagination.total} invoices
+            Showing {(page - 1) * pageSize + 1} to{" "}
+            {Math.min(page * pageSize, filteredTotal)} of {filteredTotal} invoices
+            {isLoadingMore && " (loading more…)"}
           </span>
           <div className="flex items-center gap-2">
             <button
