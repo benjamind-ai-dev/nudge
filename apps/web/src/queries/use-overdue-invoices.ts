@@ -5,8 +5,9 @@ import { listInvoices, startFollowUp } from "../api/invoices.api";
  * Fetches all overdue invoices sorted by amount descending.
  * Fixed filters — no pagination needed for the worklist view (one page of overdue items).
  *
- * v1 limitation: results are capped at 200. Businesses with >200 overdue invoices will
- * silently see only the top 200 by amount. Tracked for pagination support in a future release.
+ * v1 limitation: results are capped at 100 (the API's max page size). Businesses with
+ * >100 overdue invoices will silently see only the top 100 by amount. Tracked for
+ * pagination support in a future release.
  */
 export function useOverdueInvoices(businessId: string) {
   return useQuery({
@@ -17,7 +18,7 @@ export function useOverdueInvoices(businessId: string) {
         status: "overdue",
         sortBy: "amount_cents",
         sortOrder: "desc",
-        limit: 200,
+        limit: 100,
       }),
     enabled: Boolean(businessId),
     staleTime: 30_000,
