@@ -4,6 +4,7 @@ import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
 const ROUTE_TITLES: { prefix: string; title: string }[] = [
+  { prefix: "/get-paid", title: "Get Paid" },
   { prefix: "/dashboard", title: "Dashboard" },
   { prefix: "/invoices", title: "Invoices" },
   { prefix: "/reports", title: "Reports" },
@@ -29,7 +30,7 @@ export function AppLayout() {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-muted">
       <Sidebar isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <div className="flex min-h-screen flex-col lg:pl-60">
         <Topbar
