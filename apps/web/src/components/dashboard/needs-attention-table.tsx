@@ -28,7 +28,7 @@ export function NeedsAttentionTable({
   onViewAll,
 }: NeedsAttentionTableProps) {
   return (
-    <Card className="gap-0 py-0">
+    <Card className="card-lift gap-0 py-0">
       <CardHeader className="border-b px-6 py-5 [.border-b]:pb-6">
         <CardTitle className="text-base font-semibold">Needs your attention</CardTitle>
       </CardHeader>

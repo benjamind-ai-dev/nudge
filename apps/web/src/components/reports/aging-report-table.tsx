@@ -97,7 +97,7 @@ export function AgingReportTable({
                     <span
                       className={cn(
                         "text-[10px] font-bold uppercase",
-                        row.isOverdue ? "text-destructive" : "text-emerald-700",
+                        row.isOverdue ? "text-destructive" : "text-emerald-400",
                       )}
                     >
                       {row.isOverdue ? `${row.overdueLabel} late` : "On time"}

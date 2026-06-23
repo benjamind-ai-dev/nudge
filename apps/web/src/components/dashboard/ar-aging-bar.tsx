@@ -19,7 +19,7 @@ export function ArAgingBar({
   onViewReport,
 }: ArAgingBarProps) {
   return (
-    <Card className="gap-0 py-0">
+    <Card className="card-lift gap-0 py-0">
       <CardHeader className="flex flex-row items-center justify-between px-6 py-5">
         <CardTitle className="text-base font-semibold">A/R Aging Balance</CardTitle>
         <Button variant="link" size="sm" className="h-auto p-0" onClick={onViewReport}>

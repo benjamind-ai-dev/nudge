@@ -20,11 +20,11 @@ const BUCKET_META: Record<
   BucketKey,
   { label: string; color: string; badgeClass: string }
 > = {
-  current: { label: "Current", color: "#10B981", badgeClass: "bg-[#10B981]/10 text-[#047857]" },
-  days1to30: { label: "1–30 Days", color: "#FBBF24", badgeClass: "bg-[#FBBF24]/10 text-[#B45309]" },
-  days31to60: { label: "31–60 Days", color: "#FB923C", badgeClass: "bg-[#FB923C]/10 text-[#C2410C]" },
-  days61to90: { label: "61–90 Days", color: "#EF4444", badgeClass: "bg-[#EF4444]/10 text-[#EF4444]" },
-  days90plus: { label: "90+ Days", color: "#7F1D1D", badgeClass: "bg-[#7F1D1D]/10 text-[#7F1D1D]" },
+  current: { label: "Current", color: "#10B981", badgeClass: "bg-emerald-500/15 text-emerald-300" },
+  days1to30: { label: "1–30 Days", color: "#FBBF24", badgeClass: "bg-amber-500/15 text-amber-300" },
+  days31to60: { label: "31–60 Days", color: "#FB923C", badgeClass: "bg-orange-500/15 text-orange-300" },
+  days61to90: { label: "61–90 Days", color: "#EF4444", badgeClass: "bg-red-500/15 text-red-300" },
+  days90plus: { label: "90+ Days", color: "#7F1D1D", badgeClass: "bg-red-500/20 text-red-300" },
 };
 
 const BUCKET_ORDER: BucketKey[] = [
@@ -36,12 +36,12 @@ const BUCKET_ORDER: BucketKey[] = [
 ];
 
 const STATUS_BADGE: Record<InvoiceStatus, string> = {
-  overdue: "bg-[#DC2626]/10 text-[#DC2626]",
-  partial: "bg-[#FBBF24]/15 text-[#B45309]",
-  paid: "bg-green-100 text-green-700",
-  disputed: "bg-purple-100 text-purple-700",
-  open: "bg-[#E2E8F0] text-[#64748B]",
-  voided: "bg-gray-100 text-gray-500",
+  overdue: "bg-red-500/15 text-red-300",
+  partial: "bg-amber-500/15 text-amber-300",
+  paid: "bg-emerald-500/15 text-emerald-300",
+  disputed: "bg-fuchsia-500/15 text-fuchsia-300",
+  open: "bg-slate-500/15 text-slate-300",
+  voided: "bg-slate-500/10 text-slate-400",
 };
 
 function bucketOf(daysOverdue: number): BucketKey {

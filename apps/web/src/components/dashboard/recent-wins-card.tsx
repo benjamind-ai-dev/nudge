@@ -17,7 +17,7 @@ export function RecentWinsCard({
   onRetry,
 }: RecentWinsCardProps) {
   return (
-    <Card className="gap-0 py-0">
+    <Card className="card-lift gap-0 py-0">
       <CardHeader className="border-b px-6 py-5 [.border-b]:pb-6">
         <CardTitle className="text-base font-semibold">Recent wins</CardTitle>
         <CardDescription>Your latest payments</CardDescription>
@@ -47,8 +47,8 @@ export function RecentWinsCard({
           rows.map((row) => (
             <div key={row.id} className="flex gap-3 rounded-lg p-3">
               {/* Emerald success icon — semantic color kept */}
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                <Check className="h-4 w-4 text-emerald-600" />
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
+                <Check className="h-4 w-4 text-emerald-400" />
               </span>
               <div className="flex flex-1 flex-col">
                 <div className="flex items-start justify-between gap-2">
@@ -56,7 +56,7 @@ export function RecentWinsCard({
                     {row.customerName}
                   </span>
                   {/* Emerald success amount — semantic color kept */}
-                  <span className="shrink-0 text-[11px] font-semibold text-emerald-600">
+                  <span className="shrink-0 text-[11px] font-semibold text-emerald-400">
                     {row.amount}
                   </span>
                 </div>

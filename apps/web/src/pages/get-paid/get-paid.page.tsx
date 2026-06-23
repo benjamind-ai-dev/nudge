@@ -15,7 +15,7 @@ export function GetPaidPage() {
         </h1>
         {!vm.isLoading && vm.overdueCount > 0 ? (
           <p className="mt-1 text-sm text-muted-foreground">
-            <span className="font-semibold text-destructive">
+            <span className="font-semibold text-destructive drop-shadow-[0_0_12px_rgba(248,113,113,0.35)]">
               {formatDollars(vm.totalOverdueCents)}
             </span>{" "}
             overdue across {vm.overdueCount}{" "}
@@ -30,7 +30,7 @@ export function GetPaidPage() {
 
       {/* Already-running inline notice (appears after dialog closes) */}
       {vm.alreadyRunning && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
           Already following up on this invoice — the sequence is active.
         </div>
       )}

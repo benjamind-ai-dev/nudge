@@ -1,6 +1,11 @@
 /**
  * Shared Clerk theming so <SignUp/> and <SignIn/> match the Figma onboarding
  * form: accent-blue primary, 6px inputs, Geist font, white social button.
+ *
+ * TODO: dark Clerk appearance — install @clerk/themes and pass
+ * `appearance={{ baseTheme: dark }}` to <SignIn> and <SignUp> so the widget
+ * matches the Midnight canvas. The colorBackground/colorText below are still
+ * light-mode values.
  */
 export const clerkAppearance = {
   variables: {
