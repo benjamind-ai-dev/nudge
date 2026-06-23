@@ -1,3 +1,4 @@
+import { Fragment, useState } from "react";
 import { ChevronDown, ChevronRight, Copy, Send, Eye, PlayCircle } from "lucide-react";
 import { cn } from "../../lib/utils";
 import type { FollowUpStatus, OverdueRow } from "../../pages/get-paid/get-paid.view-model";
@@ -32,6 +33,16 @@ interface OverdueWorklistProps {
 
 // ---- Expanded inset panel --------------------------------------------------
 function ExpandedPanel({ row }: { row: OverdueRow }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    void navigator.clipboard.writeText(row.paymentLinkUrl!).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return (
     <div className="border-t border-[#E5E7EB] bg-[#F9FAFB] px-6 py-5">
       <div className="grid gap-6 md:grid-cols-2">
@@ -57,19 +68,14 @@ function ExpandedPanel({ row }: { row: OverdueRow }) {
             </div>
           </div>
           {row.paymentLinkUrl && (
-            <a
-              href={row.paymentLinkUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0B61A1] hover:underline"
-              onClick={(e) => {
-                e.stopPropagation();
-                void navigator.clipboard.writeText(row.paymentLinkUrl!);
-              }}
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2E75B6] hover:underline"
             >
               <Copy className="h-3.5 w-3.5" />
-              Copy payment link
-            </a>
+              {copied ? "Copied" : "Copy payment link"}
+            </button>
           )}
         </div>
 
@@ -277,9 +283,8 @@ export function OverdueWorklist({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <>
+              <Fragment key={row.id}>
                 <tr
-                  key={row.id}
                   onClick={() => onToggleExpand(row.id)}
                   className={cn(
                     "cursor-pointer border-b border-[#E5E7EB] transition-colors hover:bg-black/[0.02]",
@@ -347,13 +352,13 @@ export function OverdueWorklist({
                 </tr>
 
                 {expandedId === row.id && (
-                  <tr key={`${row.id}-expanded`} className="border-b border-[#E5E7EB]">
+                  <tr className="border-b border-[#E5E7EB]">
                     <td colSpan={8} className="p-0">
                       <ExpandedPanel row={row} />
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

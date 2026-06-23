@@ -65,11 +65,11 @@ export function StartFollowUpDialog({
           {/* Static checked checkboxes — display only */}
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <CheckSquare className="h-5 w-5 shrink-0 text-[#10B981]" aria-hidden="true" />
+              <CheckSquare className="h-5 w-5 shrink-0 text-[#6B7280]" aria-hidden="true" />
               <span className="text-sm text-[#1B2A4A]">Include payment link</span>
             </div>
             <div className="flex items-center gap-3">
-              <CheckSquare className="h-5 w-5 shrink-0 text-[#10B981]" aria-hidden="true" />
+              <CheckSquare className="h-5 w-5 shrink-0 text-[#6B7280]" aria-hidden="true" />
               <span className="text-sm text-[#1B2A4A]">Send by email</span>
             </div>
           </div>

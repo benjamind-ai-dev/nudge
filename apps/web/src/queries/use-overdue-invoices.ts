@@ -4,6 +4,9 @@ import { listInvoices, startFollowUp } from "../api/invoices.api";
 /**
  * Fetches all overdue invoices sorted by amount descending.
  * Fixed filters — no pagination needed for the worklist view (one page of overdue items).
+ *
+ * v1 limitation: results are capped at 200. Businesses with >200 overdue invoices will
+ * silently see only the top 200 by amount. Tracked for pagination support in a future release.
  */
 export function useOverdueInvoices(businessId: string) {
   return useQuery({
@@ -31,8 +34,12 @@ export function useStartFollowUp() {
       invoiceId: string;
       businessId: string;
     }) => startFollowUp(invoiceId, businessId),
-    onSuccess: (_data, { businessId }) => {
-      qc.invalidateQueries({ queryKey: ["invoices", "overdue", businessId] });
+    onSuccess: (data, { businessId }) => {
+      // Only invalidate when a new run was actually created; skip for already_running
+      // to avoid an unnecessary refetch when nothing changed.
+      if (data.data.created === true) {
+        qc.invalidateQueries({ queryKey: ["invoices", "overdue", businessId] });
+      }
     },
   });
 }
