@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { useAuth } from "@clerk/clerk-react";
 import { setTokenGetter } from "./api/client";
+import { useApplyTheme } from "./lib/hooks/use-apply-theme";
 import { ProtectedRoute } from "./components/protected-route";
 import { AppLayout } from "./components/app-layout";
 import { BillingGate } from "./components/billing-gate";
@@ -30,10 +31,16 @@ function ClerkTokenBridge() {
   return null;
 }
 
+function ThemeApplier() {
+  useApplyTheme();
+  return null;
+}
+
 export default function App() {
   return (
     <>
       <ClerkTokenBridge />
+      <ThemeApplier />
       <Routes>
         {/* Public */}
         <Route path="/sign-in/*" element={<SignInPage />} />
