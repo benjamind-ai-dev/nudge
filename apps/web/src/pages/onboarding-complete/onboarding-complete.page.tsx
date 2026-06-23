@@ -63,7 +63,7 @@ export default function OnboardingCompletePage() {
           <Link
             to={vm.addMoreHref}
             className="rounded-md px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#2E75B6" }}
+            style={{ backgroundColor: "#2563EB" }}
           >
             Connect another business
           </Link>
@@ -78,7 +78,7 @@ export default function OnboardingCompletePage() {
         <Link
           to={vm.dashboardHref}
           className="rounded-md px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-          style={{ backgroundColor: "#2E75B6" }}
+          style={{ backgroundColor: "#2563EB" }}
         >
           Go to dashboard
         </Link>

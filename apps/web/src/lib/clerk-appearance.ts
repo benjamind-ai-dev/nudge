@@ -4,9 +4,9 @@
  */
 export const clerkAppearance = {
   variables: {
-    colorPrimary: "#2E75B6",
+    colorPrimary: "#2563EB",
     colorText: "#041534",
-    colorTextSecondary: "#45464E",
+    colorTextSecondary: "#64748B",
     colorBackground: "#FFFFFF",
     colorInputBackground: "#FFFFFF",
     colorInputText: "#041534",
@@ -20,15 +20,15 @@ export const clerkAppearance = {
     header: "hidden",
     footer: "hidden",
     socialButtonsBlockButton:
-      "border border-[#C5C6CF] rounded-md h-10 hover:bg-gray-50",
-    socialButtonsBlockButtonText: "text-[#1A1C1C] font-medium",
-    dividerLine: "bg-[#C5C6CF]",
-    dividerText: "text-[#45464E]",
-    formFieldLabel: "text-[#45464E] font-medium",
+      "border border-[#E2E8F0] rounded-md h-10 hover:bg-gray-50",
+    socialButtonsBlockButtonText: "text-[#0F172A] font-medium",
+    dividerLine: "bg-[#E2E8F0]",
+    dividerText: "text-[#64748B]",
+    formFieldLabel: "text-[#64748B] font-medium",
     formFieldInput:
-      "border border-[#C5C6CF] rounded-md h-10 focus:border-[#2E75B6] focus:ring-[#2E75B6]",
+      "border border-[#E2E8F0] rounded-md h-10 focus:border-[#2563EB] focus:ring-[#2563EB]",
     formButtonPrimary:
-      "bg-[#2E75B6] hover:bg-[#2666a0] text-white normal-case font-semibold shadow-sm",
-    footerActionLink: "text-[#2E75B6] hover:text-[#2666a0] font-semibold",
+      "bg-[#2563EB] hover:bg-[#1D4ED8] text-white normal-case font-semibold shadow-sm",
+    footerActionLink: "text-[#2563EB] hover:text-[#1D4ED8] font-semibold",
   },
 };

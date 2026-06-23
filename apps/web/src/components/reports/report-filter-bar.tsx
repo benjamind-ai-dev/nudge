@@ -19,7 +19,7 @@ interface ReportFilterBarProps {
 }
 
 const SELECT_CLASS =
-  "appearance-none rounded-lg border border-[#C5C6CF] bg-white px-4 py-2 pr-9 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0B61A1]/20";
+  "appearance-none rounded-lg border border-[#E2E8F0] bg-white px-4 py-2 pr-9 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20";
 
 export function ReportFilterBar(props: ReportFilterBarProps) {
   return (
@@ -32,13 +32,13 @@ export function ReportFilterBar(props: ReportFilterBarProps) {
 
       {/* Customer / invoice search (filters the loaded set) */}
       <div className="relative min-w-[200px] flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#75777F]" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
         <input
           type="text"
           value={props.search}
           onChange={(e) => props.onSearchChange(e.target.value)}
           placeholder="Search customer or invoice #…"
-          className="w-full rounded-lg border border-[#C5C6CF] bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0B61A1]/20"
+          className="w-full rounded-lg border border-[#E2E8F0] bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20"
         />
       </div>
 

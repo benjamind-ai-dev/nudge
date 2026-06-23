@@ -14,20 +14,20 @@ export function AgingSummaryCard({
   onRetry,
 }: AgingSummaryCardProps) {
   return (
-    <section className="rounded-xl border border-[#C5C6CF] bg-white p-6 shadow-sm">
+    <section className="rounded-xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
       <div className="mb-6 flex items-center justify-between">
-        <h3 className="text-lg font-semibold tracking-[-0.01em] text-[#1A1C1C]">
+        <h3 className="text-lg font-semibold tracking-[-0.01em] text-[#0F172A]">
           Aging Summary
         </h3>
       </div>
 
       {error ? (
-        <p className="text-sm text-[#45464E]">
+        <p className="text-sm text-[#64748B]">
           Couldn&apos;t load the aging summary.{" "}
           <button
             type="button"
             onClick={onRetry}
-            className="font-medium text-[#0B61A1] hover:underline"
+            className="font-medium text-[#2563EB] hover:underline"
           >
             Retry
           </button>
@@ -43,7 +43,7 @@ export function AgingSummaryCard({
         </div>
       ) : (
         <>
-          <div className="mb-8 flex h-8 overflow-hidden rounded-full bg-[#EEEEEE]">
+          <div className="mb-8 flex h-8 overflow-hidden rounded-full bg-[#F1F5F9]">
             {segments.map((s) =>
               s.widthPct > 0 ? (
                 <div
@@ -64,12 +64,12 @@ export function AgingSummaryCard({
                     className="h-3 w-3 rounded-full"
                     style={{ backgroundColor: s.color }}
                   />
-                  <span className="text-xs font-medium uppercase tracking-[0.05em] text-[#45464E]">
+                  <span className="text-xs font-medium uppercase tracking-[0.05em] text-[#64748B]">
                     {s.label}
                   </span>
                 </div>
                 <p className="text-lg font-bold text-[#041534]">{s.amount}</p>
-                <p className="text-[13px] text-[#45464E]">
+                <p className="text-[13px] text-[#64748B]">
                   {s.count} {s.count === 1 ? "invoice" : "invoices"}
                 </p>
               </div>

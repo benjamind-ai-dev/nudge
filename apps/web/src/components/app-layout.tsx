@@ -29,7 +29,7 @@ export function AppLayout() {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-[#F9F9F9]">
+    <div className="min-h-screen bg-[#F8FAFC]">
       <Sidebar isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <div className="flex min-h-screen flex-col lg:pl-60">
         <Topbar

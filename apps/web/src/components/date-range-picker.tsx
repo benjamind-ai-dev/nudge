@@ -139,24 +139,24 @@ export function DateRangePicker({
         className={cn(
           "flex h-10 w-[260px] items-center gap-2 rounded-lg border bg-white px-3 transition-colors",
           open
-            ? "border-2 border-[#0B61A1] px-[11px] shadow-[0_0_0_4px_rgba(11,97,161,0.1)]"
-            : "border-[#C5C6CF] hover:border-[#0B61A1]",
+            ? "border-2 border-[#2563EB] px-[11px] shadow-[0_0_0_4px_rgba(11,97,161,0.1)]"
+            : "border-[#E2E8F0] hover:border-[#2563EB]",
         )}
       >
         <CalendarDays
-          className={cn("h-5 w-5 shrink-0", label ? "text-[#45464E]" : "text-[#75777F]")}
+          className={cn("h-5 w-5 shrink-0", label ? "text-[#64748B]" : "text-[#94A3B8]")}
         />
         <span
           className={cn(
             "flex-1 text-left text-sm",
-            label ? "text-[#1A1C1C]" : "text-[#75777F]",
+            label ? "text-[#0F172A]" : "text-[#94A3B8]",
           )}
         >
           {label ?? placeholder}
         </span>
         {label && (
           <X
-            className="h-4 w-4 shrink-0 text-[#75777F] hover:text-[#45464E]"
+            className="h-4 w-4 shrink-0 text-[#94A3B8] hover:text-[#64748B]"
             onClick={clearTrigger}
           />
         )}
@@ -164,7 +164,7 @@ export function DateRangePicker({
 
       {/* Popover */}
       {open && (
-        <div className="absolute z-20 mt-2 w-[320px] overflow-hidden rounded-xl border border-[#C5C6CF] bg-white shadow-md">
+        <div className="absolute z-20 mt-2 w-[320px] overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-md">
           {/* Header */}
           <div className="flex items-center justify-between p-4">
             <button
@@ -173,18 +173,18 @@ export function DateRangePicker({
               onClick={() =>
                 setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))
               }
-              className="rounded-full p-1 transition-colors hover:bg-[#EEEEEE]"
+              className="rounded-full p-1 transition-colors hover:bg-[#F1F5F9]"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="text-sm font-semibold text-[#1A1C1C]">{monthLabel}</span>
+            <span className="text-sm font-semibold text-[#0F172A]">{monthLabel}</span>
             <button
               type="button"
               aria-label="Next month"
               onClick={() =>
                 setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))
               }
-              className="rounded-full p-1 transition-colors hover:bg-[#EEEEEE]"
+              className="rounded-full p-1 transition-colors hover:bg-[#F1F5F9]"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -195,7 +195,7 @@ export function DateRangePicker({
             {WEEKDAYS.map((w) => (
               <div
                 key={w}
-                className="py-1 text-center text-[11px] font-bold text-[#75777F]"
+                className="py-1 text-center text-[11px] font-bold text-[#94A3B8]"
               >
                 {w}
               </div>
@@ -209,7 +209,7 @@ export function DateRangePicker({
                 return (
                   <div
                     key={toIso(date)}
-                    className="flex h-9 items-center justify-center text-[#75777F]"
+                    className="flex h-9 items-center justify-center text-[#94A3B8]"
                   >
                     {date.getDate()}
                   </div>
@@ -246,12 +246,12 @@ export function DateRangePicker({
                     className={cn(
                       "relative z-10 flex h-8 w-8 items-center justify-center rounded-full transition-colors",
                       isEndpoint
-                        ? "bg-[#0B61A1] font-medium text-white"
+                        ? "bg-[#2563EB] font-medium text-white"
                         : isMid
                           ? "text-[#041534]"
                           : isToday
-                            ? "border border-[#0B61A1] text-[#1A1C1C]"
-                            : "text-[#1A1C1C] hover:bg-[#EEEEEE]",
+                            ? "border border-[#2563EB] text-[#0F172A]"
+                            : "text-[#0F172A] hover:bg-[#F1F5F9]",
                     )}
                   >
                     {date.getDate()}
@@ -262,11 +262,11 @@ export function DateRangePicker({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-[#C5C6CF] bg-[#F9F9F9] p-3">
+          <div className="flex items-center justify-between border-t border-[#E2E8F0] bg-[#F8FAFC] p-3">
             <button
               type="button"
               onClick={() => setDraft({ start: null, end: null })}
-              className="rounded px-3 py-2 text-xs font-semibold text-[#0B61A1] transition-colors hover:bg-[#0B61A1]/5"
+              className="rounded px-3 py-2 text-xs font-semibold text-[#2563EB] transition-colors hover:bg-[#2563EB]/5"
             >
               Clear
             </button>
@@ -276,7 +276,7 @@ export function DateRangePicker({
                 onChange(draft);
                 setOpen(false);
               }}
-              className="rounded-lg bg-[#0B61A1] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+              className="rounded-lg bg-[#2563EB] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
             >
               Apply
             </button>

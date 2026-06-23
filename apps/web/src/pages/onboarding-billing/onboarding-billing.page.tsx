@@ -20,13 +20,13 @@ export function OnboardingBillingPage() {
               <h1 className="text-[28px] font-semibold leading-tight text-[#041534]">
                 Choose your plan.
               </h1>
-              <p className="mt-2 text-sm text-[#45464E]">
+              <p className="mt-2 text-sm text-[#64748B]">
                 A payment card is required to start. Cancel anytime.
               </p>
             </header>
 
             {vm.showCancelledBanner && (
-              <div className="mb-6 rounded-md border border-[#C5C6CF] bg-[#F9F9F9] px-4 py-3 text-center text-sm text-[#45464E]">
+              <div className="mb-6 rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-center text-sm text-[#64748B]">
                 No payment was taken. Pick a plan when you're ready.
               </div>
             )}
@@ -53,13 +53,13 @@ export function OnboardingBillingPage() {
               ))}
             </div>
 
-            <p className="mt-6 text-center text-xs text-[#6B7280]">
+            <p className="mt-6 text-center text-xs text-[#64748B]">
               You'll be redirected to Stripe to enter your card. Then we'll bring
               you back to finish setup.
             </p>
-            <p className={cn("mt-1 text-center text-xs text-[#6B7280]")}>
+            <p className={cn("mt-1 text-center text-xs text-[#64748B]")}>
               Need something custom?{" "}
-              <a href={`mailto:support@nudge.com`} className="font-semibold text-[#2E75B6]">
+              <a href={`mailto:support@nudge.com`} className="font-semibold text-[#2563EB]">
                 Contact support
               </a>
             </p>

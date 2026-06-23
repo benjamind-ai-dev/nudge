@@ -41,15 +41,15 @@ export function StartFollowUpDialog({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-[#C5C6CF] px-6 py-5">
+        <div className="flex items-start justify-between border-b border-[#E2E8F0] px-6 py-5">
           <div>
             <h2
               id="sfu-dialog-title"
-              className="text-[17px] font-semibold leading-snug text-[#1A1C1C]"
+              className="text-[17px] font-semibold leading-snug text-[#0F172A]"
             >
               Start follow-up — {invoiceNumber} · {customerName}
             </h2>
-            <p className="mt-0.5 text-sm text-[#45464E]">
+            <p className="mt-0.5 text-sm text-[#64748B]">
               Your default follow-up sequence.
             </p>
           </div>
@@ -57,7 +57,7 @@ export function StartFollowUpDialog({
             type="button"
             onClick={onCancel}
             aria-label="Close dialog"
-            className="ml-4 mt-0.5 shrink-0 rounded-md p-1 text-[#45464E] transition-colors hover:bg-[#F3F3F3] hover:text-[#1A1C1C]"
+            className="ml-4 mt-0.5 shrink-0 rounded-md p-1 text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
           >
             <X className="h-5 w-5" />
           </button>
@@ -70,17 +70,17 @@ export function StartFollowUpDialog({
            * This is a representative default preview, NOT the exact resolved sequence template.
            * Exact preview requires a backend endpoint — tracked as a follow-up.
            */}
-          <div className="rounded-lg border border-[#C5C6CF] bg-[#F3F3F3] p-5">
+          <div className="rounded-lg border border-[#E2E8F0] bg-[#F1F5F9] p-5">
             {/* Card label */}
             <div className="mb-3 flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5 text-[#45464E]" aria-hidden="true" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#45464E]">
+              <Mail className="h-3.5 w-3.5 text-[#64748B]" aria-hidden="true" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#64748B]">
                 Email Preview
               </span>
             </div>
 
             {/* Email body */}
-            <div className="space-y-3 text-sm leading-relaxed text-[#1A1C1C]">
+            <div className="space-y-3 text-sm leading-relaxed text-[#0F172A]">
               <p>Hi {customerName} team,</p>
               <p>
                 This is a friendly reminder that invoice {invoiceNumber} for{" "}
@@ -88,7 +88,7 @@ export function StartFollowUpDialog({
                 appreciate it if you could process this payment at your earliest convenience.
               </p>
               <p>If you&apos;ve already sent payment, please disregard this message.</p>
-              <p className="text-[#45464E]">
+              <p className="text-[#64748B]">
                 Best regards,
                 <br />
                 Nudge Billing
@@ -107,8 +107,8 @@ export function StartFollowUpDialog({
                 <Check className="h-3 w-3 text-white" strokeWidth={3} />
               </span>
               <div>
-                <span className="text-sm font-medium text-[#1A1C1C]">Include payment link</span>
-                <p className="text-xs text-[#45464E]">Adds a payment link to the email body.</p>
+                <span className="text-sm font-medium text-[#0F172A]">Include payment link</span>
+                <p className="text-xs text-[#64748B]">Adds a payment link to the email body.</p>
               </div>
             </div>
 
@@ -120,25 +120,25 @@ export function StartFollowUpDialog({
               >
                 <Check className="h-3 w-3 text-white" strokeWidth={3} />
               </span>
-              <span className="text-sm font-medium text-[#1A1C1C]">Send by email</span>
+              <span className="text-sm font-medium text-[#0F172A]">Send by email</span>
             </div>
           </div>
 
           {error && (
-            <p className="rounded-lg border border-[#FFB4AB] bg-[#FFDAD6] px-3 py-2 text-sm text-[#93000A]">
+            <p className="rounded-lg border border-[#FECACA] bg-[#FEE2E2] px-3 py-2 text-sm text-[#991B1B]">
               {error}
             </p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-[#C5C6CF] px-6 py-4">
+        <div className="border-t border-[#E2E8F0] px-6 py-4">
           <div className="flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onCancel}
               disabled={isPending}
-              className="rounded-lg border border-[#C5C6CF] px-4 py-2 text-sm font-medium text-[#45464E] transition-colors hover:bg-[#F3F3F3] disabled:opacity-50"
+              className="rounded-lg border border-[#E2E8F0] px-4 py-2 text-sm font-medium text-[#64748B] transition-colors hover:bg-[#F1F5F9] disabled:opacity-50"
             >
               Cancel
             </button>
@@ -148,14 +148,14 @@ export function StartFollowUpDialog({
               disabled={isPending}
               className={cn(
                 "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                "bg-[#0B61A1] hover:bg-[#0a5690]",
+                "bg-[#2563EB] hover:bg-[#1D4ED8]",
               )}
             >
               <Send className="h-4 w-4" />
               {isPending ? "Starting…" : "Send & start sequence"}
             </button>
           </div>
-          <p className="mt-3 text-center text-[11px] text-[#45464E]">
+          <p className="mt-3 text-center text-[11px] text-[#64748B]">
             By starting this sequence, automated follow-ups will be sent according to your schedule.
           </p>
         </div>
