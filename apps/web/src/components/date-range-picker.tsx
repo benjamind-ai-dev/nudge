@@ -1,5 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useState } from "react";
+import { CalendarDays, X } from "lucide-react";
+import type { DateRange as DayPickerRange } from "react-day-picker";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "../lib/utils";
 
 export interface DateRange {
@@ -15,8 +23,6 @@ interface DateRangePickerProps {
   className?: string;
 }
 
-const WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
-
 function toIso(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -27,14 +33,6 @@ function toIso(d: Date): string {
 function parseIso(s: string): Date {
   const [y, m, d] = s.split("-").map(Number);
   return new Date(y, m - 1, d);
-}
-
-function sameDay(a: Date, b: Date): boolean {
-  return toIso(a) === toIso(b);
-}
-
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
 function fmtDay(d: Date, withYear: boolean): string {
@@ -54,20 +52,12 @@ function formatLabel(range: DateRange): string | null {
   return `${fmtDay(start, !sameYear)} – ${fmtDay(end, true)}`;
 }
 
-interface DayCell {
-  date: Date;
-  inMonth: boolean;
-}
-
-function buildGrid(viewMonth: Date): DayCell[] {
-  const first = startOfMonth(viewMonth);
-  const leading = first.getDay();
-  const cells: DayCell[] = [];
-  for (let i = 0; i < 42; i++) {
-    const date = new Date(first.getFullYear(), first.getMonth(), i - leading + 1);
-    cells.push({ date, inMonth: date.getMonth() === viewMonth.getMonth() });
-  }
-  return cells;
+function toPickerRange(range: DateRange): DayPickerRange | undefined {
+  if (!range.start) return undefined;
+  return {
+    from: parseIso(range.start),
+    to: range.end ? parseIso(range.end) : undefined,
+  };
 }
 
 export function DateRangePicker({
@@ -76,213 +66,101 @@ export function DateRangePicker({
   placeholder = "Due date",
   className,
 }: DateRangePickerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<DateRange>(value);
-  const [viewMonth, setViewMonth] = useState<Date>(
-    value.start ? startOfMonth(parseIso(value.start)) : startOfMonth(new Date()),
+  const [draft, setDraft] = useState<DayPickerRange | undefined>(
+    toPickerRange(value),
   );
 
-  // Sync the draft + visible month each time the popover opens.
-  useEffect(() => {
-    if (open) {
-      setDraft(value);
-      setViewMonth(
-        value.start ? startOfMonth(parseIso(value.start)) : startOfMonth(new Date()),
-      );
-    }
-  }, [open, value]);
-
-  // Close on outside click.
-  useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  const today = useMemo(() => new Date(), []);
-  const grid = useMemo(() => buildGrid(viewMonth), [viewMonth]);
   const label = formatLabel(value);
 
-  const draftStart = draft.start ? parseIso(draft.start) : null;
-  const draftEnd = draft.end ? parseIso(draft.end) : null;
-
-  function pickDay(date: Date) {
-    if (!draftStart || (draftStart && draftEnd)) {
-      setDraft({ start: toIso(date), end: null });
-    } else if (date < draftStart) {
-      setDraft({ start: toIso(date), end: toIso(draftStart) });
-    } else {
-      setDraft({ start: toIso(draftStart), end: toIso(date) });
+  function handleOpenChange(next: boolean) {
+    if (next) {
+      // Sync draft when opening
+      setDraft(toPickerRange(value));
     }
+    setOpen(next);
   }
 
-  function clearTrigger(e: React.MouseEvent) {
+  function handleSelect(range: DayPickerRange | undefined) {
+    setDraft(range);
+  }
+
+  function handleApply() {
+    if (draft?.from) {
+      onChange({
+        start: toIso(draft.from),
+        end: draft.to ? toIso(draft.to) : null,
+      });
+    } else {
+      onChange({ start: null, end: null });
+    }
+    setOpen(false);
+  }
+
+  function handleClear() {
+    setDraft(undefined);
+  }
+
+  function handleClearTrigger(e: React.MouseEvent) {
     e.stopPropagation();
     onChange({ start: null, end: null });
   }
 
-  const monthLabel = new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    year: "numeric",
-  }).format(viewMonth);
-
   return (
-    <div ref={containerRef} className={cn("relative inline-block", className)}>
-      {/* Trigger */}
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={cn(
-          "flex h-10 w-[260px] items-center gap-2 rounded-lg border bg-white px-3 transition-colors",
-          open
-            ? "border-2 border-[#2563EB] px-[11px] shadow-[0_0_0_4px_rgba(11,97,161,0.1)]"
-            : "border-[#E2E8F0] hover:border-[#2563EB]",
-        )}
-      >
-        <CalendarDays
-          className={cn("h-5 w-5 shrink-0", label ? "text-[#64748B]" : "text-[#94A3B8]")}
-        />
-        <span
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
           className={cn(
-            "flex-1 text-left text-sm",
-            label ? "text-[#0F172A]" : "text-[#94A3B8]",
+            "flex h-10 w-[260px] items-center gap-2 rounded-lg px-3 text-sm font-normal",
+            !label && "text-muted-foreground",
+            className,
           )}
         >
-          {label ?? placeholder}
-        </span>
-        {label && (
-          <X
-            className="h-4 w-4 shrink-0 text-[#94A3B8] hover:text-[#64748B]"
-            onClick={clearTrigger}
+          <CalendarDays
+            className={cn("h-5 w-5 shrink-0", label ? "text-muted-foreground" : "text-muted-foreground")}
           />
-        )}
-      </button>
+          <span className="flex-1 text-left">
+            {label ?? placeholder}
+          </span>
+          {label && (
+            <X
+              className="h-4 w-4 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={handleClearTrigger}
+            />
+          )}
+        </Button>
+      </PopoverTrigger>
 
-      {/* Popover */}
-      {open && (
-        <div className="absolute z-20 mt-2 w-[320px] overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-md">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4">
-            <button
-              type="button"
-              aria-label="Previous month"
-              onClick={() =>
-                setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))
-              }
-              className="rounded-full p-1 transition-colors hover:bg-[#F1F5F9]"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm font-semibold text-[#0F172A]">{monthLabel}</span>
-            <button
-              type="button"
-              aria-label="Next month"
-              onClick={() =>
-                setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))
-              }
-              className="rounded-full p-1 transition-colors hover:bg-[#F1F5F9]"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Weekday header */}
-          <div className="grid grid-cols-7 px-2">
-            {WEEKDAYS.map((w) => (
-              <div
-                key={w}
-                className="py-1 text-center text-[11px] font-bold text-[#94A3B8]"
-              >
-                {w}
-              </div>
-            ))}
-          </div>
-
-          {/* Day grid */}
-          <div className="grid grid-cols-7 px-2 pb-4 text-sm">
-            {grid.map(({ date, inMonth }) => {
-              if (!inMonth) {
-                return (
-                  <div
-                    key={toIso(date)}
-                    className="flex h-9 items-center justify-center text-[#94A3B8]"
-                  >
-                    {date.getDate()}
-                  </div>
-                );
-              }
-
-              const isStart = draftStart && sameDay(date, draftStart);
-              const isEnd = draftEnd && sameDay(date, draftEnd);
-              const isMid =
-                draftStart &&
-                draftEnd &&
-                date > draftStart &&
-                date < draftEnd;
-              const isToday = sameDay(date, today);
-              const isEndpoint = isStart || isEnd;
-              const hasRange = Boolean(draftStart && draftEnd);
-
-              return (
-                <button
-                  type="button"
-                  key={toIso(date)}
-                  onClick={() => pickDay(date)}
-                  className="relative flex h-9 items-center justify-center"
-                >
-                  {/* Range band */}
-                  {isMid && <div className="absolute inset-0 bg-[#D9E2FF]" />}
-                  {hasRange && isStart && (
-                    <div className="absolute inset-y-0 right-0 w-1/2 bg-[#D9E2FF]" />
-                  )}
-                  {hasRange && isEnd && (
-                    <div className="absolute inset-y-0 left-0 w-1/2 bg-[#D9E2FF]" />
-                  )}
-                  <span
-                    className={cn(
-                      "relative z-10 flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                      isEndpoint
-                        ? "bg-[#2563EB] font-medium text-white"
-                        : isMid
-                          ? "text-[#041534]"
-                          : isToday
-                            ? "border border-[#2563EB] text-[#0F172A]"
-                            : "text-[#0F172A] hover:bg-[#F1F5F9]",
-                    )}
-                  >
-                    {date.getDate()}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between border-t border-[#E2E8F0] bg-[#F8FAFC] p-3">
-            <button
-              type="button"
-              onClick={() => setDraft({ start: null, end: null })}
-              className="rounded px-3 py-2 text-xs font-semibold text-[#2563EB] transition-colors hover:bg-[#2563EB]/5"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onChange(draft);
-                setOpen(false);
-              }}
-              className="rounded-lg bg-[#2563EB] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
-            >
-              Apply
-            </button>
-          </div>
+      <PopoverContent
+        className="w-auto p-0"
+        align="start"
+        sideOffset={4}
+      >
+        <Calendar
+          mode="range"
+          selected={draft}
+          onSelect={handleSelect}
+        />
+        <div className="flex items-center justify-between border-t bg-muted/30 px-3 py-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+          >
+            Clear
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleApply}
+          >
+            Apply
+          </Button>
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }

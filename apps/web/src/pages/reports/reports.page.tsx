@@ -3,6 +3,7 @@ import { useReportsViewModel } from "./reports.view-model";
 import { AgingSummaryCard } from "../../components/reports/aging-summary-card";
 import { ReportFilterBar } from "../../components/reports/report-filter-bar";
 import { AgingReportTable } from "../../components/reports/aging-report-table";
+import { Button } from "@/components/ui/button";
 import { cn } from "../../lib/utils";
 
 export function ReportsPage() {
@@ -13,41 +14,42 @@ export function ReportsPage() {
       {/* Page header */}
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#041534]">
+          <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
             A/R Aging Report
           </h2>
-          <p className="text-sm text-[#64748B]">
+          <p className="text-sm text-muted-foreground">
             Outstanding balances grouped by how overdue they are.
           </p>
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={vm.handleExportCsv}
-            className="flex items-center gap-2 rounded-lg border border-[#94A3B8] px-4 py-2 text-sm font-semibold text-[#0F172A] transition-colors hover:bg-white"
           >
             <Download className="h-4 w-4" />
             Export CSV
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="default"
             onClick={vm.handleSyncNow}
             disabled={vm.isSyncing}
-            className="flex items-center gap-2 rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw className={cn("h-4 w-4", vm.isSyncing && "animate-spin")} />
             {vm.isSyncing ? "Syncing…" : "Sync now"}
-          </button>
+          </Button>
         </div>
       </div>
 
       {(vm.syncMessage || vm.syncError) && (
         <div
-          className={
+          className={cn(
+            "rounded-lg border px-4 py-3 text-sm",
             vm.syncError
-              ? "rounded-lg border border-[#FECACA] bg-[#FEE2E2] px-4 py-3 text-sm text-[#991B1B]"
-              : "rounded-lg border border-[#A7F3D0] bg-[#D1FAE5] px-4 py-3 text-sm text-[#065F46]"
-          }
+              ? "border-destructive/30 bg-destructive/10 text-destructive"
+              : "border-emerald-200 bg-emerald-50 text-emerald-800",
+          )}
         >
           {vm.syncError ?? vm.syncMessage}
         </div>
