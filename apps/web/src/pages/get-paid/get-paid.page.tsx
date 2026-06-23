@@ -1,6 +1,7 @@
 import { useGetPaidViewModel } from "./get-paid.view-model";
 import { OverdueWorklist } from "../../components/get-paid/overdue-worklist";
 import { StartFollowUpDialog } from "../../components/get-paid/start-follow-up-dialog";
+import { InvoiceFilterBar } from "../../components/invoice-filter-bar";
 import { formatDollars } from "../../lib/format";
 
 export function GetPaidPage() {
@@ -38,6 +39,20 @@ export function GetPaidPage() {
         </div>
       )}
 
+      {/* Filter bar */}
+      <InvoiceFilterBar
+        dateRange={vm.dateRange}
+        onDateRangeChange={vm.setDateRange}
+        search={vm.search}
+        onSearchChange={vm.setSearch}
+        status={vm.statusFilter}
+        statusOptions={vm.statusOptions}
+        onStatusChange={vm.setStatusFilter}
+        sortValue={vm.sortValue}
+        sortOptions={vm.sortOptions}
+        onSortChange={vm.setSort}
+      />
+
       {/* Worklist table */}
       <OverdueWorklist
         rows={vm.rows}
@@ -52,9 +67,6 @@ export function GetPaidPage() {
         totalPages={vm.totalPages}
         total={vm.total}
         onPageChange={vm.setPage}
-        statusFilter={vm.statusFilter}
-        statusOptions={vm.statusOptions}
-        onStatusChange={vm.setStatusFilter}
         cardTitle={cardTitle}
       />
 

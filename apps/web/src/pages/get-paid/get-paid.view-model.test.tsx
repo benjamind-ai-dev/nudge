@@ -94,11 +94,11 @@ describe("useGetPaidViewModel", () => {
     navigateMock.mockReset();
   });
 
-  // 1. Overdue rows mapped + sorted desc by balance
-  it("maps invoices to rows sorted by balanceDue descending", () => {
+  // 1. Overdue rows mapped + sorted desc by amount (default sort: amount_cents:desc)
+  it("maps invoices to rows sorted by amountCents descending (default sort)", () => {
     mockInvoices = [
-      makeInvoice({ id: "inv-1", balanceDueCents: 200_000, invoiceNumber: "1001" }),
-      makeInvoice({ id: "inv-2", balanceDueCents: 500_000, invoiceNumber: "1002" }),
+      makeInvoice({ id: "inv-1", amountCents: 200_000, balanceDueCents: 200_000, invoiceNumber: "1001" }),
+      makeInvoice({ id: "inv-2", amountCents: 500_000, balanceDueCents: 500_000, invoiceNumber: "1002" }),
     ];
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
     expect(result.current.rows).toHaveLength(2);
@@ -583,5 +583,179 @@ describe("useGetPaidViewModel", () => {
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
     const values = result.current.statusOptions.map((o) => o.value);
     expect(values).toEqual(["unpaid", "overdue", "open", "partial"]);
+  });
+
+  // 33. Default sort is amount high→low
+  it("default sort is amount high-to-low (amount_cents:desc)", () => {
+    mockInvoices = [
+      makeInvoice({ id: "low", amountCents: 10_000, balanceDueCents: 10_000 }),
+      makeInvoice({ id: "high", amountCents: 90_000, balanceDueCents: 90_000 }),
+      makeInvoice({ id: "mid", amountCents: 50_000, balanceDueCents: 50_000 }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+    expect(result.current.sortValue).toBe("amount_cents:desc");
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["high", "mid", "low"]);
+  });
+
+  // 34. Switching sort to due_date:asc sorts by oldest due date first
+  it("sort due_date:asc orders by oldest due date first", () => {
+    mockInvoices = [
+      makeInvoice({ id: "newer", dueDate: "2026-08-01T00:00:00.000Z" }),
+      makeInvoice({ id: "oldest", dueDate: "2026-01-01T00:00:00.000Z" }),
+      makeInvoice({ id: "middle", dueDate: "2026-04-15T00:00:00.000Z" }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setSort("due_date:asc"));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["oldest", "middle", "newer"]);
+  });
+
+  // 35. Switching sort to days_overdue:desc orders by most overdue first
+  it("sort days_overdue:desc orders most overdue first", () => {
+    mockInvoices = [
+      makeInvoice({ id: "a", daysOverdue: 5 }),
+      makeInvoice({ id: "b", daysOverdue: 90 }),
+      makeInvoice({ id: "c", daysOverdue: 30 }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setSort("days_overdue:desc"));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["b", "c", "a"]);
+  });
+
+  // 36. setSort resets page to 1
+  it("setSort resets page to 1", () => {
+    mockInvoices = makeInvoices(PAGE_SIZE + 3);
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setPage(2));
+    expect(result.current.page).toBe(2);
+
+    act(() => result.current.setSort("due_date:asc"));
+    expect(result.current.page).toBe(1);
+  });
+
+  // 37. search filters by customer name (case-insensitive)
+  it("search filters by customer name (case-insensitive)", () => {
+    mockInvoices = [
+      makeInvoice({ id: "acme", customer: { id: "c1", companyName: "Acme Corp" } }),
+      makeInvoice({ id: "globex", customer: { id: "c2", companyName: "Globex Inc" } }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setSearch("acme"));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["acme"]);
+    expect(ids).not.toContain("globex");
+  });
+
+  // 38. search filters by invoice number (case-insensitive)
+  it("search filters by invoice number (case-insensitive)", () => {
+    mockInvoices = [
+      makeInvoice({ id: "inv-a", invoiceNumber: "INV-001" }),
+      makeInvoice({ id: "inv-b", invoiceNumber: "INV-999" }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setSearch("001"));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["inv-a"]);
+  });
+
+  // 39. empty search shows all (no-sequence + status) items
+  it("empty search shows all items that pass no-sequence + status filter", () => {
+    mockInvoices = [
+      makeInvoice({ id: "a", customer: { id: "c1", companyName: "Alpha" } }),
+      makeInvoice({ id: "b", customer: { id: "c2", companyName: "Beta" } }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setSearch(""));
+
+    expect(result.current.rows).toHaveLength(2);
+  });
+
+  // 40. setSearch resets page to 1
+  it("setSearch resets page to 1", () => {
+    mockInvoices = makeInvoices(PAGE_SIZE + 3);
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setPage(2));
+    expect(result.current.page).toBe(2);
+
+    act(() => result.current.setSearch("acme"));
+    expect(result.current.page).toBe(1);
+  });
+
+  // 41. date range filters by dueDate (inclusive)
+  it("dateRange filters include invoices whose dueDate falls within the range", () => {
+    mockInvoices = [
+      makeInvoice({ id: "before", dueDate: "2026-01-01T00:00:00.000Z" }),
+      makeInvoice({ id: "in-range", dueDate: "2026-03-15T00:00:00.000Z" }),
+      makeInvoice({ id: "after", dueDate: "2026-06-01T00:00:00.000Z" }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setDateRange({ start: "2026-02-01", end: "2026-04-30" }));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["in-range"]);
+  });
+
+  // 42. setDateRange resets page to 1
+  it("setDateRange resets page to 1", () => {
+    mockInvoices = makeInvoices(PAGE_SIZE + 3);
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setPage(2));
+    expect(result.current.page).toBe(2);
+
+    act(() => result.current.setDateRange({ start: "2026-01-01", end: "2026-12-31" }));
+    expect(result.current.page).toBe(1);
+  });
+
+  // 43. hero totals (totalOverdueCents, overdueCount) reflect the filtered set
+  it("hero totals reflect the filtered set (after search)", () => {
+    mockInvoices = [
+      makeInvoice({ id: "acme", balanceDueCents: 10_000, customer: { id: "c1", companyName: "Acme" } }),
+      makeInvoice({ id: "other", balanceDueCents: 99_000, customer: { id: "c2", companyName: "Other Co" } }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setSearch("acme"));
+
+    expect(result.current.totalOverdueCents).toBe(10_000);
+    expect(result.current.overdueCount).toBe(1);
+  });
+
+  // 44. sortOptions exposes 3 options
+  it("exposes 3 sort options", () => {
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+    expect(result.current.sortOptions).toHaveLength(3);
+    const values = result.current.sortOptions.map((o) => o.value);
+    expect(values).toContain("amount_cents:desc");
+    expect(values).toContain("due_date:asc");
+    expect(values).toContain("days_overdue:desc");
+  });
+
+  // 45. no-sequence constraint still applies when search is set
+  it("no-sequence constraint is applied even when search matches a sequenced invoice", () => {
+    mockInvoices = [
+      makeInvoice({ id: "no-seq", invoiceNumber: "1001", sequenceRun: null }),
+      makeInvoice({ id: "has-seq", invoiceNumber: "1001", sequenceRun: { id: "r1", status: "active" } }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setSearch("1001"));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["no-seq"]);
   });
 });
