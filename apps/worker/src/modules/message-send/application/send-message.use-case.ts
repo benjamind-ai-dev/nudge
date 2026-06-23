@@ -71,6 +71,23 @@ export class SendMessageUseCase {
       return { sent: false, skippedReason: "run_not_active", messagesSent: 0 };
     }
 
+    const isFirstSend = !(await this.repo.runHasSentMessages(run.runId, run.businessId));
+
+    // If the run was started with "Send by email" unchecked, skip the first
+    // message entirely but still advance/complete the run so the sequence
+    // progresses normally.
+    if (isFirstSend && run.firstStepSkip === true) {
+      this.logger.log({
+        msg: "First send skipped per run override (firstStepSkip=true)",
+        event: "first_send_skipped",
+        runId: run.runId,
+        invoiceId: run.invoiceId,
+        businessId: run.businessId,
+      });
+      await this.advanceOrCompleteRun(run);
+      return { sent: false, skippedReason: "first_send_skipped", messagesSent: 0 };
+    }
+
     const templateData = this.buildTemplateData(run);
     let messagesSent = 0;
     // We track two duplicate sources separately because they have *different*
@@ -112,7 +129,7 @@ export class SendMessageUseCase {
       }
 
       try {
-        const result = await this.sendByChannel(channel, run, templateData);
+        const result = await this.sendByChannel(channel, run, templateData, isFirstSend);
         if (result.sent) {
           messagesSent++;
         } else if (result.skippedReason === "no_recipient") {
@@ -218,10 +235,11 @@ export class SendMessageUseCase {
     channel: SingleChannel,
     run: RunReadyToSend,
     templateData: TemplateData,
+    isFirstSend: boolean,
   ): Promise<ChannelSendResult> {
     switch (channel) {
       case "email":
-        return this.sendEmail(run, templateData);
+        return this.sendEmail(run, templateData, isFirstSend);
       case "sms":
         return this.sendSms(run, templateData);
       default: {
@@ -231,7 +249,7 @@ export class SendMessageUseCase {
     }
   }
 
-  private async sendEmail(run: RunReadyToSend, templateData: TemplateData): Promise<ChannelSendResult> {
+  private async sendEmail(run: RunReadyToSend, templateData: TemplateData, isFirstSend: boolean): Promise<ChannelSendResult> {
     const recipientEmail = run.stepIsOwnerAlert
       ? run.businessSenderEmail
       : run.customerContactEmail;
@@ -247,14 +265,30 @@ export class SendMessageUseCase {
     }
 
     // Template precedence: if the step has an attached template, use its content; else fall back to inline.
-    const subjectSource = run.stepTemplateSubject ?? run.stepSubjectTemplate;
-    const bodySource = run.stepTemplateBody ?? run.stepBodyTemplate;
+    // On the first send, per-run overrides (stored on SequenceRun) take highest priority.
+    let subjectSource: string | null | undefined;
+    let bodySource: string;
+    let subjectCacheKey: string;
+    let bodyCacheKey: string;
+
+    if (isFirstSend && (run.firstStepSubject != null || run.firstStepBody != null)) {
+      // Use run-scoped cache keys to avoid colliding with the step-template cache.
+      subjectSource = run.firstStepSubject ?? (run.stepTemplateSubject ?? run.stepSubjectTemplate);
+      bodySource = run.firstStepBody ?? (run.stepTemplateBody ?? run.stepBodyTemplate);
+      subjectCacheKey = `${run.runId}-first-subject`;
+      bodyCacheKey = `${run.runId}-first-body`;
+    } else {
+      subjectSource = run.stepTemplateSubject ?? run.stepSubjectTemplate;
+      bodySource = run.stepTemplateBody ?? run.stepBodyTemplate;
+      subjectCacheKey = `${run.stepId}-subject`;
+      bodyCacheKey = `${run.stepId}-body`;
+    }
 
     const subject = subjectSource
-      ? this.templateService.render(`${run.stepId}-subject`, subjectSource, templateData)
+      ? this.templateService.render(subjectCacheKey, subjectSource, templateData)
       : `Reminder: Invoice ${run.invoiceNumber ?? ""}`;
 
-    let body = newlinesToHtml(this.templateService.render(`${run.stepId}-body`, bodySource, templateData));
+    let body = newlinesToHtml(this.templateService.render(bodyCacheKey, bodySource, templateData));
 
     // Signature precedence: template signature > business email signature.
     const signatureSource = run.stepTemplateSignature ?? run.businessEmailSignature;
@@ -267,8 +301,14 @@ export class SendMessageUseCase {
       body = `${body}<br><br>${renderedSig}`;
     }
 
+    // Payment link gate: on first send, the run override takes precedence over the step setting.
+    const includeLink =
+      isFirstSend && run.firstStepIncludePaymentLink != null
+        ? run.firstStepIncludePaymentLink
+        : run.stepIncludePaymentLink;
+
     if (
-      run.stepIncludePaymentLink &&
+      includeLink &&
       run.paymentLinkUrl &&
       !run.stepIsOwnerAlert
     ) {

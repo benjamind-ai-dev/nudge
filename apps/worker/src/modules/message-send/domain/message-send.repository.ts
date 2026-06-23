@@ -46,6 +46,10 @@ export interface RunReadyToSend {
   stepTemplateSubject: string | null;
   stepTemplateBody: string | null;
   stepTemplateSignature: string | null;
+  firstStepSubject: string | null;
+  firstStepBody: string | null;
+  firstStepIncludePaymentLink: boolean | null;
+  firstStepSkip: boolean | null;
 }
 
 export interface NextStep {
@@ -84,6 +88,7 @@ export interface MessageSendRepository {
   findRunById(id: string, businessId: string): Promise<RunReadyToSend | null>;
   findNextStep(sequenceId: string, businessId: string, currentStepOrder: number): Promise<NextStep | null>;
   messageExistsForRunStep(runId: string, stepId: string, channel: string, businessId: string): Promise<boolean>;
+  runHasSentMessages(runId: string, businessId: string): Promise<boolean>;
   createMessage(data: CreateMessageData): Promise<{ created: boolean }>;
   updateMessageStatus(data: UpdateMessageStatusData): Promise<void>;
   advanceRunToNextStep(runId: string, businessId: string, nextStepId: string, nextSendAt: Date): Promise<void>;

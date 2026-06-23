@@ -37,6 +37,10 @@ const createMockRun = (overrides: Partial<RunReadyToSend> = {}): RunReadyToSend 
   stepTemplateSubject: null,
   stepTemplateBody: null,
   stepTemplateSignature: null,
+  firstStepSubject: null,
+  firstStepBody: null,
+  firstStepIncludePaymentLink: null,
+  firstStepSkip: null,
   ...overrides,
 });
 
@@ -54,6 +58,7 @@ describe("SendMessageUseCase", () => {
       findRunById: jest.fn(),
       findNextStep: jest.fn(),
       messageExistsForRunStep: jest.fn().mockResolvedValue(false),
+      runHasSentMessages: jest.fn().mockResolvedValue(false),
       createMessage: jest.fn().mockResolvedValue({ created: true }),
       updateMessageStatus: jest.fn(),
       advanceRunToNextStep: jest.fn(),
@@ -640,6 +645,140 @@ describe("SendMessageUseCase", () => {
       expect(renderedSources).toContain("INLINE SUBJECT");
       expect(renderedSources).toContain("INLINE BODY");
       expect(renderedSources).toContain("Business sig");
+    });
+  });
+
+  describe("first-step overrides", () => {
+    it("uses custom subject and body on first send (run-scoped cache keys)", async () => {
+      const run = createMockRun({
+        firstStepSubject: "Custom subject from dialog",
+        firstStepBody: "Custom body from dialog",
+        stepIncludePaymentLink: false,
+        businessEmailSignature: null,
+      });
+      repo.findRunById.mockResolvedValue(run);
+      repo.runHasSentMessages.mockResolvedValue(false);
+      repo.findNextStep.mockResolvedValue(null);
+      templateService.render
+        .mockReturnValueOnce("Custom subject from dialog")  // subject
+        .mockReturnValueOnce("Custom body from dialog");     // body
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const calls = templateService.render.mock.calls;
+      // Subject call uses run-scoped key
+      expect(calls[0][0]).toBe("run-1-first-subject");
+      expect(calls[0][1]).toBe("Custom subject from dialog");
+      // Body call uses run-scoped key
+      expect(calls[1][0]).toBe("run-1-first-body");
+      expect(calls[1][1]).toBe("Custom body from dialog");
+    });
+
+    it("overrides includePaymentLink=false on first send suppresses the payment button", async () => {
+      const run = createMockRun({
+        firstStepIncludePaymentLink: false,
+        stepIncludePaymentLink: true,  // step says include, run says don't
+        paymentLinkUrl: "https://pay.example.com/inv-1",
+      });
+      repo.findRunById.mockResolvedValue(run);
+      repo.runHasSentMessages.mockResolvedValue(false);
+      repo.findNextStep.mockResolvedValue(null);
+      templateService.render.mockReturnValue("Body text.");
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const sent = emailService.send.mock.calls[0][0];
+      expect(sent.html).not.toContain("Pay Invoice");
+    });
+
+    it("overrides includePaymentLink=true on first send adds the payment button even when step says false", async () => {
+      const run = createMockRun({
+        firstStepIncludePaymentLink: true,
+        stepIncludePaymentLink: false,  // step says exclude, run says include
+        paymentLinkUrl: "https://pay.example.com/inv-1",
+        businessEmailSignature: null,
+      });
+      repo.findRunById.mockResolvedValue(run);
+      repo.runHasSentMessages.mockResolvedValue(false);
+      repo.findNextStep.mockResolvedValue(null);
+      templateService.render.mockReturnValue("Body text.");
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const sent = emailService.send.mock.calls[0][0];
+      expect(sent.html).toContain("Pay Invoice");
+    });
+
+    it("skips first send and advances the run when firstStepSkip=true", async () => {
+      const run = createMockRun({ firstStepSkip: true });
+      repo.findRunById.mockResolvedValue(run);
+      repo.runHasSentMessages.mockResolvedValue(false);
+      repo.findNextStep.mockResolvedValue(null);
+
+      const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      expect(result.sent).toBe(false);
+      expect(result.skippedReason).toBe("first_send_skipped");
+      expect(result.messagesSent).toBe(0);
+      expect(emailService.send).not.toHaveBeenCalled();
+      expect(repo.createMessage).not.toHaveBeenCalled();
+      // Run must still advance/complete
+      expect(repo.completeRun).toHaveBeenCalledWith("run-1", "biz-1");
+    });
+
+    it("skips first send and advances to next step when firstStepSkip=true and next step exists", async () => {
+      const run = createMockRun({ firstStepSkip: true });
+      repo.findRunById.mockResolvedValue(run);
+      repo.runHasSentMessages.mockResolvedValue(false);
+      repo.findNextStep.mockResolvedValue({ id: "step-2", stepOrder: 2, delayDays: 5 });
+
+      const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      expect(result.sent).toBe(false);
+      expect(result.skippedReason).toBe("first_send_skipped");
+      expect(emailService.send).not.toHaveBeenCalled();
+      expect(repo.advanceRunToNextStep).toHaveBeenCalledWith(
+        "run-1", "biz-1", "step-2", expect.any(Date),
+      );
+      expect(repo.completeRun).not.toHaveBeenCalled();
+    });
+
+    it("ignores firstStepSkip on second send (runHasSentMessages=true)", async () => {
+      const run = createMockRun({ firstStepSkip: true });
+      repo.findRunById.mockResolvedValue(run);
+      // Second send: already has messages
+      repo.runHasSentMessages.mockResolvedValue(true);
+      repo.findNextStep.mockResolvedValue(null);
+
+      const result = await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      expect(result.sent).toBe(true);
+      expect(emailService.send).toHaveBeenCalled();
+    });
+
+    it("ignores custom subject/body overrides on second send (uses step templates)", async () => {
+      const run = createMockRun({
+        firstStepSubject: "Custom subject",
+        firstStepBody: "Custom body",
+        stepSubjectTemplate: "Step subject template",
+        stepBodyTemplate: "Step body template",
+        businessEmailSignature: null,
+        stepIncludePaymentLink: false,
+      });
+      repo.findRunById.mockResolvedValue(run);
+      // Second send
+      repo.runHasSentMessages.mockResolvedValue(true);
+      repo.findNextStep.mockResolvedValue(null);
+      templateService.render.mockReturnValue("Rendered.");
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const calls = templateService.render.mock.calls;
+      // Should use step-scoped keys, not run-scoped
+      expect(calls[0][0]).toBe("step-1-subject");
+      expect(calls[0][1]).toBe("Step subject template");
+      expect(calls[1][0]).toBe("step-1-body");
+      expect(calls[1][1]).toBe("Step body template");
     });
   });
 });
