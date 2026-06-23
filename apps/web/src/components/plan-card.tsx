@@ -1,6 +1,9 @@
 import { Check } from "lucide-react";
 import { cn } from "../lib/utils";
 import type { BillingPlan } from "../api/billing.api";
+import { Card, CardContent } from "./ui/card";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 
 export interface PlanCardData {
   plan: BillingPlan;
@@ -23,51 +26,52 @@ export function PlanCard({ data, selected, isLoading, disabled, onChoose }: Plan
   const { plan, name, priceLabel, tagline, features, featured } = data;
 
   return (
-    <div
+    <Card
       className={cn(
-        "relative flex flex-col rounded-xl border bg-white p-6 shadow-sm",
-        featured ? "border-2 border-[#2563EB]" : "border border-[#E2E8F0]",
+        "relative gap-0 py-0",
+        featured ? "border-2 border-primary ring-1 ring-primary" : "",
       )}
     >
       {featured && (
-        <span className="absolute -top-3 right-6 rounded-full bg-[#2563EB] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">
+        <Badge
+          variant="default"
+          className="absolute -top-3 right-6 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide"
+        >
           Most popular
-        </span>
+        </Badge>
       )}
 
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-        {name}
-      </p>
-      <div className="mt-2 flex items-baseline gap-1">
-        <span className="text-4xl font-semibold tabular-nums text-[#041534]">
-          {priceLabel}
-        </span>
-        <span className="text-sm text-[#64748B]">/mo</span>
-      </div>
-      <p className="mt-1 text-sm text-[#64748B]">{tagline}</p>
+      <CardContent className="flex flex-1 flex-col px-6 py-6">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {name}
+        </p>
+        <div className="mt-2 flex items-baseline gap-1">
+          <span className="text-4xl font-semibold tabular-nums text-foreground">
+            {priceLabel}
+          </span>
+          <span className="text-sm text-muted-foreground">/mo</span>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">{tagline}</p>
 
-      <ul className="mt-5 flex flex-1 flex-col gap-3 border-t border-[#E2E8F0] pt-5">
-        {features.map((f) => (
-          <li key={f} className="flex items-start gap-2 text-sm text-[#0F172A]">
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#2563EB]" />
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
+        <ul className="mt-5 flex flex-1 flex-col gap-3 border-t border-border pt-5">
+          {features.map((f) => (
+            <li key={f} className="flex items-start gap-2 text-sm text-foreground">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
 
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChoose(plan)}
-        className={cn(
-          "mt-6 h-11 w-full rounded-md text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-          featured
-            ? "bg-[#2563EB] text-white hover:bg-[#1D4ED8]"
-            : "border border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-gray-50",
-        )}
-      >
-        {isLoading && selected ? "Redirecting…" : `Choose ${name} →`}
-      </button>
-    </div>
+        <Button
+          type="button"
+          variant={featured ? "default" : "outline"}
+          className="mt-6 h-11 w-full"
+          disabled={disabled}
+          onClick={() => onChoose(plan)}
+        >
+          {isLoading && selected ? "Redirecting…" : `Choose ${name} →`}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

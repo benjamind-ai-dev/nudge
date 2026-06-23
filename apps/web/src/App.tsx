@@ -12,14 +12,14 @@ import { SignInPage } from "./pages/sign-in";
 import { SignUpPage } from "./pages/sign-up";
 import { OnboardingPage } from "./pages/onboarding/onboarding.page";
 import { OnboardingBillingPage } from "./pages/onboarding-billing/onboarding-billing.page";
-import OnboardingComplete from "./pages/onboarding-complete/onboarding-complete.page";
+import { OnboardingCompletePage } from "./pages/onboarding-complete/onboarding-complete.page";
 import { DashboardPage } from "./pages/dashboard/dashboard.page";
-import Customers from "./pages/customers";
-import Invoices from "./pages/invoices";
-import Sequences from "./pages/sequences";
+import { CustomersPage } from "./pages/customers";
+import { InvoicesPage } from "./pages/invoices";
+import { SequencesPage } from "./pages/sequences";
 import { ReportsPage } from "./pages/reports/reports.page";
 import { GetPaidPage } from "./pages/get-paid/get-paid.page";
-import Settings from "./pages/settings";
+import { SettingsPage } from "./pages/settings";
 import { BillingPage } from "./pages/billing/billing.page";
 
 function ClerkTokenBridge() {
@@ -44,7 +44,7 @@ export default function App() {
           <Route element={<BillingPaywallGate />}>
             <Route path="/onboarding/billing" element={<OnboardingBillingPage />} />
           </Route>
-          <Route path="/onboarding/complete" element={<OnboardingComplete />} />
+          <Route path="/onboarding/complete" element={<OnboardingCompletePage />} />
           <Route element={<BillingGate />}>
             <Route element={<OnboardingGate />}>
               <Route path="/onboarding" element={<OnboardingPage />} />
@@ -53,11 +53,11 @@ export default function App() {
               <Route element={<AppLayout />}>
                 <Route path="/get-paid" element={<GetPaidPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/customers" element={<Customers />} />
-                <Route path="/invoices" element={<Invoices />} />
-                <Route path="/sequences" element={<Sequences />} />
+                <Route path="/customers" element={<CustomersPage />} />
+                <Route path="/invoices" element={<InvoicesPage />} />
+                <Route path="/sequences" element={<SequencesPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/settings/billing" element={<BillingPage />} />
               </Route>
             </Route>

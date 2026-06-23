@@ -5,7 +5,7 @@ import { clerkAppearance } from "../lib/clerk-appearance";
 
 export function SignUpPage() {
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-background">
       <OnboardingBrandPanel />
 
       <main className="flex flex-1 flex-col px-6 py-8 md:px-12">
@@ -13,10 +13,10 @@ export function SignUpPage() {
 
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-[400px]">
-            <h1 className="text-[28px] leading-tight text-[#041534]">
+            <h1 className="text-[28px] leading-tight text-foreground">
               Get started in 60 seconds.
             </h1>
-            <p className="mt-2 text-sm text-[#64748B]">
+            <p className="mt-2 text-sm text-muted-foreground">
               Connect your books. We handle the follow-ups.
             </p>
 
