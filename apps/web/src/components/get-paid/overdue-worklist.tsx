@@ -16,16 +16,16 @@ import type { FollowUpStatus, OverdueRow } from "../../pages/get-paid/get-paid.v
 
 // ---- Column header style ---------------------------------------------------
 const HEAD =
-  "px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#45464E]";
+  "px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#64748B]";
 
 // ---- Card section label style ----------------------------------------------
 const CARD_LABEL =
-  "text-[10px] font-semibold uppercase tracking-[0.07em] text-[#45464E]";
+  "text-[10px] font-semibold uppercase tracking-[0.07em] text-[#64748B]";
 
 // ---- Follow-up status pill -------------------------------------------------
 const FOLLOW_UP_PILL: Record<FollowUpStatus, string> = {
   // Active status pill keeps green tint — it's a status indicator, not a button
-  none: "border border-[#C5C6CF] bg-transparent text-[#45464E]",
+  none: "border border-[#E2E8F0] bg-transparent text-[#64748B]",
   active: "bg-[#10B981]/[0.12] text-[#059669]",
   paused: "bg-[#FBBF24]/[0.15] text-[#B45309]",
 };
@@ -69,35 +69,35 @@ function ExpandedPanel({ row }: { row: OverdueRow }) {
   };
 
   return (
-    <div className="border-t border-[#C5C6CF] bg-[#F3F3F3] px-6 p-4">
+    <div className="border-t border-[#E2E8F0] bg-[#F1F5F9] px-6 p-4">
       <div className="grid items-stretch gap-4 md:grid-cols-3">
         {/* Card 1: Invoice Details */}
-        <div className="flex flex-col gap-3 rounded-xl border border-[#C5C6CF] bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm">
           <div className="flex items-center gap-1.5">
-            <ReceiptText className="h-3.5 w-3.5 text-[#45464E]" aria-hidden="true" />
+            <ReceiptText className="h-3.5 w-3.5 text-[#64748B]" aria-hidden="true" />
             <span className={CARD_LABEL}>Invoice Details</span>
           </div>
           <div className="flex flex-col gap-1.5 text-sm">
             {row.issuedDate && (
               <div className="flex items-center justify-between">
-                <span className="text-[#45464E]">Issued</span>
-                <span className="text-[#1A1C1C]">{row.issuedDate}</span>
+                <span className="text-[#64748B]">Issued</span>
+                <span className="text-[#0F172A]">{row.issuedDate}</span>
               </div>
             )}
             <div className="flex items-center justify-between">
-              <span className="text-[#45464E]">Due</span>
-              <span className="text-[#45464E]">{row.dueDate}</span>
+              <span className="text-[#64748B]">Due</span>
+              <span className="text-[#64748B]">{row.dueDate}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[#45464E]">Balance due</span>
-              <span className="font-bold tabular-nums text-[#1A1C1C]">{row.balanceDue}</span>
+              <span className="text-[#64748B]">Balance due</span>
+              <span className="font-bold tabular-nums text-[#0F172A]">{row.balanceDue}</span>
             </div>
           </div>
           {row.paymentLinkUrl && (
             <button
               type="button"
               onClick={handleCopyLink}
-              className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-md border border-[#C5C6CF] px-3 py-2 text-xs font-medium text-[#45464E] transition-colors hover:bg-[#F3F3F3]"
+              className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-md border border-[#E2E8F0] px-3 py-2 text-xs font-medium text-[#64748B] transition-colors hover:bg-[#F1F5F9]"
             >
               <Copy className="h-3.5 w-3.5" />
               {copied ? "Copied!" : "Copy payment link"}
@@ -106,23 +106,23 @@ function ExpandedPanel({ row }: { row: OverdueRow }) {
         </div>
 
         {/* Card 2: Recent Activity */}
-        <div className="flex flex-col gap-3 rounded-xl border border-[#C5C6CF] bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm">
           <div className="flex items-center gap-1.5">
-            <History className="h-3.5 w-3.5 text-[#45464E]" aria-hidden="true" />
+            <History className="h-3.5 w-3.5 text-[#64748B]" aria-hidden="true" />
             <span className={CARD_LABEL}>Recent Activity</span>
           </div>
           {/* DO NOT invent reminder events — show placeholder only */}
-          <p className="text-sm text-[#45464E]">No activity yet</p>
+          <p className="text-sm text-[#64748B]">No activity yet</p>
         </div>
 
         {/* Card 3: Next Action */}
-        <div className="flex flex-col gap-3 rounded-xl border border-[#C5C6CF] bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm">
           <div className="flex items-center gap-1.5">
-            <ArrowRight className="h-3.5 w-3.5 text-[#45464E]" aria-hidden="true" />
+            <ArrowRight className="h-3.5 w-3.5 text-[#64748B]" aria-hidden="true" />
             <span className={CARD_LABEL}>Next Action</span>
           </div>
           {/* Sequences editor doesn't exist yet — show placeholder only */}
-          <p className="text-sm text-[#45464E]">No activity yet</p>
+          <p className="text-sm text-[#64748B]">No activity yet</p>
         </div>
       </div>
     </div>
@@ -149,7 +149,7 @@ function ActionButton({
           e.stopPropagation();
           onStartFollowUp(row);
         }}
-        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#0B61A1] px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0a5690]"
+        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#2563EB] px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]"
       >
         <Send className="h-3.5 w-3.5" />
         Start follow-up
@@ -165,7 +165,7 @@ function ActionButton({
           // Deep-linking to the specific sequence run is a follow-up TODO.
           onViewSequence();
         }}
-        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#C5C6CF] px-3 text-xs font-semibold text-[#45464E] transition-colors hover:bg-white"
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#E2E8F0] px-3 text-xs font-semibold text-[#64748B] transition-colors hover:bg-white"
       >
         <Eye className="h-3.5 w-3.5" />
         View sequence
@@ -181,7 +181,7 @@ function ActionButton({
         // Deep-linking to the specific sequence run is a follow-up TODO.
         onViewSequence();
       }}
-      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#C5C6CF] px-3 text-xs font-semibold text-[#45464E] transition-colors hover:bg-white"
+      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#E2E8F0] px-3 text-xs font-semibold text-[#64748B] transition-colors hover:bg-white"
     >
       <PlayCircle className="h-3.5 w-3.5" />
       Resume
@@ -215,8 +215,8 @@ function PaginationFooter({
   }
 
   return (
-    <div className="flex items-center justify-between border-t border-[#C5C6CF] bg-[#F3F3F3] px-6 py-4">
-      <span className="text-sm text-[#45464E]">
+    <div className="flex items-center justify-between border-t border-[#E2E8F0] bg-[#F1F5F9] px-6 py-4">
+      <span className="text-sm text-[#64748B]">
         Showing {from} to {to} of {total} entries
       </span>
       <div className="flex items-center gap-1">
@@ -226,7 +226,7 @@ function PaginationFooter({
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
           aria-label="Previous page"
-          className="flex h-8 w-8 items-center justify-center rounded border border-[#C5C6CF] transition-colors hover:bg-white disabled:opacity-50"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[#E2E8F0] transition-colors hover:bg-white disabled:opacity-50"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -242,8 +242,8 @@ function PaginationFooter({
             className={cn(
               "h-8 min-w-[2rem] rounded border px-2 text-sm font-medium transition-colors",
               n === page
-                ? "border-[#0B61A1] bg-[#0B61A1] text-white"
-                : "border-[#C5C6CF] text-[#1A1C1C] hover:bg-white",
+                ? "border-[#2563EB] bg-[#2563EB] text-white"
+                : "border-[#E2E8F0] text-[#0F172A] hover:bg-white",
             )}
           >
             {n}
@@ -256,7 +256,7 @@ function PaginationFooter({
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           aria-label="Next page"
-          className="flex h-8 w-8 items-center justify-center rounded border border-[#C5C6CF] transition-colors hover:bg-white disabled:opacity-50"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[#E2E8F0] transition-colors hover:bg-white disabled:opacity-50"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -283,13 +283,13 @@ export function OverdueWorklist({
 }: OverdueWorklistProps) {
   if (error) {
     return (
-      <div className="overflow-hidden rounded-xl border border-[#C5C6CF] bg-white shadow-sm">
-        <p className="px-6 py-12 text-sm text-[#45464E]">
+      <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
+        <p className="px-6 py-12 text-sm text-[#64748B]">
           Couldn&apos;t load overdue invoices.{" "}
           <button
             type="button"
             onClick={onRetry}
-            className="font-medium text-[#0B61A1] hover:underline"
+            className="font-medium text-[#2563EB] hover:underline"
           >
             Retry
           </button>
@@ -300,10 +300,10 @@ export function OverdueWorklist({
 
   if (isLoading) {
     return (
-      <div className="overflow-hidden rounded-xl border border-[#C5C6CF] bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <div className="space-y-2 p-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-lg bg-[#F3F3F3]" />
+            <div key={i} className="h-14 animate-pulse rounded-lg bg-[#F1F5F9]" />
           ))}
         </div>
       </div>
@@ -312,13 +312,13 @@ export function OverdueWorklist({
 
   if (rows.length === 0 && total === 0) {
     return (
-      <div className="overflow-hidden rounded-xl border border-[#C5C6CF] bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
           <span className="text-4xl">🎉</span>
           <p className="text-base font-semibold text-[#041534]">
             No overdue invoices
           </p>
-          <p className="max-w-xs text-sm text-[#45464E]">
+          <p className="max-w-xs text-sm text-[#64748B]">
             All outstanding invoices are on time. Check back soon.
           </p>
         </div>
@@ -327,13 +327,13 @@ export function OverdueWorklist({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#C5C6CF] bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
       {/* Mobile: card list */}
       <div className="flex flex-col md:hidden">
         {rows.map((row) => (
           <div
             key={row.id}
-            className="border-b border-[#C5C6CF] last:border-b-0"
+            className="border-b border-[#E2E8F0] last:border-b-0"
           >
             <button
               type="button"
@@ -348,7 +348,7 @@ export function OverdueWorklist({
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-semibold text-[#041534]">{row.customerName}</span>
-                    <span className="text-[11px] leading-none text-[#45464E]">
+                    <span className="text-[11px] leading-none text-[#64748B]">
                       {row.invoiceNumber} &bull; {row.dueDateShort}
                     </span>
                   </div>
@@ -362,16 +362,16 @@ export function OverdueWorklist({
                       {FOLLOW_UP_LABEL[row.followUpStatus]}
                     </span>
                     {expandedId === row.id ? (
-                      <ChevronDown className="h-4 w-4 text-[#45464E]" />
+                      <ChevronDown className="h-4 w-4 text-[#64748B]" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-[#45464E]" />
+                      <ChevronRight className="h-4 w-4 text-[#64748B]" />
                     )}
                   </div>
                 </div>
                 <div className="mt-3 flex items-end justify-between gap-2">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] text-[#45464E]">Due {row.dueDate}</span>
-                    <span className="text-sm font-bold tabular-nums text-[#BA1A1A]">
+                    <span className="text-[11px] text-[#64748B]">Due {row.dueDate}</span>
+                    <span className="text-sm font-bold tabular-nums text-[#DC2626]">
                       {row.balanceDue}
                     </span>
                   </div>
@@ -408,7 +408,7 @@ export function OverdueWorklist({
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[760px] border-collapse text-left">
           <thead>
-            <tr className="border-b border-[#C5C6CF] bg-[#F3F3F3]">
+            <tr className="border-b border-[#E2E8F0] bg-[#F1F5F9]">
               <th className={cn(HEAD, "pl-6 w-8")} />
               <th className={HEAD}>Customer &amp; Invoice</th>
               <th className={HEAD}>Days Overdue</th>
@@ -417,14 +417,14 @@ export function OverdueWorklist({
               <th className={cn(HEAD, "pr-6")}>Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#C5C6CF]">
+          <tbody className="divide-y divide-[#E2E8F0]">
             {rows.map((row) => (
               <Fragment key={row.id}>
                 <tr
                   onClick={() => onToggleExpand(row.id)}
                   className={cn(
                     "cursor-pointer transition-colors hover:bg-black/[0.02]",
-                    expandedId === row.id && "bg-[#F9F9F9]",
+                    expandedId === row.id && "bg-[#F8FAFC]",
                   )}
                 >
                   {/* Expand chevron — carries the left accent bar via box-shadow */}
@@ -433,9 +433,9 @@ export function OverdueWorklist({
                     style={{ boxShadow: `inset 3px 0 0 0 ${row.agingDotColor}` }}
                   >
                     {expandedId === row.id ? (
-                      <ChevronDown className="h-4 w-4 text-[#45464E]" />
+                      <ChevronDown className="h-4 w-4 text-[#64748B]" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-[#45464E]" />
+                      <ChevronRight className="h-4 w-4 text-[#64748B]" />
                     )}
                   </td>
 
@@ -443,7 +443,7 @@ export function OverdueWorklist({
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-sm font-semibold text-[#041534]">{row.customerName}</span>
-                      <span className="text-[11px] leading-none text-[#45464E]">
+                      <span className="text-[11px] leading-none text-[#64748B]">
                         {row.invoiceNumber} &bull; {row.dueDateShort}
                       </span>
                     </div>
@@ -466,7 +466,7 @@ export function OverdueWorklist({
                   </td>
 
                   {/* Amount — red, bold, tabular */}
-                  <td className="px-4 py-3 text-right font-bold tabular-nums text-[#BA1A1A]">
+                  <td className="px-4 py-3 text-right font-bold tabular-nums text-[#DC2626]">
                     {row.balanceDue}
                   </td>
 

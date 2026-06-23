@@ -16,7 +16,7 @@ export function ReportsPage() {
           <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#041534]">
             A/R Aging Report
           </h2>
-          <p className="text-sm text-[#45464E]">
+          <p className="text-sm text-[#64748B]">
             Outstanding balances grouped by how overdue they are.
           </p>
         </div>
@@ -24,7 +24,7 @@ export function ReportsPage() {
           <button
             type="button"
             onClick={vm.handleExportCsv}
-            className="flex items-center gap-2 rounded-lg border border-[#75777F] px-4 py-2 text-sm font-semibold text-[#1A1C1C] transition-colors hover:bg-white"
+            className="flex items-center gap-2 rounded-lg border border-[#94A3B8] px-4 py-2 text-sm font-semibold text-[#0F172A] transition-colors hover:bg-white"
           >
             <Download className="h-4 w-4" />
             Export CSV
@@ -33,7 +33,7 @@ export function ReportsPage() {
             type="button"
             onClick={vm.handleSyncNow}
             disabled={vm.isSyncing}
-            className="flex items-center gap-2 rounded-lg bg-[#0B61A1] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0a5690] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex items-center gap-2 rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw className={cn("h-4 w-4", vm.isSyncing && "animate-spin")} />
             {vm.isSyncing ? "Syncing…" : "Sync now"}
@@ -45,7 +45,7 @@ export function ReportsPage() {
         <div
           className={
             vm.syncError
-              ? "rounded-lg border border-[#FFB4AB] bg-[#FFDAD6] px-4 py-3 text-sm text-[#93000A]"
+              ? "rounded-lg border border-[#FECACA] bg-[#FEE2E2] px-4 py-3 text-sm text-[#991B1B]"
               : "rounded-lg border border-[#A7F3D0] bg-[#D1FAE5] px-4 py-3 text-sm text-[#065F46]"
           }
         >

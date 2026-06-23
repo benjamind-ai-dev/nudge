@@ -21,7 +21,7 @@ export function DashboardPage() {
         <div
           className={
             vm.syncError
-              ? "rounded-lg border border-[#FFB4AB] bg-[#FFDAD6] px-4 py-3 text-sm text-[#93000A]"
+              ? "rounded-lg border border-[#FECACA] bg-[#FEE2E2] px-4 py-3 text-sm text-[#991B1B]"
               : "rounded-lg border border-[#A7F3D0] bg-[#D1FAE5] px-4 py-3 text-sm text-[#065F46]"
           }
         >

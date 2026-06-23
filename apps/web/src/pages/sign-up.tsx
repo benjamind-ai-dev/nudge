@@ -16,7 +16,7 @@ export function SignUpPage() {
             <h1 className="text-[28px] leading-tight text-[#041534]">
               Get started in 60 seconds.
             </h1>
-            <p className="mt-2 text-sm text-[#45464E]">
+            <p className="mt-2 text-sm text-[#64748B]">
               Connect your books. We handle the follow-ups.
             </p>
 

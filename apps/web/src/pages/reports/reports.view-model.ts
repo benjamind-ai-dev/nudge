@@ -36,11 +36,11 @@ const BUCKET_ORDER: BucketKey[] = [
 ];
 
 const STATUS_BADGE: Record<InvoiceStatus, string> = {
-  overdue: "bg-[#BA1A1A]/10 text-[#BA1A1A]",
+  overdue: "bg-[#DC2626]/10 text-[#DC2626]",
   partial: "bg-[#FBBF24]/15 text-[#B45309]",
   paid: "bg-green-100 text-green-700",
   disputed: "bg-purple-100 text-purple-700",
-  open: "bg-[#E2E2E2] text-[#45464E]",
+  open: "bg-[#E2E8F0] text-[#64748B]",
   voided: "bg-gray-100 text-gray-500",
 };
 

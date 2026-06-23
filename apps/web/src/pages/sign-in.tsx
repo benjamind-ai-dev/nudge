@@ -16,7 +16,7 @@ export function SignInPage() {
             <h1 className="text-[28px] leading-tight text-[#041534]">
               Welcome back.
             </h1>
-            <p className="mt-2 text-sm text-[#45464E]">
+            <p className="mt-2 text-sm text-[#64748B]">
               Sign in to your Nudge account.
             </p>
 

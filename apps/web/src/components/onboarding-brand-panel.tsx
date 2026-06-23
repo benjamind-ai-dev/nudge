@@ -14,7 +14,7 @@ export function OnboardingBrandPanel() {
     <aside className="hidden w-[40%] max-w-[512px] flex-col justify-between bg-[#1B2A4A] p-12 md:flex">
       {/* Brand */}
       <div className="flex items-center gap-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#2E75B6]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#2563EB]" />
         <span className="text-lg font-semibold tracking-tight text-white">
           Nudge
         </span>
@@ -29,7 +29,7 @@ export function OnboardingBrandPanel() {
             <div className="mt-2 h-3 w-20 rounded bg-white/40" />
             <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
               <div className="h-2 w-8 rounded bg-white/10" />
-              <div className="h-2 w-10 rounded bg-[#2E75B6]" />
+              <div className="h-2 w-10 rounded bg-[#2563EB]" />
             </div>
           </div>
 
@@ -42,14 +42,14 @@ export function OnboardingBrandPanel() {
                   <span
                     className={
                       s.tone === "accent"
-                        ? "h-2.5 w-2.5 rounded-full bg-[#2E75B6] ring-4 ring-white/10"
+                        ? "h-2.5 w-2.5 rounded-full bg-[#2563EB] ring-4 ring-white/10"
                         : "h-2.5 w-2.5 rounded-full bg-white/40"
                     }
                   />
                   <span
                     className={
                       s.tone === "accent"
-                        ? "mt-3 text-xs font-bold uppercase tracking-wider text-[#2E75B6]"
+                        ? "mt-3 text-xs font-bold uppercase tracking-wider text-[#2563EB]"
                         : "mt-3 text-xs font-medium uppercase tracking-wider text-white/60"
                     }
                   >

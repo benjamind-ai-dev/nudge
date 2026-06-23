@@ -15,7 +15,7 @@ function FieldLabel({ htmlFor, children }: FieldLabelProps) {
   return (
     <label
       htmlFor={htmlFor}
-      className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[#45464E]"
+      className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[#64748B]"
     >
       {children}
     </label>
@@ -37,13 +37,13 @@ function FieldHelper({ error, hint }: HelperProps) {
     );
   }
   if (hint) {
-    return <p className="mt-1 text-[12px] text-[#6B7280]">{hint}</p>;
+    return <p className="mt-1 text-[12px] text-[#64748B]">{hint}</p>;
   }
   return null;
 }
 
 const INPUT_BASE =
-  "h-11 w-full rounded-[6px] border border-[#C5C6CF] px-3 text-sm text-[#1B2A4A] outline-none transition-colors focus:border-[#2E75B6] focus:ring-1 focus:ring-[#2E75B6] placeholder:text-[#9CA3AF] bg-white box-border";
+  "h-11 w-full rounded-[6px] border border-[#E2E8F0] px-3 text-sm text-[#1B2A4A] outline-none transition-colors focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] placeholder:text-[#94A3B8] bg-white box-border";
 
 const INPUT_ERROR = "border-red-600 focus:border-red-600 focus:ring-red-600";
 
@@ -68,7 +68,7 @@ export function OnboardingPage() {
         <div className="box-border w-full max-w-[600px]">
           {/* Resume banner — mb-4 (was mb-6) to save vertical space */}
           {vm.isResume && (
-            <div className="mb-4 flex items-start gap-2 rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-[13px] text-[#2E75B6]">
+            <div className="mb-4 flex items-start gap-2 rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-[13px] text-[#2563EB]">
               <Info className="h-4 w-4 mt-0.5 shrink-0" />
               Your business is saved. Finish connecting your books to continue.
             </div>
@@ -78,7 +78,7 @@ export function OnboardingPage() {
           <h1 className="text-[28px] font-semibold text-[#1B2A4A]">
             Tell us about your business.
           </h1>
-          <p className="mt-2 text-[14px] text-[#6B7280]">
+          <p className="mt-2 text-[14px] text-[#64748B]">
             We'll use this to send follow-ups on your behalf. Takes 30 seconds.
           </p>
 
@@ -185,7 +185,7 @@ export function OnboardingPage() {
               <button
                 type="button"
                 onClick={vm.toggleSignature}
-                className="cursor-pointer text-[13px] font-medium text-[#2E75B6] transition-colors hover:text-[#2666a0]"
+                className="cursor-pointer text-[13px] font-medium text-[#2563EB] transition-colors hover:text-[#1D4ED8]"
               >
                 {vm.signatureOpen ? "− Remove email signature" : "+ Add email signature"}
               </button>
@@ -197,7 +197,7 @@ export function OnboardingPage() {
                     onChange={(e) => vm.setEmailSignature(e.target.value)}
                     placeholder="Best regards,&#10;Jane Smith&#10;Acme Plumbing Co."
                     rows={4}
-                    className="box-border w-full rounded-[6px] border border-[#C5C6CF] px-3 py-2 text-sm text-[#1B2A4A] outline-none transition-colors focus:border-[#2E75B6] focus:ring-1 focus:ring-[#2E75B6] placeholder:text-[#9CA3AF]"
+                    className="box-border w-full rounded-[6px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#1B2A4A] outline-none transition-colors focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] placeholder:text-[#94A3B8]"
                   />
                 </div>
               )}
@@ -206,10 +206,10 @@ export function OnboardingPage() {
 
           {/* Connect section — mt-6 pt-5 (was mt-8 pt-6) to save vertical space */}
           <div className="mt-6 border-t border-gray-200 pt-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">
               Connect your books
             </p>
-            <p className="mt-1 text-[13px] text-[#9CA3AF]">
+            <p className="mt-1 text-[13px] text-[#94A3B8]">
               Read-only access · We never modify your books · Disconnect anytime
             </p>
 
@@ -239,7 +239,7 @@ export function OnboardingPage() {
                 name="Xero"
                 description="Popular in UK, AU, NZ."
                 logo={
-                  <Building2 className="h-6 w-6 text-[#2E75B6]" />
+                  <Building2 className="h-6 w-6 text-[#2563EB]" />
                 }
                 selected={vm.provider === "xero"}
                 onSelect={(p) => {
@@ -258,8 +258,8 @@ export function OnboardingPage() {
             className={cn(
               "mt-6 h-11 w-full rounded-[6px] text-sm font-semibold transition-colors",
               vm.isValid && !vm.isSubmitting
-                ? "cursor-pointer bg-[#2E75B6] text-white hover:bg-[#2666a0]"
-                : "cursor-not-allowed bg-[#C5C6CF] text-white",
+                ? "cursor-pointer bg-[#2563EB] text-white hover:bg-[#1D4ED8]"
+                : "cursor-not-allowed bg-[#E2E8F0] text-white",
             )}
           >
             {vm.isSubmitting ? (
@@ -272,7 +272,7 @@ export function OnboardingPage() {
             )}
           </button>
 
-          <p className="mt-3 text-center text-[12px] text-[#9CA3AF]">
+          <p className="mt-3 text-center text-[12px] text-[#94A3B8]">
             You'll be redirected to {providerLabel} to authorize. Then we'll
             bring you back here.
           </p>

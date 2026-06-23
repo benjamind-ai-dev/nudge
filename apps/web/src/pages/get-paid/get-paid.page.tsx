@@ -15,18 +15,18 @@ export function GetPaidPage() {
       {showHero && (
         <div className="flex items-stretch gap-4">
           {/* Left accent rule */}
-          <div className="w-1 shrink-0 rounded-full bg-[#BA1A1A]" aria-hidden="true" />
+          <div className="w-1 shrink-0 rounded-full bg-[#DC2626]" aria-hidden="true" />
           <div className="flex flex-col gap-1">
             {/* Eyebrow */}
-            <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#45464E]">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#64748B]">
               Get paid faster
             </span>
             {/* Hero number */}
-            <span className="text-4xl font-bold leading-none tracking-tight tabular-nums text-[#BA1A1A]">
+            <span className="text-4xl font-bold leading-none tracking-tight tabular-nums text-[#DC2626]">
               {formatDollars(vm.totalOverdueCents)}
             </span>
             {/* Muted subline */}
-            <span className="text-[13px] text-[#45464E]">
+            <span className="text-[13px] text-[#64748B]">
               overdue across {vm.overdueCount}{" "}
               {vm.overdueCount === 1 ? "invoice" : "invoices"}
             </span>
@@ -37,10 +37,10 @@ export function GetPaidPage() {
       {/* Page header — shown only when hero is hidden (loading / zero) */}
       {!showHero && (
         <div>
-          <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#1A1C1C]">
+          <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#0F172A]">
             Get paid faster
           </h2>
-          <p className="mt-1 text-sm text-[#45464E]">
+          <p className="mt-1 text-sm text-[#64748B]">
             Overdue invoices sorted by amount at risk.
           </p>
         </div>

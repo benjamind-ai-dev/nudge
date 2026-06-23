@@ -16,27 +16,27 @@ export function ArAgingBar({
   onViewReport,
 }: ArAgingBarProps) {
   return (
-    <section className="rounded-xl border border-[#C5C6CF] bg-white p-6 shadow-sm">
+    <section className="rounded-xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold tracking-[-0.01em] text-[#1A1C1C]">
+        <h3 className="text-lg font-semibold tracking-[-0.01em] text-[#0F172A]">
           A/R Aging Balance
         </h3>
         <button
           type="button"
           onClick={onViewReport}
-          className="text-sm font-semibold text-[#0B61A1] hover:underline"
+          className="text-sm font-semibold text-[#2563EB] hover:underline"
         >
           View Detailed Report
         </button>
       </div>
 
       {error ? (
-        <p className="mt-6 text-sm text-[#45464E]">
+        <p className="mt-6 text-sm text-[#64748B]">
           Couldn&apos;t load aging data.{" "}
           <button
             type="button"
             onClick={onRetry}
-            className="font-medium text-[#0B61A1] hover:underline"
+            className="font-medium text-[#2563EB] hover:underline"
           >
             Retry
           </button>
@@ -60,7 +60,7 @@ export function ArAgingBar({
             )}
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-4 border-t border-[#C5C6CF] pt-4 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="mt-4 grid grid-cols-2 gap-4 border-t border-[#E2E8F0] pt-4 sm:grid-cols-3 lg:grid-cols-5">
             {segments.map((s) => (
               <div key={s.key} className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
@@ -68,12 +68,12 @@ export function ArAgingBar({
                     className="h-2 w-2 rounded-full"
                     style={{ backgroundColor: s.color }}
                   />
-                  <span className="text-xs font-semibold text-[#45464E]">
+                  <span className="text-xs font-semibold text-[#64748B]">
                     {s.label}
                   </span>
                 </div>
-                <span className="text-lg font-bold text-[#1A1C1C]">{s.amount}</span>
-                <span className="text-[10px] text-[#45464E]">
+                <span className="text-lg font-bold text-[#0F172A]">{s.amount}</span>
+                <span className="text-[10px] text-[#64748B]">
                   {s.count} {s.count === 1 ? "invoice" : "invoices"}
                 </span>
               </div>

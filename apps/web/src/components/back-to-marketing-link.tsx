@@ -15,7 +15,7 @@ export function BackToMarketingLink() {
   return (
     <a
       href={MARKETING_URL}
-      className="inline-flex items-center gap-1.5 text-[13px] text-[#45464E] transition-colors hover:text-[#1A1C1C]"
+      className="inline-flex items-center gap-1.5 text-[13px] text-[#64748B] transition-colors hover:text-[#0F172A]"
     >
       <ChevronLeft className="h-3.5 w-3.5" />
       Back

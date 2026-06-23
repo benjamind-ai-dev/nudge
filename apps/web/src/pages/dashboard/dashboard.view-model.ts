@@ -33,7 +33,7 @@ const BADGE_BY_TYPE: Record<NeedsAttentionType, AttentionBadge> = {
   },
   stale_no_response: {
     label: "No response",
-    className: "bg-[#F3F4F6] text-[#374151]",
+    className: "bg-[#F3F4F6] text-[#334155]",
   },
 };
 
