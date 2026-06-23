@@ -2,18 +2,17 @@ import { Bell, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface TopbarProps {
-  title: string;
   hasNotifications?: boolean;
   onMenuClick?: () => void;
 }
 
 export function Topbar({
-  title,
   hasNotifications = false,
   onMenuClick,
 }: TopbarProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 sm:px-6">
+      {/* Page titles live in each page's own header — keep the bar chrome-only. */}
       <div className="flex items-center gap-2">
         <Button
           type="button"
@@ -25,9 +24,6 @@ export function Topbar({
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl font-semibold tracking-[0.01em] text-foreground">
-          {title}
-        </h1>
       </div>
       <div className="relative">
         <Button

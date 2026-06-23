@@ -121,18 +121,24 @@ describe("useGetPaidViewModel", () => {
     expect(result.current.rows[0].followUpStatus).toBe("none");
   });
 
-  // 5. Status derivation — active
-  it("derives followUpStatus 'active' when sequenceRun.status is active", () => {
-    mockInvoices = [makeInvoice({ sequenceRun: { id: "run-1", status: "active" } })];
+  // 5. Action list: invoices with an ACTIVE sequence are excluded
+  it("excludes invoices that already have an active sequence", () => {
+    mockInvoices = [
+      makeInvoice({ id: "no-seq", sequenceRun: null }),
+      makeInvoice({ id: "active", sequenceRun: { id: "run-1", status: "active" } }),
+    ];
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
-    expect(result.current.rows[0].followUpStatus).toBe("active");
+    expect(result.current.rows.map((r) => r.id)).toEqual(["no-seq"]);
   });
 
-  // 6. Status derivation — paused
-  it("derives followUpStatus 'paused' when sequenceRun.status is paused", () => {
-    mockInvoices = [makeInvoice({ sequenceRun: { id: "run-2", status: "paused" } })];
+  // 6. Action list: invoices with a PAUSED sequence are excluded
+  it("excludes invoices that already have a paused sequence", () => {
+    mockInvoices = [
+      makeInvoice({ id: "no-seq", sequenceRun: null }),
+      makeInvoice({ id: "paused", sequenceRun: { id: "run-2", status: "paused" } }),
+    ];
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
-    expect(result.current.rows[0].followUpStatus).toBe("paused");
+    expect(result.current.rows.map((r) => r.id)).toEqual(["no-seq"]);
   });
 
   // 7. Unexpected sequenceRun status falls back to 'none'
