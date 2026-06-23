@@ -47,14 +47,14 @@ interface OverdueWorklistProps {
 function StatusBadge({ status }: { status: FollowUpStatus }) {
   if (status === "active") {
     return (
-      <Badge className="border-transparent bg-emerald-50 text-emerald-700">
+      <Badge className="border-transparent bg-emerald-500/15 text-emerald-300">
         Active
       </Badge>
     );
   }
   if (status === "paused") {
     return (
-      <Badge className="border-transparent bg-amber-50 text-amber-700">
+      <Badge className="border-transparent bg-amber-500/15 text-amber-300">
         Paused
       </Badge>
     );

@@ -116,6 +116,16 @@ export interface GetPaidViewModel {
   startError: string | null;
   alreadyRunning: boolean;
 
+  // Dialog editable fields
+  dialogSubject: string;
+  dialogBody: string;
+  dialogIncludePaymentLink: boolean;
+  dialogSendByEmail: boolean;
+  setDialogSubject: (v: string) => void;
+  setDialogBody: (v: string) => void;
+  toggleIncludePaymentLink: () => void;
+  toggleSendByEmail: () => void;
+
   // Navigation — wires the dead "View sequence" / "Resume" buttons.
   // Deep-linking to the specific sequence run is a follow-up TODO.
   onViewSequence: () => void;
@@ -135,6 +145,12 @@ export function useGetPaidViewModel(): GetPaidViewModel {
   const [startError, setStartError] = useState<string | null>(null);
   const [alreadyRunning, setAlreadyRunning] = useState(false);
   const [page, setPageState] = useState(1);
+
+  // Editable dialog fields
+  const [dialogSubject, setDialogSubject] = useState("");
+  const [dialogBody, setDialogBody] = useState("");
+  const [dialogIncludePaymentLink, setDialogIncludePaymentLink] = useState(true);
+  const [dialogSendByEmail, setDialogSendByEmail] = useState(true);
 
   const allRows = useMemo(
     () => (query.data?.data ?? []).map(toRow),
@@ -177,6 +193,14 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     setDialogAmount(row.balanceDue);
     setStartError(null);
     setAlreadyRunning(false);
+
+    // Initialise editable fields from the selected row
+    setDialogSubject(`Reminder: invoice ${row.invoiceNumber} is past due`);
+    setDialogBody(
+      `Hi ${row.customerName} team,\n\nThis is a friendly reminder that invoice ${row.invoiceNumber} for ${row.balanceDue} is currently past due. We'd appreciate it if you could process this payment at your earliest convenience.\n\nIf you've already sent payment, please disregard this message.\n\nBest regards,\nNudge Billing`,
+    );
+    setDialogIncludePaymentLink(true);
+    setDialogSendByEmail(true);
   }, []);
 
   const closeDialog = useCallback(() => {
@@ -195,6 +219,12 @@ export function useGetPaidViewModel(): GetPaidViewModel {
       const result = await startFollowUpMutation.mutateAsync({
         invoiceId: dialogInvoiceId,
         businessId,
+        body: {
+          subject: dialogSubject,
+          body: dialogBody,
+          includePaymentLink: dialogIncludePaymentLink,
+          sendByEmail: dialogSendByEmail,
+        },
       });
       if (result.data.status === "already_running") {
         setAlreadyRunning(true);
@@ -206,7 +236,24 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     } catch (e) {
       setStartError(e instanceof Error ? e.message : "Couldn't start follow-up.");
     }
-  }, [dialogInvoiceId, businessId, startFollowUpMutation, closeDialog]);
+  }, [
+    dialogInvoiceId,
+    businessId,
+    startFollowUpMutation,
+    closeDialog,
+    dialogSubject,
+    dialogBody,
+    dialogIncludePaymentLink,
+    dialogSendByEmail,
+  ]);
+
+  const toggleIncludePaymentLink = useCallback(() => {
+    setDialogIncludePaymentLink((prev) => !prev);
+  }, []);
+
+  const toggleSendByEmail = useCallback(() => {
+    setDialogSendByEmail((prev) => !prev);
+  }, []);
 
   // Deep-linking to a specific sequence run is a follow-up TODO.
   const onViewSequence = useCallback(() => {
@@ -243,6 +290,15 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     isStarting: startFollowUpMutation.isPending,
     startError,
     alreadyRunning,
+
+    dialogSubject,
+    dialogBody,
+    dialogIncludePaymentLink,
+    dialogSendByEmail,
+    setDialogSubject,
+    setDialogBody,
+    toggleIncludePaymentLink,
+    toggleSendByEmail,
 
     onViewSequence,
   };

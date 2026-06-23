@@ -48,7 +48,7 @@ export function ReportsPage() {
             "rounded-lg border px-4 py-3 text-sm",
             vm.syncError
               ? "border-destructive/30 bg-destructive/10 text-destructive"
-              : "border-emerald-200 bg-emerald-50 text-emerald-800",
+              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
           )}
         >
           {vm.syncError ?? vm.syncMessage}

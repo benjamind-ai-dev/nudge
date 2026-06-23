@@ -44,6 +44,10 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       select: {
         id: true,
         status: true,
+        firstStepSubject: true,
+        firstStepBody: true,
+        firstStepIncludePaymentLink: true,
+        firstStepSkip: true,
         invoice: {
           select: {
             id: true,
@@ -156,6 +160,10 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
         stepTemplateSubject: run.currentStep!.template?.subject ?? null,
         stepTemplateBody: run.currentStep!.template?.body ?? null,
         stepTemplateSignature: run.currentStep!.template?.signature ?? null,
+        firstStepSubject: run.firstStepSubject,
+        firstStepBody: run.firstStepBody,
+        firstStepIncludePaymentLink: run.firstStepIncludePaymentLink,
+        firstStepSkip: run.firstStepSkip,
       }));
   }
 
@@ -168,6 +176,10 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       select: {
         id: true,
         status: true,
+        firstStepSubject: true,
+        firstStepBody: true,
+        firstStepIncludePaymentLink: true,
+        firstStepSkip: true,
         invoice: {
           select: {
             id: true,
@@ -273,7 +285,21 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
       stepTemplateSubject: run.currentStep.template?.subject ?? null,
       stepTemplateBody: run.currentStep.template?.body ?? null,
       stepTemplateSignature: run.currentStep.template?.signature ?? null,
+      firstStepSubject: run.firstStepSubject,
+      firstStepBody: run.firstStepBody,
+      firstStepIncludePaymentLink: run.firstStepIncludePaymentLink,
+      firstStepSkip: run.firstStepSkip,
     };
+  }
+
+  async runHasSentMessages(runId: string, businessId: string): Promise<boolean> {
+    const count = await this.prisma.message.count({
+      where: {
+        sequenceRunId: runId,
+        businessId,
+      },
+    });
+    return count > 0;
   }
 
   async findNextStep(sequenceId: string, businessId: string, currentStepOrder: number): Promise<NextStep | null> {

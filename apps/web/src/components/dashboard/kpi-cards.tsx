@@ -28,7 +28,7 @@ function KpiCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="min-h-32 justify-between gap-0 py-0">
+    <Card className="card-lift min-h-32 justify-between gap-0 py-0">
       <CardHeader className="flex flex-row items-start justify-between px-6 pt-6 pb-0">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}

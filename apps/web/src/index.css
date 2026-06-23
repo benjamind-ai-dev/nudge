@@ -2,43 +2,49 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Design system — "Clean bright" (Linear/Stripe vibe).
-   White surfaces, near-black slate text, hairline borders, indigo accent.
-   shadcn/ui reads these CSS variables; the @theme inline block maps them onto
-   Tailwind utilities (bg-background, text-foreground, bg-primary, border, …).
+   Design system — "Midnight" (dark + dramatic, Linear-grade craft).
+   Near-black slate surfaces, near-white text, vivid indigo→violet accent with
+   a soft glow, hairline borders, layered shadows. shadcn/ui reads these CSS
+   variables; the @theme inline block maps them onto Tailwind utilities
+   (bg-background, text-foreground, bg-primary, border, shadow-glow, …).
 --------------------------------------------------------------------------- */
 :root {
-  --radius: 0.625rem; /* 10px — soft modern corners */
+  color-scheme: dark;
+  --radius: 0.625rem; /* 10px */
 
-  --background: #ffffff;
-  --foreground: #0f172a; /* slate-900 near-black */
+  --background: #0a0c12; /* near-black, faint blue */
+  --foreground: #e7e9ee; /* near-white */
 
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --card: #11141d; /* raised panel */
+  --card-foreground: #e7e9ee;
+  --popover: #12151f;
+  --popover-foreground: #e7e9ee;
 
-  --primary: #4f46e5; /* indigo-600 — the accent */
+  --primary: #6366f1; /* indigo-500 — pops on dark */
   --primary-foreground: #ffffff;
 
-  --secondary: #f1f5f9; /* slate-100 */
-  --secondary-foreground: #0f172a;
+  --secondary: #1a1e2b; /* subtle raised */
+  --secondary-foreground: #e7e9ee;
 
-  --muted: #f8fafc; /* slate-50 */
-  --muted-foreground: #64748b; /* slate-500 */
+  --muted: #161a25;
+  --muted-foreground: #94a0b8; /* slate-ish, readable on dark */
 
-  --accent: #eef2ff; /* indigo-50 tint for hover/selected */
-  --accent-foreground: #4338ca; /* indigo-700 */
+  --accent: #1e2233; /* hover / selected surface */
+  --accent-foreground: #c7d2fe; /* indigo-200 */
 
-  --destructive: #dc2626; /* red-600 */
+  --destructive: #f87171; /* red-400 — readable on dark */
   --destructive-foreground: #ffffff;
 
-  --success: #059669; /* emerald-600 */
-  --success-foreground: #ffffff;
+  --success: #34d399; /* emerald-400 */
+  --success-foreground: #062a1e;
 
-  --border: #e2e8f0; /* slate-200 hairline */
-  --input: #e2e8f0;
-  --ring: #4f46e5; /* focus ring = indigo */
+  --border: #232838; /* hairline on dark */
+  --input: #2a3043;
+  --ring: #818cf8; /* indigo-400 focus glow */
+
+  /* Accent gradient + glow for buttons / hero. */
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --glow-primary: 0 0 0 1px rgba(99, 102, 241, 0.35), 0 8px 24px -6px rgba(99, 102, 241, 0.45);
 }
 
 @theme inline {
@@ -80,6 +86,13 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    /* subtle ambient glow top-left so the dark canvas isn't flat */
+    background-image: radial-gradient(
+      60rem 40rem at 12% -10%,
+      rgba(99, 102, 241, 0.08),
+      transparent 60%
+    );
+    background-attachment: fixed;
   }
 
   /* Every interactive control gets a pointer cursor (Tailwind preflight leaves
@@ -89,5 +102,50 @@
   [role="button"]:not([aria-disabled="true"]),
   a[href] {
     cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Reusable craft utilities — applied in components for the "dramatic" feel. */
+
+  /* Primary action: indigo→violet gradient + glow + press feedback. */
+  .btn-glow {
+    background-image: var(--accent-gradient);
+    box-shadow: var(--glow-primary);
+    transition:
+      box-shadow 150ms ease,
+      transform 100ms ease,
+      filter 150ms ease;
+  }
+  .btn-glow:hover {
+    filter: brightness(1.08);
+    box-shadow:
+      0 0 0 1px rgba(129, 140, 248, 0.5),
+      0 10px 30px -6px rgba(99, 102, 241, 0.6);
+  }
+  .btn-glow:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  /* List/stat cards: subtle lift + accent border on hover. */
+  .card-lift {
+    transition:
+      transform 150ms ease,
+      box-shadow 150ms ease,
+      border-color 150ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
   }
 }

@@ -25,15 +25,15 @@ interface AttentionBadge {
 }
 
 const BADGE_BY_TYPE: Record<NeedsAttentionType, AttentionBadge> = {
-  client_replied: { label: "Replied", className: "bg-blue-100 text-blue-700" },
-  disputed: { label: "Disputed", className: "bg-orange-100 text-orange-700" },
+  client_replied: { label: "Replied", className: "bg-blue-500/15 text-blue-300" },
+  disputed: { label: "Disputed", className: "bg-orange-500/15 text-orange-300" },
   owner_alert_triggered: {
     label: "Escalated",
-    className: "bg-red-100 text-red-800",
+    className: "bg-red-500/15 text-red-300",
   },
   stale_no_response: {
     label: "No response",
-    className: "bg-slate-100 text-slate-600",
+    className: "bg-slate-500/15 text-slate-300",
   },
 };
 

@@ -31,6 +31,7 @@ function makeRepo(overrides: Partial<StartFollowUpRepository> = {}): StartFollow
   return {
     getFollowUpContext: jest.fn().mockResolvedValue(baseContext()),
     findDefaultTierSequenceId: jest.fn().mockResolvedValue("seq-default"),
+    findAnyActiveSequenceId: jest.fn().mockResolvedValue("seq-any"),
     findSequenceFirstStep: jest
       .fn()
       .mockResolvedValue({ firstStepId: "step-1", firstStepDelayDays: 0 }),
@@ -54,6 +55,10 @@ describe("StartFollowUpUseCase", () => {
         sequenceId: "seq-default",
         currentStepId: "step-1",
         status: "active",
+        firstStepSubject: null,
+        firstStepBody: null,
+        firstStepIncludePaymentLink: null,
+        firstStepSkip: null,
       }),
     );
   });
@@ -89,7 +94,9 @@ describe("StartFollowUpUseCase", () => {
     );
   });
 
-  it("errors when the customer tier sequence exists but is inactive", async () => {
+  it("falls back to the business default when the customer tier sequence is inactive", async () => {
+    // The manual start never refuses for a paused tier sequence — it falls
+    // through to the business default instead of throwing.
     const repo = makeRepo({
       getFollowUpContext: jest.fn().mockResolvedValue(
         baseContext({ customerTierSequenceId: "seq-tier", customerTierSequenceIsActive: false }),
@@ -97,8 +104,23 @@ describe("StartFollowUpUseCase", () => {
     });
     const useCase = new StartFollowUpUseCase(repo);
 
-    await expect(useCase.execute(INVOICE_ID, BUSINESS_ID)).rejects.toBeInstanceOf(
-      NoActiveSequenceError,
+    await useCase.execute(INVOICE_ID, BUSINESS_ID);
+
+    expect(repo.createSequenceRun).toHaveBeenCalledWith(
+      expect.objectContaining({ sequenceId: "seq-default" }),
+    );
+  });
+
+  it("falls back to any active sequence when there is no default tier sequence", async () => {
+    const repo = makeRepo({
+      findDefaultTierSequenceId: jest.fn().mockResolvedValue(null),
+    });
+    const useCase = new StartFollowUpUseCase(repo);
+
+    await useCase.execute(INVOICE_ID, BUSINESS_ID);
+
+    expect(repo.createSequenceRun).toHaveBeenCalledWith(
+      expect.objectContaining({ sequenceId: "seq-any" }),
     );
   });
 
@@ -156,8 +178,11 @@ describe("StartFollowUpUseCase", () => {
     );
   });
 
-  it("throws NoActiveSequenceError when nothing resolves", async () => {
-    const repo = makeRepo({ findDefaultTierSequenceId: jest.fn().mockResolvedValue(null) });
+  it("throws NoActiveSequenceError only when the business has zero active sequences", async () => {
+    const repo = makeRepo({
+      findDefaultTierSequenceId: jest.fn().mockResolvedValue(null),
+      findAnyActiveSequenceId: jest.fn().mockResolvedValue(null),
+    });
     const useCase = new StartFollowUpUseCase(repo);
 
     await expect(useCase.execute(INVOICE_ID, BUSINESS_ID)).rejects.toBeInstanceOf(
@@ -170,5 +195,70 @@ describe("StartFollowUpUseCase", () => {
     const useCase = new StartFollowUpUseCase(repo);
 
     await expect(useCase.execute(INVOICE_ID, BUSINESS_ID)).rejects.toBeInstanceOf(NoStepsError);
+  });
+
+  describe("opts mapping", () => {
+    it("maps subject, body, includePaymentLink to run create data", async () => {
+      const repo = makeRepo();
+      const useCase = new StartFollowUpUseCase(repo);
+
+      await useCase.execute(INVOICE_ID, BUSINESS_ID, {
+        subject: "Custom subject",
+        body: "Custom body text",
+        includePaymentLink: false,
+      });
+
+      expect(repo.createSequenceRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstStepSubject: "Custom subject",
+          firstStepBody: "Custom body text",
+          firstStepIncludePaymentLink: false,
+          firstStepSkip: null,
+        }),
+      );
+    });
+
+    it("sets firstStepSkip=true when sendByEmail is false", async () => {
+      const repo = makeRepo();
+      const useCase = new StartFollowUpUseCase(repo);
+
+      await useCase.execute(INVOICE_ID, BUSINESS_ID, { sendByEmail: false });
+
+      expect(repo.createSequenceRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstStepSkip: true,
+          firstStepSubject: null,
+          firstStepBody: null,
+          firstStepIncludePaymentLink: null,
+        }),
+      );
+    });
+
+    it("sets firstStepSkip=null when sendByEmail is true", async () => {
+      const repo = makeRepo();
+      const useCase = new StartFollowUpUseCase(repo);
+
+      await useCase.execute(INVOICE_ID, BUSINESS_ID, { sendByEmail: true });
+
+      expect(repo.createSequenceRun).toHaveBeenCalledWith(
+        expect.objectContaining({ firstStepSkip: null }),
+      );
+    });
+
+    it("sets all fields to null when no opts provided (default behavior unchanged)", async () => {
+      const repo = makeRepo();
+      const useCase = new StartFollowUpUseCase(repo);
+
+      await useCase.execute(INVOICE_ID, BUSINESS_ID);
+
+      expect(repo.createSequenceRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstStepSubject: null,
+          firstStepBody: null,
+          firstStepIncludePaymentLink: null,
+          firstStepSkip: null,
+        }),
+      );
+    });
   });
 });

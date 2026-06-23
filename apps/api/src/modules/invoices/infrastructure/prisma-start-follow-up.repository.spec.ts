@@ -352,6 +352,10 @@ describe("PrismaStartFollowUpRepository (integration)", () => {
       status: "active" as const,
       nextSendAt: new Date("2026-06-01T10:00:00Z"),
       startedAt: new Date("2026-05-25T10:00:00Z"),
+      firstStepSubject: null,
+      firstStepBody: null,
+      firstStepIncludePaymentLink: null,
+      firstStepSkip: null,
       ...overrides,
     });
 

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listInvoices, startFollowUp } from "../api/invoices.api";
+import { listInvoices, startFollowUp, type StartFollowUpBody } from "../api/invoices.api";
 
 /**
  * Fetches all overdue invoices sorted by amount descending.
@@ -31,10 +31,12 @@ export function useStartFollowUp() {
     mutationFn: ({
       invoiceId,
       businessId,
+      body,
     }: {
       invoiceId: string;
       businessId: string;
-    }) => startFollowUp(invoiceId, businessId),
+      body?: StartFollowUpBody;
+    }) => startFollowUp(invoiceId, businessId, body),
     onSuccess: (data, { businessId }) => {
       // Only invalidate when a new run was actually created; skip for already_running
       // to avoid an unnecessary refetch when nothing changed.
