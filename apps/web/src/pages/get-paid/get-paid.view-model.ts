@@ -202,7 +202,7 @@ export interface GetPaidViewModel {
 }
 
 export function useGetPaidViewModel(): GetPaidViewModel {
-  const { businessId, isLoading: businessLoading } = useActiveBusinessId();
+  const { businessId, senderName, isLoading: businessLoading } = useActiveBusinessId();
   const invoicesQuery = useInvoicesInfinite(businessId);
   const startFollowUpMutation = useStartFollowUp();
   const navigate = useNavigate();
@@ -343,11 +343,11 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     // Initialise editable fields from the selected row
     setDialogSubject(`Reminder: invoice ${row.invoiceNumber} is past due`);
     setDialogBody(
-      `Hi ${row.customerName} team,\n\nThis is a friendly reminder that invoice ${row.invoiceNumber} for ${row.balanceDue} is currently past due. We'd appreciate it if you could process this payment at your earliest convenience.\n\nIf you've already sent payment, please disregard this message.\n\nBest regards,\nNudge Billing`,
+      `Hi ${row.customerName} team,\n\nThis is a friendly reminder that invoice ${row.invoiceNumber} for ${row.balanceDue} is currently past due. We'd appreciate it if you could process this payment at your earliest convenience.\n\nIf you've already sent payment, please disregard this message.\n\nBest regards,\n${senderName || "Billing"}`,
     );
     setDialogIncludePaymentLink(true);
     setDialogSendByEmail(true);
-  }, []);
+  }, [senderName]);
 
   const closeDialog = useCallback(() => {
     setDialogInvoiceId(null);

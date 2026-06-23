@@ -19,7 +19,8 @@ export function AppLayout() {
       <Sidebar isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <div className="flex min-h-screen flex-col lg:pl-60">
         <Topbar onMenuClick={() => setDrawerOpen(true)} />
-        <main className="flex-1 overflow-auto">
+        {/* pt-12 on mobile clears the floating menu button; desktop starts flush */}
+        <main className="flex-1 overflow-auto pt-12 lg:pt-0">
           <Outlet />
         </main>
       </div>
