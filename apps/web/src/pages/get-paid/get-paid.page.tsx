@@ -7,32 +7,30 @@ export function GetPaidPage() {
   const vm = useGetPaidViewModel();
 
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-6 py-8 lg:px-10">
-      {/* Page header — dashboard style */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#0F172A]">
-            Get paid faster
-          </h2>
-          {!vm.isLoading && vm.overdueCount > 0 ? (
-            <p className="mt-1 text-base text-[#64748B]">
-              <span className="font-semibold text-[#DC2626]">
-                {formatDollars(vm.totalOverdueCents)}
-              </span>{" "}
-              overdue across {vm.overdueCount}{" "}
-              {vm.overdueCount === 1 ? "invoice" : "invoices"}.
-            </p>
-          ) : (
-            <p className="mt-1 text-base text-[#64748B]">
-              Overdue invoices sorted by amount at risk.
-            </p>
-          )}
-        </div>
+    <div className="mx-auto w-full max-w-[1440px] space-y-6 px-6 py-8 lg:px-10">
+      {/* Page header */}
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          Get paid faster
+        </h1>
+        {!vm.isLoading && vm.overdueCount > 0 ? (
+          <p className="mt-1 text-sm text-muted-foreground">
+            <span className="font-semibold text-destructive">
+              {formatDollars(vm.totalOverdueCents)}
+            </span>{" "}
+            overdue across {vm.overdueCount}{" "}
+            {vm.overdueCount === 1 ? "invoice" : "invoices"}
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground">
+            Overdue invoices sorted by amount at risk.
+          </p>
+        )}
       </div>
 
       {/* Already-running inline notice (appears after dialog closes) */}
       {vm.alreadyRunning && (
-        <div className="rounded-lg border border-[#A7F3D0] bg-[#D1FAE5] px-4 py-3 text-sm text-[#065F46]">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Already following up on this invoice — the sequence is active.
         </div>
       )}

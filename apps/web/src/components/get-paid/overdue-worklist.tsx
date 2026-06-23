@@ -3,34 +3,25 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Copy,
   History,
   ArrowRight,
   ReceiptText,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "../../lib/utils";
 import type { FollowUpStatus, OverdueRow } from "../../pages/get-paid/get-paid.view-model";
-
-// ---- Column header style (matches needs-attention-table) -------------------
-const HEAD =
-  "px-6 py-4 text-[11px] font-bold uppercase tracking-[0.05em] text-[#64748B]";
-
-// ---- Card section label style ----------------------------------------------
-const CARD_LABEL =
-  "text-[10px] font-semibold uppercase tracking-[0.07em] text-[#64748B]";
-
-// ---- Follow-up status pill -------------------------------------------------
-const FOLLOW_UP_PILL: Record<FollowUpStatus, string> = {
-  none: "bg-[#F1F5F9] text-[#64748B]",
-  active: "bg-[#D1FAE5] text-[#059669]",
-  paused: "bg-[#FBBF24]/[0.15] text-[#B45309]",
-};
-
-const FOLLOW_UP_LABEL: Record<FollowUpStatus, string> = {
-  none: "No sequence",
-  active: "Active",
-  paused: "Paused",
-};
 
 // ---- Props -----------------------------------------------------------------
 interface OverdueWorklistProps {
@@ -52,77 +43,23 @@ interface OverdueWorklistProps {
   onPageChange: (p: number) => void;
 }
 
-// ---- Expanded panel --------------------------------------------------------
-function ExpandedPanel({ row }: { row: OverdueRow }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopyLink = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    void navigator.clipboard.writeText(row.paymentLinkUrl!).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  return (
-    <div className="border-t border-[#E2E8F0] bg-[rgba(243,243,243,0.5)] px-6 py-5">
-      <div className="grid items-stretch gap-4 md:grid-cols-3">
-        {/* Card 1: Invoice Details */}
-        <div className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-1.5">
-            <ReceiptText className="h-3.5 w-3.5 text-[#64748B]" aria-hidden="true" />
-            <span className={CARD_LABEL}>Invoice Details</span>
-          </div>
-          <div className="flex flex-col gap-1.5 text-sm">
-            {row.issuedDate && (
-              <div className="flex items-center justify-between">
-                <span className="text-[#64748B]">Issued</span>
-                <span className="text-[#0F172A]">{row.issuedDate}</span>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <span className="text-[#64748B]">Due</span>
-              <span className="text-[#64748B]">{row.dueDate}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[#64748B]">Balance due</span>
-              <span className="font-bold tabular-nums text-[#0F172A]">{row.balanceDue}</span>
-            </div>
-          </div>
-          {row.paymentLinkUrl && (
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-md border border-[#E2E8F0] px-3 py-2 text-xs font-medium text-[#64748B] transition-colors hover:bg-[#F1F5F9]"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              {copied ? "Copied!" : "Copy payment link"}
-            </button>
-          )}
-        </div>
-
-        {/* Card 2: Recent Activity */}
-        <div className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-1.5">
-            <History className="h-3.5 w-3.5 text-[#64748B]" aria-hidden="true" />
-            <span className={CARD_LABEL}>Recent Activity</span>
-          </div>
-          {/* DO NOT invent reminder events — show placeholder only */}
-          <p className="text-sm text-[#64748B]">No activity yet</p>
-        </div>
-
-        {/* Card 3: Next Action */}
-        <div className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-1.5">
-            <ArrowRight className="h-3.5 w-3.5 text-[#64748B]" aria-hidden="true" />
-            <span className={CARD_LABEL}>Next Action</span>
-          </div>
-          {/* Sequences editor doesn't exist yet — show placeholder only */}
-          <p className="text-sm text-[#64748B]">No activity yet</p>
-        </div>
-      </div>
-    </div>
-  );
+// ---- Status badge ----------------------------------------------------------
+function StatusBadge({ status }: { status: FollowUpStatus }) {
+  if (status === "active") {
+    return (
+      <Badge className="border-transparent bg-emerald-50 text-emerald-700">
+        Active
+      </Badge>
+    );
+  }
+  if (status === "paused") {
+    return (
+      <Badge className="border-transparent bg-amber-50 text-amber-700">
+        Paused
+      </Badge>
+    );
+  }
+  return <Badge variant="secondary">No sequence</Badge>;
 }
 
 // ---- Action button ---------------------------------------------------------
@@ -139,50 +76,129 @@ function ActionButton({
 }) {
   if (status === "none") {
     return (
-      <button
-        type="button"
+      <Button
+        size="sm"
         onClick={(e) => {
           e.stopPropagation();
           onStartFollowUp(row);
         }}
-        className="flex h-9 items-center gap-2 rounded-lg bg-[#2563EB] px-4 text-sm font-medium text-white transition-colors hover:bg-[#1D4ED8]"
       >
         Start follow-up
-      </button>
+      </Button>
     );
   }
   if (status === "active") {
     return (
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="sm"
         onClick={(e) => {
           e.stopPropagation();
           // Deep-linking to the specific sequence run is a follow-up TODO.
           onViewSequence();
         }}
-        className="h-9 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A] transition-colors hover:bg-gray-50"
       >
         View sequence
-      </button>
+      </Button>
     );
   }
   // paused
   return (
-    <button
-      type="button"
+    <Button
+      variant="outline"
+      size="sm"
       onClick={(e) => {
         e.stopPropagation();
         // Deep-linking to the specific sequence run is a follow-up TODO.
         onViewSequence();
       }}
-      className="h-9 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A] transition-colors hover:bg-gray-50"
     >
       Resume
-    </button>
+    </Button>
   );
 }
 
-// ---- Pagination footer (mirrors Reports) -----------------------------------
+// ---- Expanded panel --------------------------------------------------------
+function ExpandedPanel({ row }: { row: OverdueRow }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    void navigator.clipboard.writeText(row.paymentLinkUrl!).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="border-t bg-muted/50 px-6 py-5">
+      <div className="grid items-stretch gap-4 md:grid-cols-3">
+        {/* Card 1: Invoice Details */}
+        <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm">
+          <div className="flex items-center gap-1.5">
+            <ReceiptText className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">
+              Invoice Details
+            </span>
+          </div>
+          <div className="flex flex-col gap-1.5 text-sm">
+            {row.issuedDate && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Issued</span>
+                <span className="text-foreground">{row.issuedDate}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Due</span>
+              <span className="text-muted-foreground">{row.dueDate}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Balance due</span>
+              <span className="font-bold tabular-nums text-foreground">{row.balanceDue}</span>
+            </div>
+          </div>
+          {row.paymentLinkUrl && (
+            <Button
+              variant="link"
+              size="sm"
+              className="mt-auto w-full justify-center gap-1.5"
+              onClick={handleCopyLink}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              {copied ? "Copied!" : "Copy payment link"}
+            </Button>
+          )}
+        </div>
+
+        {/* Card 2: Recent Activity */}
+        <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm">
+          <div className="flex items-center gap-1.5">
+            <History className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">
+              Recent Activity
+            </span>
+          </div>
+          {/* DO NOT invent reminder events — show placeholder only */}
+          <p className="text-sm text-muted-foreground">No activity yet</p>
+        </div>
+
+        {/* Card 3: Next Action */}
+        <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm">
+          <div className="flex items-center gap-1.5">
+            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">
+              Next Action
+            </span>
+          </div>
+          {/* Sequences editor doesn't exist yet — show placeholder only */}
+          <p className="text-sm text-muted-foreground">No activity yet</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- Pagination footer -----------------------------------------------------
 function PaginationFooter({
   page,
   pageSize,
@@ -207,51 +223,43 @@ function PaginationFooter({
   }
 
   return (
-    <div className="flex items-center justify-between border-t border-[#E2E8F0] px-6 py-4">
-      <span className="text-sm text-[#64748B]">
+    <div className="flex items-center justify-between border-t px-6 py-4">
+      <span className="text-sm text-muted-foreground">
         Showing {from} to {to} of {total} entries
       </span>
       <div className="flex items-center gap-1">
-        {/* Prev */}
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="icon-sm"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
           aria-label="Previous page"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E2E8F0] text-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
         >
           <ChevronLeft className="h-4 w-4" />
-        </button>
+        </Button>
 
-        {/* Page numbers */}
         {pageNumbers.map((n) => (
-          <button
+          <Button
             key={n}
-            type="button"
+            variant={n === page ? "default" : "outline"}
+            size="icon-sm"
             onClick={() => onPageChange(n)}
             aria-label={`Page ${n}`}
             aria-current={n === page ? "page" : undefined}
-            className={cn(
-              "h-8 min-w-[2rem] rounded-lg border px-2 text-sm font-medium transition-colors",
-              n === page
-                ? "border-[#2563EB] bg-[#2563EB] text-white"
-                : "border-[#E2E8F0] text-[#0F172A] hover:bg-gray-50",
-            )}
           >
             {n}
-          </button>
+          </Button>
         ))}
 
-        {/* Next */}
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="icon-sm"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           aria-label="Next page"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E2E8F0] text-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
         >
           <ChevronRight className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -275,68 +283,64 @@ export function OverdueWorklist({
 }: OverdueWorklistProps) {
   if (error) {
     return (
-      <section className="rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
-        <p className="px-6 py-12 text-sm text-[#64748B]">
-          Couldn&apos;t load overdue invoices.{" "}
-          <button
-            type="button"
-            onClick={onRetry}
-            className="font-medium text-[#2563EB] hover:underline"
-          >
-            Retry
-          </button>
-        </p>
-      </section>
+      <Card>
+        <CardContent className="px-6 py-12">
+          <p className="text-sm text-muted-foreground">
+            Couldn&apos;t load overdue invoices.{" "}
+            <button
+              type="button"
+              onClick={onRetry}
+              className="font-medium text-primary hover:underline"
+            >
+              Retry
+            </button>
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   if (isLoading) {
     return (
-      <section className="rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
-        <div className="space-y-2 p-6">
+      <Card>
+        <CardContent className="space-y-2 px-6 py-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-12 animate-pulse rounded bg-gray-50" />
+            <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
           ))}
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     );
   }
 
   if (rows.length === 0 && total === 0) {
     return (
-      <section className="rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
-        <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 px-6 py-20 text-center">
           <span className="text-4xl">🎉</span>
-          <p className="text-base font-semibold text-[#0F172A]">
-            No overdue invoices
-          </p>
-          <p className="max-w-xs text-sm text-[#64748B]">
+          <p className="text-base font-semibold text-foreground">No overdue invoices</p>
+          <p className="max-w-xs text-sm text-muted-foreground">
             All outstanding invoices are on time. Check back soon.
           </p>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <section className="rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
-      {/* Section header row */}
-      <div className="flex items-center justify-between border-b border-[#E2E8F0] px-6 py-5">
-        <h3 className="text-lg font-semibold tracking-[-0.01em] text-[#0F172A]">
-          Overdue invoices
-        </h3>
-        <span className="text-sm text-[#64748B]">
-          {total} {total === 1 ? "invoice" : "invoices"}
-        </span>
-      </div>
+    <Card className="gap-0 py-0">
+      <CardHeader className="border-b px-6 py-5 [.border-b]:pb-6">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-semibold">Overdue invoices</CardTitle>
+          <span className="text-sm text-muted-foreground">
+            {total} {total === 1 ? "invoice" : "invoices"}
+          </span>
+        </div>
+      </CardHeader>
 
       {/* Mobile: card list */}
       <div className="flex flex-col md:hidden">
         {rows.map((row) => (
-          <div
-            key={row.id}
-            className="border-b border-[#E2E8F0] last:border-b-0"
-          >
+          <div key={row.id} className="border-b last:border-b-0">
             <button
               type="button"
               className="w-full text-left"
@@ -345,24 +349,17 @@ export function OverdueWorklist({
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium text-[#0F172A]">{row.customerName}</span>
-                    <span className="text-xs text-[#64748B]">
+                    <span className="text-sm font-medium text-foreground">{row.customerName}</span>
+                    <span className="text-xs text-muted-foreground">
                       {row.invoiceNumber} &bull; Due {row.dueDateShort}
                     </span>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span
-                      className={cn(
-                        "inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase",
-                        FOLLOW_UP_PILL[row.followUpStatus],
-                      )}
-                    >
-                      {FOLLOW_UP_LABEL[row.followUpStatus]}
-                    </span>
+                    <StatusBadge status={row.followUpStatus} />
                     {expandedId === row.id ? (
-                      <ChevronDown className="h-4 w-4 text-[#64748B]" />
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-[#64748B]" />
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     )}
                   </div>
                 </div>
@@ -372,14 +369,11 @@ export function OverdueWorklist({
                       className="inline-block h-2 w-2 rounded-full"
                       style={{ backgroundColor: row.agingDotColor }}
                     />
-                    <span
-                      className="text-xs font-semibold tabular-nums"
-                      style={{ color: row.agingDotColor }}
-                    >
-                      {row.daysOverdue}d overdue
+                    <span className="text-xs tabular-nums" style={{ color: row.agingDotColor }}>
+                      {row.daysOverdue} days
                     </span>
                   </div>
-                  <span className="text-sm font-bold tabular-nums text-[#DC2626]">
+                  <span className="text-sm font-semibold tabular-nums text-destructive">
                     {row.balanceDue}
                   </span>
                 </div>
@@ -398,111 +392,114 @@ export function OverdueWorklist({
         ))}
       </div>
 
-      {/* Desktop: table */}
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[800px] border-collapse text-left">
-          <thead className="bg-[rgba(243,243,243,0.5)]">
-            <tr>
-              <th className={cn(HEAD, "w-10")} aria-label="Expand" />
-              <th className={cn(HEAD, "text-left")}>Customer</th>
-              <th className={cn(HEAD, "text-left")}>Invoice #</th>
-              <th className={cn(HEAD, "text-left")}>Due Date</th>
-              <th className={cn(HEAD, "text-left")}>Overdue</th>
-              <th className={cn(HEAD, "text-right")}>Amount</th>
-              <th className={cn(HEAD, "text-left")}>Status</th>
-              <th className={cn(HEAD, "text-left")}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
+      {/* Desktop: shadcn Table */}
+      <CardContent className="hidden p-0 md:block">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow className="border-0 hover:bg-transparent">
+              <TableHead className="w-10" aria-label="Expand" />
+              <TableHead>Customer</TableHead>
+              <TableHead>Invoice #</TableHead>
+              <TableHead>Due Date</TableHead>
+              <TableHead>Overdue</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((row) => (
               <Fragment key={row.id}>
-                <tr
+                <TableRow
                   onClick={() => onToggleExpand(row.id)}
                   className={cn(
-                    "cursor-pointer border-t border-[#E2E8F0] transition-colors hover:bg-black/[0.02]",
-                    expandedId === row.id && "bg-[rgba(243,243,243,0.5)]",
+                    "cursor-pointer",
+                    row.isSevere && "border-l-2 border-l-destructive/40",
+                    expandedId === row.id && "bg-muted/50",
                   )}
                 >
                   {/* Expand chevron */}
-                  <td className="px-6 py-4 text-[#64748B]">
-                    {expandedId === row.id ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </td>
+                  <TableCell className="px-4">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground"
+                      aria-label={expandedId === row.id ? "Collapse row" : "Expand row"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleExpand(row.id);
+                      }}
+                      tabIndex={-1}
+                    >
+                      {expandedId === row.id ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableCell>
 
                   {/* Customer */}
-                  <td className="px-6 py-4 text-sm font-medium text-[#0F172A]">
+                  <TableCell className="px-4 font-medium text-foreground">
                     {row.customerName}
-                  </td>
+                  </TableCell>
 
                   {/* Invoice # */}
-                  <td className="px-6 py-4 text-xs text-[#64748B]">
+                  <TableCell className="px-4 text-sm text-muted-foreground">
                     {row.invoiceNumber}
-                  </td>
+                  </TableCell>
 
                   {/* Due Date */}
-                  <td className="px-6 py-4 text-xs text-[#64748B]">
+                  <TableCell className="px-4 text-sm text-muted-foreground">
                     {row.dueDateShort}
-                  </td>
+                  </TableCell>
 
                   {/* Overdue — aging dot + colored text */}
-                  <td className="px-6 py-4">
+                  <TableCell className="px-4">
                     <span className="inline-flex items-center gap-1.5">
                       <span
                         className="inline-block h-2 w-2 shrink-0 rounded-full"
                         style={{ backgroundColor: row.agingDotColor }}
                       />
-                      <span
-                        className="text-xs font-semibold tabular-nums"
-                        style={{ color: row.agingDotColor }}
-                      >
-                        {row.daysOverdue}d
+                      <span className="text-sm tabular-nums" style={{ color: row.agingDotColor }}>
+                        {row.daysOverdue} days
                       </span>
                     </span>
-                  </td>
+                  </TableCell>
 
-                  {/* Amount — red, bold, right-aligned */}
-                  <td className="px-6 py-4 text-right text-sm font-bold tabular-nums text-[#DC2626]">
+                  {/* Amount — red, semibold, right-aligned */}
+                  <TableCell className="px-4 text-right font-semibold tabular-nums text-destructive">
                     {row.balanceDue}
-                  </td>
+                  </TableCell>
 
-                  {/* Status pill */}
-                  <td className="px-6 py-4">
-                    <span
-                      className={cn(
-                        "inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase",
-                        FOLLOW_UP_PILL[row.followUpStatus],
-                      )}
-                    >
-                      {FOLLOW_UP_LABEL[row.followUpStatus]}
-                    </span>
-                  </td>
+                  {/* Status badge */}
+                  <TableCell className="px-4">
+                    <StatusBadge status={row.followUpStatus} />
+                  </TableCell>
 
                   {/* Action button */}
-                  <td className="px-6 py-4">
+                  <TableCell className="px-4">
                     <ActionButton
                       status={row.followUpStatus}
                       row={row}
                       onStartFollowUp={onStartFollowUp}
                       onViewSequence={onViewSequence}
                     />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
 
                 {expandedId === row.id && (
-                  <tr>
-                    <td colSpan={8} className="p-0">
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={8} className="p-0">
                       <ExpandedPanel row={row} />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
               </Fragment>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </CardContent>
 
       {/* Pagination footer */}
       <PaginationFooter
@@ -512,6 +509,6 @@ export function OverdueWorklist({
         total={total}
         onPageChange={onPageChange}
       />
-    </section>
+    </Card>
   );
 }
