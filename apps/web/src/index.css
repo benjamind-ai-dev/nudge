@@ -2,34 +2,73 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Design system — "Midnight" (dark + dramatic, Linear-grade craft).
-   Near-black slate surfaces, near-white text, vivid indigo→violet accent with
-   a soft glow, hairline borders, layered shadows. shadcn/ui reads these CSS
-   variables; the @theme inline block maps them onto Tailwind utilities
-   (bg-background, text-foreground, bg-primary, border, shadow-glow, …).
+   Design system — "Clean Bright" (light) + "Midnight" (dark).
+   shadcn/ui reads CSS variables; .dark on <html> switches to the dark palette.
+   The @theme inline block maps variables onto Tailwind utilities.
 --------------------------------------------------------------------------- */
+
+/* Light theme — "Clean Bright" */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --radius: 0.625rem; /* 10px */
 
-  --background: #0a0c12; /* near-black, faint blue */
-  --foreground: #e7e9ee; /* near-white */
+  --background: #f8fafc;
+  --foreground: #0f172a;
 
-  --card: #11141d; /* raised panel */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --primary: #4f46e5; /* indigo-600 — pops on light */
+  --primary-foreground: #ffffff;
+
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  --accent: #eef2ff; /* indigo-50 */
+  --accent-foreground: #4338ca; /* indigo-700 */
+
+  --destructive: #dc2626; /* red-600 — readable on light */
+  --destructive-foreground: #ffffff;
+
+  --success: #059669; /* emerald-600 */
+  --success-foreground: #ffffff;
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #6366f1; /* indigo-500 focus */
+
+  /* Accent gradient + glow for buttons / hero. */
+  --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  --glow-primary: 0 0 0 1px rgba(79, 70, 229, 0.3), 0 8px 24px -6px rgba(79, 70, 229, 0.35);
+}
+
+/* Dark theme — "Midnight" (softer bg so cards clearly raise) */
+.dark {
+  color-scheme: dark;
+
+  --background: #0e1119; /* deep navy, not pure black */
+  --foreground: #e7e9ee;
+
+  --card: #171c28; /* visibly lighter than bg */
   --card-foreground: #e7e9ee;
-  --popover: #12151f;
+  --popover: #171c28;
   --popover-foreground: #e7e9ee;
 
   --primary: #6366f1; /* indigo-500 — pops on dark */
   --primary-foreground: #ffffff;
 
-  --secondary: #1a1e2b; /* subtle raised */
+  --secondary: #1c2230;
   --secondary-foreground: #e7e9ee;
 
-  --muted: #161a25;
-  --muted-foreground: #94a0b8; /* slate-ish, readable on dark */
+  --muted: #161b26;
+  --muted-foreground: #94a0b8;
 
-  --accent: #1e2233; /* hover / selected surface */
+  --accent: #1f2535;
   --accent-foreground: #c7d2fe; /* indigo-200 */
 
   --destructive: #f87171; /* red-400 — readable on dark */
@@ -38,8 +77,8 @@
   --success: #34d399; /* emerald-400 */
   --success-foreground: #062a1e;
 
-  --border: #232838; /* hairline on dark */
-  --input: #2a3043;
+  --border: #262d3d;
+  --input: #2c3344;
   --ring: #818cf8; /* indigo-400 focus glow */
 
   /* Accent gradient + glow for buttons / hero. */
@@ -86,10 +125,13 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    /* subtle ambient glow top-left so the dark canvas isn't flat */
+  }
+
+  /* Dark mode: subtle ambient indigo glow so the canvas isn't flat */
+  .dark body {
     background-image: radial-gradient(
       60rem 40rem at 12% -10%,
-      rgba(99, 102, 241, 0.08),
+      rgba(99, 102, 241, 0.07),
       transparent 60%
     );
     background-attachment: fixed;

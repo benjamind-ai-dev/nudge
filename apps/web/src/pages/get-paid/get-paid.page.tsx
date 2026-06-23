@@ -11,7 +11,7 @@ export function GetPaidPage() {
   const cardTitle = `${filterLabel} invoices`;
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] space-y-6 px-6 py-8 lg:px-10">
+    <div className="mx-auto w-full max-w-[1440px] space-y-6 px-6 py-6 lg:px-10">
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
