@@ -5,20 +5,21 @@ import { useActiveBusinessId } from "../../lib/hooks/use-active-business-id";
 import { useInvoicesInfinite } from "../../queries/use-invoices";
 import { useStartFollowUp } from "../../queries/use-overdue-invoices";
 import type { InvoiceListItem } from "../../api/invoices.api";
+import type { DateRange } from "../../components/date-range-picker";
 
 export const PAGE_SIZE = 10;
 
 // ---- Status filter ---------------------------------------------------------
 export type StatusFilter = "unpaid" | "overdue" | "open" | "partial";
 
-export const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
+export const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "unpaid", label: "Unpaid" },
   { value: "overdue", label: "Overdue" },
   { value: "open", label: "Open" },
   { value: "partial", label: "Partial" },
 ];
 
-function matchesStatusFilter(item: InvoiceListItem, filter: StatusFilter): boolean {
+function matchesStatusFilter(item: InvoiceListItem, filter: string): boolean {
   switch (filter) {
     case "unpaid":
       return item.status === "open" || item.status === "overdue" || item.status === "partial";
@@ -28,8 +29,37 @@ function matchesStatusFilter(item: InvoiceListItem, filter: StatusFilter): boole
       return item.status === "open";
     case "partial":
       return item.status === "partial";
+    default:
+      return true;
   }
 }
+
+// ---- Sort options -----------------------------------------------------------
+interface SortDef {
+  value: string;
+  label: string;
+  compare: (a: InvoiceListItem, b: InvoiceListItem) => number;
+}
+
+export const SORT_OPTIONS: SortDef[] = [
+  {
+    value: "amount_cents:desc",
+    label: "Amount (high to low)",
+    compare: (a, b) => b.amountCents - a.amountCents,
+  },
+  {
+    value: "due_date:asc",
+    label: "Due date (oldest first)",
+    compare: (a, b) => a.dueDate.localeCompare(b.dueDate),
+  },
+  {
+    value: "days_overdue:desc",
+    label: "Most overdue",
+    compare: (a, b) => b.daysOverdue - a.daysOverdue,
+  },
+];
+
+const DEFAULT_SORT = "amount_cents:desc";
 
 // ---- Aging dot colours per spec --------------------------------------------
 function agingDotColor(daysOverdue: number): string {
@@ -116,10 +146,17 @@ export interface GetPaidViewModel {
   error: unknown;
   refetch: () => void;
 
-  // Status filter
-  statusFilter: StatusFilter;
-  setStatusFilter: (f: StatusFilter) => void;
-  statusOptions: { value: StatusFilter; label: string }[];
+  // Filter bar
+  dateRange: DateRange;
+  setDateRange: (r: DateRange) => void;
+  search: string;
+  setSearch: (v: string) => void;
+  statusFilter: string;
+  setStatusFilter: (f: string) => void;
+  statusOptions: { value: string; label: string }[];
+  sortValue: string;
+  sortOptions: { value: string; label: string }[];
+  setSort: (v: string) => void;
 
   // Pagination
   page: number;
@@ -185,7 +222,13 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const [statusFilter, setStatusFilterState] = useState<StatusFilter>("unpaid");
+  // Filter bar state
+  const [dateRange, setDateRangeState] = useState<DateRange>({ start: null, end: null });
+  const [search, setSearchState] = useState("");
+  const [statusFilter, setStatusFilterState] = useState<string>("unpaid");
+  const [sortValue, setSortState] = useState(DEFAULT_SORT);
+
+  // Other state
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dialogInvoiceId, setDialogInvoiceId] = useState<string | null>(null);
   const [dialogInvoiceNumber, setDialogInvoiceNumber] = useState("");
@@ -206,17 +249,39 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     [data],
   );
 
-  // Get Paid is the action list: only invoices with no active/paused sequence
-  // AND matching the current status filter (default: unpaid = open + overdue + partial).
-  const allRows = useMemo(
-    () =>
-      allItems
-        .filter((item) => matchesStatusFilter(item, statusFilter) && followUpStatus(item) === "none")
-        .map(toRow)
-        // Sort by amount descending
-        .sort((a, b) => b.balanceDueCents - a.balanceDueCents),
-    [allItems, statusFilter],
-  );
+  const resetPage = () => setPageState(1);
+
+  // Get Paid is the action list: only invoices with no active/paused sequence,
+  // matching status filter, date range (on dueDate), and search (customer/invoice #).
+  const allRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const sortDef = SORT_OPTIONS.find((s) => s.value === sortValue) ?? SORT_OPTIONS[0];
+
+    const filtered = allItems.filter((item) => {
+      // No-sequence constraint (core Get Paid rule)
+      if (followUpStatus(item) !== "none") return false;
+
+      // Status filter
+      if (!matchesStatusFilter(item, statusFilter)) return false;
+
+      // Date range filter (on dueDate ISO string)
+      const day = item.dueDate.slice(0, 10);
+      if (dateRange.start && day < dateRange.start) return false;
+      if (dateRange.end && day > dateRange.end) return false;
+
+      // Search filter (customer name or invoice #)
+      if (q) {
+        const num = (item.invoiceNumber ?? "").toLowerCase();
+        const name = item.customer.companyName.toLowerCase();
+        if (!num.includes(q) && !name.includes(q)) return false;
+      }
+
+      return true;
+    });
+
+    // Sort raw InvoiceListItems (comparator operates on InvoiceListItem), then map to rows.
+    return [...filtered].sort(sortDef.compare).map(toRow);
+  }, [allItems, statusFilter, dateRange, search, sortValue]);
 
   // Client-side pagination — clamp page when data changes
   const total = allRows.length;
@@ -235,9 +300,25 @@ export function useGetPaidViewModel(): GetPaidViewModel {
   );
   const overdueCount = allRows.length;
 
-  const setStatusFilter = useCallback((f: StatusFilter) => {
+  // Filter setters — each resets page to 1
+  const setDateRange = useCallback((r: DateRange) => {
+    setDateRangeState(r);
+    resetPage();
+  }, []);
+
+  const setSearch = useCallback((v: string) => {
+    setSearchState(v);
+    resetPage();
+  }, []);
+
+  const setStatusFilter = useCallback((f: string) => {
     setStatusFilterState(f);
-    setPageState(1);
+    resetPage();
+  }, []);
+
+  const setSort = useCallback((v: string) => {
+    setSortState(v);
+    resetPage();
   }, []);
 
   const setPage = useCallback(
@@ -332,9 +413,17 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     error,
     refetch,
 
+    // Filter bar
+    dateRange,
+    setDateRange,
+    search,
+    setSearch,
     statusFilter,
     setStatusFilter,
     statusOptions: STATUS_OPTIONS,
+    sortValue,
+    sortOptions: SORT_OPTIONS.map(({ value, label }) => ({ value, label })),
+    setSort,
 
     page: safePage,
     pageSize: PAGE_SIZE,

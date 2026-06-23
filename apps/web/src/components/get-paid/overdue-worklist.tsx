@@ -12,13 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -27,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "../../lib/utils";
-import type { OverdueRow, StatusFilter } from "../../pages/get-paid/get-paid.view-model";
+import type { OverdueRow } from "../../pages/get-paid/get-paid.view-model";
 
 // ---- Props -----------------------------------------------------------------
 interface OverdueWorklistProps {
@@ -44,10 +37,6 @@ interface OverdueWorklistProps {
   totalPages: number;
   total: number;
   onPageChange: (p: number) => void;
-  // Status filter
-  statusFilter: StatusFilter;
-  statusOptions: { value: StatusFilter; label: string }[];
-  onStatusChange: (f: StatusFilter) => void;
   // Card title (driven by selected filter label)
   cardTitle: string;
 }
@@ -234,9 +223,6 @@ export function OverdueWorklist({
   totalPages,
   total,
   onPageChange,
-  statusFilter,
-  statusOptions,
-  onStatusChange,
   cardTitle,
 }: OverdueWorklistProps) {
   if (error) {
@@ -274,21 +260,7 @@ export function OverdueWorklist({
     return (
       <Card>
         <CardHeader className="border-b px-6 py-5 [.border-b]:pb-6">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold">{cardTitle}</CardTitle>
-            <Select value={statusFilter} onValueChange={(v) => onStatusChange(v as StatusFilter)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <CardTitle className="text-base font-semibold">{cardTitle}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-3 px-6 py-20 text-center">
           <span className="text-4xl">🎉</span>
@@ -306,23 +278,9 @@ export function OverdueWorklist({
       <CardHeader className="border-b px-6 py-5 [.border-b]:pb-6">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold">{cardTitle}</CardTitle>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">
-              {total} {total === 1 ? "invoice" : "invoices"}
-            </span>
-            <Select value={statusFilter} onValueChange={(v) => onStatusChange(v as StatusFilter)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <span className="text-sm text-muted-foreground">
+            {total} {total === 1 ? "invoice" : "invoices"}
+          </span>
         </div>
       </CardHeader>
 
