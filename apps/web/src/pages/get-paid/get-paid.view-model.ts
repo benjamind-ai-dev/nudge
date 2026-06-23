@@ -1,8 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
-import { formatCents } from "../../lib/format";
+import { useNavigate } from "react-router";
+import { formatDollars } from "../../lib/format";
 import { useActiveBusinessId } from "../../lib/hooks/use-active-business-id";
 import { useOverdueInvoices, useStartFollowUp } from "../../queries/use-overdue-invoices";
 import type { InvoiceListItem } from "../../api/invoices.api";
+
+export const PAGE_SIZE = 10;
 
 // ---- Aging dot colours per spec -------------------------------------------
 function agingDotColor(daysOverdue: number): string {
@@ -22,19 +25,12 @@ function followUpStatus(item: InvoiceListItem): FollowUpStatus {
   return "none";
 }
 
-// ---- Exported row shape ----------------------------------------------------
-export interface OverdueRow {
-  id: string;
-  invoiceNumber: string;
-  customerName: string;
-  issuedDate: string | null; // ISO string, formatted in view model
-  dueDate: string; // formatted
-  daysOverdue: number;
-  balanceDue: string; // formatted cents
-  paymentLinkUrl: string | null;
-  agingDotColor: string;
-  followUpStatus: FollowUpStatus;
-  sequenceRunId: string | null;
+// ---- Short date: "May 21" (month + day, no year) ---------------------------
+function formatMonthDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(iso));
 }
 
 function formatShortDate(iso: string): string {
@@ -45,6 +41,24 @@ function formatShortDate(iso: string): string {
   }).format(new Date(iso));
 }
 
+// ---- Exported row shape ----------------------------------------------------
+export interface OverdueRow {
+  id: string;
+  invoiceNumber: string;
+  customerName: string;
+  issuedDate: string | null; // formatted (year+month+day)
+  dueDate: string;           // formatted (year+month+day)
+  dueDateShort: string;      // "May 21" — used for the combined Customer & Invoice subline
+  daysOverdue: number;
+  balanceDueCents: number;   // raw cents for urgency total
+  balanceDue: string;        // formatDollars — no decimals
+  paymentLinkUrl: string | null;
+  agingDotColor: string;
+  followUpStatus: FollowUpStatus;
+  sequenceRunId: string | null;
+  isSevere: boolean;         // daysOverdue >= 90 → faint red row tint
+}
+
 function toRow(item: InvoiceListItem): OverdueRow {
   return {
     id: item.id,
@@ -52,21 +66,38 @@ function toRow(item: InvoiceListItem): OverdueRow {
     customerName: item.customer.companyName,
     issuedDate: item.issuedDate ? formatShortDate(item.issuedDate) : null,
     dueDate: formatShortDate(item.dueDate),
+    dueDateShort: formatMonthDay(item.dueDate),
     daysOverdue: item.daysOverdue,
-    balanceDue: formatCents(item.balanceDueCents),
+    balanceDueCents: item.balanceDueCents,
+    balanceDue: formatDollars(item.balanceDueCents),
     paymentLinkUrl: item.paymentLinkUrl,
     agingDotColor: agingDotColor(item.daysOverdue),
     followUpStatus: followUpStatus(item),
     sequenceRunId: item.sequenceRun?.id ?? null,
+    isSevere: item.daysOverdue >= 90,
   };
 }
 
 // ---- View model ------------------------------------------------------------
 export interface GetPaidViewModel {
+  // Paginated rows (current page slice)
   rows: OverdueRow[];
+  // All rows (full loaded set, up to 100 — see note in urgency strip)
+  allRows: OverdueRow[];
   isLoading: boolean;
   error: unknown;
   refetch: () => void;
+
+  // Pagination
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  total: number;
+  setPage: (p: number) => void;
+
+  // Urgency strip totals (capped at 100-invoice fetch limit)
+  totalOverdueCents: number;
+  overdueCount: number;
 
   // Expanded row
   expandedId: string | null;
@@ -83,12 +114,17 @@ export interface GetPaidViewModel {
   isStarting: boolean;
   startError: string | null;
   alreadyRunning: boolean;
+
+  // Navigation — wires the dead "View sequence" / "Resume" buttons.
+  // Deep-linking to the specific sequence run is a follow-up TODO.
+  onViewSequence: () => void;
 }
 
 export function useGetPaidViewModel(): GetPaidViewModel {
   const { businessId, isLoading: businessLoading } = useActiveBusinessId();
   const query = useOverdueInvoices(businessId);
   const startFollowUpMutation = useStartFollowUp();
+  const navigate = useNavigate();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dialogInvoiceId, setDialogInvoiceId] = useState<string | null>(null);
@@ -96,10 +132,36 @@ export function useGetPaidViewModel(): GetPaidViewModel {
   const [dialogCustomerName, setDialogCustomerName] = useState("");
   const [startError, setStartError] = useState<string | null>(null);
   const [alreadyRunning, setAlreadyRunning] = useState(false);
+  const [page, setPageState] = useState(1);
 
-  const rows = useMemo(
+  const allRows = useMemo(
     () => (query.data?.data ?? []).map(toRow),
     [query.data],
+  );
+
+  // Client-side pagination — clamp page when data changes
+  const total = allRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+
+  const rows = useMemo(
+    () => allRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [allRows, safePage],
+  );
+
+  // Urgency strip totals — summed over the full loaded set.
+  // Note: capped at the 100-invoice fetch limit imposed by useOverdueInvoices.
+  const totalOverdueCents = useMemo(
+    () => allRows.reduce((sum, r) => sum + r.balanceDueCents, 0),
+    [allRows],
+  );
+  const overdueCount = allRows.length;
+
+  const setPage = useCallback(
+    (p: number) => {
+      setPageState(Math.max(1, Math.min(p, totalPages)));
+    },
+    [totalPages],
   );
 
   const toggleExpand = useCallback((id: string) => {
@@ -143,11 +205,26 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     }
   }, [dialogInvoiceId, businessId, startFollowUpMutation, closeDialog]);
 
+  // Deep-linking to a specific sequence run is a follow-up TODO.
+  const onViewSequence = useCallback(() => {
+    void navigate("/sequences");
+  }, [navigate]);
+
   return {
     rows,
+    allRows,
     isLoading: businessLoading || query.isLoading,
     error: query.error,
     refetch: query.refetch,
+
+    page: safePage,
+    pageSize: PAGE_SIZE,
+    totalPages,
+    total,
+    setPage,
+
+    totalOverdueCents,
+    overdueCount,
 
     expandedId,
     toggleExpand,
@@ -162,5 +239,7 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     isStarting: startFollowUpMutation.isPending,
     startError,
     alreadyRunning,
+
+    onViewSequence,
   };
 }
