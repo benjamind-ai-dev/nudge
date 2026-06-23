@@ -6,45 +6,29 @@ import { formatDollars } from "../../lib/format";
 export function GetPaidPage() {
   const vm = useGetPaidViewModel();
 
-  // Hero block: show only when loaded and there are overdue invoices
-  const showHero = !vm.isLoading && vm.overdueCount > 0;
-
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-6 py-8 lg:px-10">
-      {/* Hero money block — replaces soft urgency strip */}
-      {showHero && (
-        <div className="flex items-stretch gap-4">
-          {/* Left accent rule */}
-          <div className="w-1 shrink-0 rounded-full bg-[#DC2626]" aria-hidden="true" />
-          <div className="flex flex-col gap-1">
-            {/* Eyebrow */}
-            <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#64748B]">
-              Get paid faster
-            </span>
-            {/* Hero number */}
-            <span className="text-4xl font-bold leading-none tracking-tight tabular-nums text-[#DC2626]">
-              {formatDollars(vm.totalOverdueCents)}
-            </span>
-            {/* Muted subline */}
-            <span className="text-[13px] text-[#64748B]">
-              overdue across {vm.overdueCount}{" "}
-              {vm.overdueCount === 1 ? "invoice" : "invoices"}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Page header — shown only when hero is hidden (loading / zero) */}
-      {!showHero && (
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-6 py-8 lg:px-10">
+      {/* Page header — dashboard style */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#0F172A]">
             Get paid faster
           </h2>
-          <p className="mt-1 text-sm text-[#64748B]">
-            Overdue invoices sorted by amount at risk.
-          </p>
+          {!vm.isLoading && vm.overdueCount > 0 ? (
+            <p className="mt-1 text-base text-[#64748B]">
+              <span className="font-semibold text-[#DC2626]">
+                {formatDollars(vm.totalOverdueCents)}
+              </span>{" "}
+              overdue across {vm.overdueCount}{" "}
+              {vm.overdueCount === 1 ? "invoice" : "invoices"}.
+            </p>
+          ) : (
+            <p className="mt-1 text-base text-[#64748B]">
+              Overdue invoices sorted by amount at risk.
+            </p>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Already-running inline notice (appears after dialog closes) */}
       {vm.alreadyRunning && (

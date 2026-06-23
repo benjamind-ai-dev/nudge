@@ -4,19 +4,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
-  Eye,
-  PlayCircle,
-  ReceiptText,
   History,
   ArrowRight,
-  Send,
+  ReceiptText,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import type { FollowUpStatus, OverdueRow } from "../../pages/get-paid/get-paid.view-model";
 
-// ---- Column header style ---------------------------------------------------
+// ---- Column header style (matches needs-attention-table) -------------------
 const HEAD =
-  "px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#64748B]";
+  "px-6 py-4 text-[11px] font-bold uppercase tracking-[0.05em] text-[#64748B]";
 
 // ---- Card section label style ----------------------------------------------
 const CARD_LABEL =
@@ -24,9 +21,8 @@ const CARD_LABEL =
 
 // ---- Follow-up status pill -------------------------------------------------
 const FOLLOW_UP_PILL: Record<FollowUpStatus, string> = {
-  // Active status pill keeps green tint — it's a status indicator, not a button
-  none: "border border-[#E2E8F0] bg-transparent text-[#64748B]",
-  active: "bg-[#10B981]/[0.12] text-[#059669]",
+  none: "bg-[#F1F5F9] text-[#64748B]",
+  active: "bg-[#D1FAE5] text-[#059669]",
   paused: "bg-[#FBBF24]/[0.15] text-[#B45309]",
 };
 
@@ -56,7 +52,7 @@ interface OverdueWorklistProps {
   onPageChange: (p: number) => void;
 }
 
-// ---- Expanded panel — three bordered white cards ---------------------------
+// ---- Expanded panel --------------------------------------------------------
 function ExpandedPanel({ row }: { row: OverdueRow }) {
   const [copied, setCopied] = useState(false);
 
@@ -69,7 +65,7 @@ function ExpandedPanel({ row }: { row: OverdueRow }) {
   };
 
   return (
-    <div className="border-t border-[#E2E8F0] bg-[#F1F5F9] px-6 p-4">
+    <div className="border-t border-[#E2E8F0] bg-[rgba(243,243,243,0.5)] px-6 py-5">
       <div className="grid items-stretch gap-4 md:grid-cols-3">
         {/* Card 1: Invoice Details */}
         <div className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm">
@@ -149,9 +145,8 @@ function ActionButton({
           e.stopPropagation();
           onStartFollowUp(row);
         }}
-        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#2563EB] px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]"
+        className="flex h-9 items-center gap-2 rounded-lg bg-[#2563EB] px-4 text-sm font-medium text-white transition-colors hover:bg-[#1D4ED8]"
       >
-        <Send className="h-3.5 w-3.5" />
         Start follow-up
       </button>
     );
@@ -165,9 +160,8 @@ function ActionButton({
           // Deep-linking to the specific sequence run is a follow-up TODO.
           onViewSequence();
         }}
-        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#E2E8F0] px-3 text-xs font-semibold text-[#64748B] transition-colors hover:bg-white"
+        className="h-9 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A] transition-colors hover:bg-gray-50"
       >
-        <Eye className="h-3.5 w-3.5" />
         View sequence
       </button>
     );
@@ -181,9 +175,8 @@ function ActionButton({
         // Deep-linking to the specific sequence run is a follow-up TODO.
         onViewSequence();
       }}
-      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#E2E8F0] px-3 text-xs font-semibold text-[#64748B] transition-colors hover:bg-white"
+      className="h-9 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A] transition-colors hover:bg-gray-50"
     >
-      <PlayCircle className="h-3.5 w-3.5" />
       Resume
     </button>
   );
@@ -208,14 +201,13 @@ function PaginationFooter({
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
 
-  // Show numbered page buttons (up to 7, with ellipsis handled simply)
   const pageNumbers: number[] = [];
   for (let i = 1; i <= totalPages; i++) {
     pageNumbers.push(i);
   }
 
   return (
-    <div className="flex items-center justify-between border-t border-[#E2E8F0] bg-[#F1F5F9] px-6 py-4">
+    <div className="flex items-center justify-between border-t border-[#E2E8F0] px-6 py-4">
       <span className="text-sm text-[#64748B]">
         Showing {from} to {to} of {total} entries
       </span>
@@ -226,7 +218,7 @@ function PaginationFooter({
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
           aria-label="Previous page"
-          className="flex h-8 w-8 items-center justify-center rounded border border-[#E2E8F0] transition-colors hover:bg-white disabled:opacity-50"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E2E8F0] text-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -240,10 +232,10 @@ function PaginationFooter({
             aria-label={`Page ${n}`}
             aria-current={n === page ? "page" : undefined}
             className={cn(
-              "h-8 min-w-[2rem] rounded border px-2 text-sm font-medium transition-colors",
+              "h-8 min-w-[2rem] rounded-lg border px-2 text-sm font-medium transition-colors",
               n === page
                 ? "border-[#2563EB] bg-[#2563EB] text-white"
-                : "border-[#E2E8F0] text-[#0F172A] hover:bg-white",
+                : "border-[#E2E8F0] text-[#0F172A] hover:bg-gray-50",
             )}
           >
             {n}
@@ -256,7 +248,7 @@ function PaginationFooter({
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           aria-label="Next page"
-          className="flex h-8 w-8 items-center justify-center rounded border border-[#E2E8F0] transition-colors hover:bg-white disabled:opacity-50"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E2E8F0] text-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -283,7 +275,7 @@ export function OverdueWorklist({
 }: OverdueWorklistProps) {
   if (error) {
     return (
-      <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
+      <section className="rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <p className="px-6 py-12 text-sm text-[#64748B]">
           Couldn&apos;t load overdue invoices.{" "}
           <button
@@ -294,40 +286,50 @@ export function OverdueWorklist({
             Retry
           </button>
         </p>
-      </div>
+      </section>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
+      <section className="rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <div className="space-y-2 p-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-lg bg-[#F1F5F9]" />
+            <div key={i} className="h-12 animate-pulse rounded bg-gray-50" />
           ))}
         </div>
-      </div>
+      </section>
     );
   }
 
   if (rows.length === 0 && total === 0) {
     return (
-      <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
+      <section className="rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
           <span className="text-4xl">🎉</span>
-          <p className="text-base font-semibold text-[#041534]">
+          <p className="text-base font-semibold text-[#0F172A]">
             No overdue invoices
           </p>
           <p className="max-w-xs text-sm text-[#64748B]">
             All outstanding invoices are on time. Check back soon.
           </p>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
+    <section className="rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
+      {/* Section header row */}
+      <div className="flex items-center justify-between border-b border-[#E2E8F0] px-6 py-5">
+        <h3 className="text-lg font-semibold tracking-[-0.01em] text-[#0F172A]">
+          Overdue invoices
+        </h3>
+        <span className="text-sm text-[#64748B]">
+          {total} {total === 1 ? "invoice" : "invoices"}
+        </span>
+      </div>
+
       {/* Mobile: card list */}
       <div className="flex flex-col md:hidden">
         {rows.map((row) => (
@@ -340,22 +342,18 @@ export function OverdueWorklist({
               className="w-full text-left"
               onClick={() => onToggleExpand(row.id)}
             >
-              {/* Left accent bar via box-shadow on the inner padding div */}
-              <div
-                className="p-4"
-                style={{ boxShadow: `inset 3px 0 0 0 ${row.agingDotColor}` }}
-              >
+              <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-semibold text-[#041534]">{row.customerName}</span>
-                    <span className="text-[11px] leading-none text-[#64748B]">
-                      {row.invoiceNumber} &bull; {row.dueDateShort}
+                    <span className="text-sm font-medium text-[#0F172A]">{row.customerName}</span>
+                    <span className="text-xs text-[#64748B]">
+                      {row.invoiceNumber} &bull; Due {row.dueDateShort}
                     </span>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span
                       className={cn(
-                        "inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                        "inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase",
                         FOLLOW_UP_PILL[row.followUpStatus],
                       )}
                     >
@@ -369,24 +367,21 @@ export function OverdueWorklist({
                   </div>
                 </div>
                 <div className="mt-3 flex items-end justify-between gap-2">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] text-[#64748B]">Due {row.dueDate}</span>
-                    <span className="text-sm font-bold tabular-nums text-[#DC2626]">
-                      {row.balanceDue}
-                    </span>
-                  </div>
                   <div className="flex items-center gap-1.5">
                     <span
                       className="inline-block h-2 w-2 rounded-full"
                       style={{ backgroundColor: row.agingDotColor }}
                     />
                     <span
-                      className="text-[13px] font-medium tabular-nums"
+                      className="text-xs font-semibold tabular-nums"
                       style={{ color: row.agingDotColor }}
                     >
-                      {row.daysOverdue} days
+                      {row.daysOverdue}d overdue
                     </span>
                   </div>
+                  <span className="text-sm font-bold tabular-nums text-[#DC2626]">
+                    {row.balanceDue}
+                  </span>
                 </div>
                 <div className="mt-3">
                   <ActionButton
@@ -404,77 +399,80 @@ export function OverdueWorklist({
       </div>
 
       {/* Desktop: table */}
-      {/* Columns: chevron · Customer & Invoice · Days Overdue · Amount · Status · Action */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[760px] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-[#E2E8F0] bg-[#F1F5F9]">
-              <th className={cn(HEAD, "pl-6 w-8")} />
-              <th className={HEAD}>Customer &amp; Invoice</th>
-              <th className={HEAD}>Days Overdue</th>
+        <table className="w-full min-w-[800px] border-collapse text-left">
+          <thead className="bg-[rgba(243,243,243,0.5)]">
+            <tr>
+              <th className={cn(HEAD, "w-10")} aria-label="Expand" />
+              <th className={cn(HEAD, "text-left")}>Customer</th>
+              <th className={cn(HEAD, "text-left")}>Invoice #</th>
+              <th className={cn(HEAD, "text-left")}>Due Date</th>
+              <th className={cn(HEAD, "text-left")}>Overdue</th>
               <th className={cn(HEAD, "text-right")}>Amount</th>
-              <th className={HEAD}>Status</th>
-              <th className={cn(HEAD, "pr-6")}>Action</th>
+              <th className={cn(HEAD, "text-left")}>Status</th>
+              <th className={cn(HEAD, "text-left")}>Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E8F0]">
+          <tbody>
             {rows.map((row) => (
               <Fragment key={row.id}>
                 <tr
                   onClick={() => onToggleExpand(row.id)}
                   className={cn(
-                    "cursor-pointer transition-colors hover:bg-black/[0.02]",
-                    expandedId === row.id && "bg-[#F8FAFC]",
+                    "cursor-pointer border-t border-[#E2E8F0] transition-colors hover:bg-black/[0.02]",
+                    expandedId === row.id && "bg-[rgba(243,243,243,0.5)]",
                   )}
                 >
-                  {/* Expand chevron — carries the left accent bar via box-shadow */}
-                  <td
-                    className="py-3 pl-6 pr-2"
-                    style={{ boxShadow: `inset 3px 0 0 0 ${row.agingDotColor}` }}
-                  >
+                  {/* Expand chevron */}
+                  <td className="px-6 py-4 text-[#64748B]">
                     {expandedId === row.id ? (
-                      <ChevronDown className="h-4 w-4 text-[#64748B]" />
+                      <ChevronDown className="h-4 w-4" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-[#64748B]" />
+                      <ChevronRight className="h-4 w-4" />
                     )}
                   </td>
 
-                  {/* Customer & Invoice — combined column */}
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-semibold text-[#041534]">{row.customerName}</span>
-                      <span className="text-[11px] leading-none text-[#64748B]">
-                        {row.invoiceNumber} &bull; {row.dueDateShort}
-                      </span>
-                    </div>
+                  {/* Customer */}
+                  <td className="px-6 py-4 text-sm font-medium text-[#0F172A]">
+                    {row.customerName}
                   </td>
 
-                  {/* Days Overdue — "{n} days" with aging dot, colored by aging scale */}
-                  <td className="px-4 py-3">
+                  {/* Invoice # */}
+                  <td className="px-6 py-4 text-xs text-[#64748B]">
+                    {row.invoiceNumber}
+                  </td>
+
+                  {/* Due Date */}
+                  <td className="px-6 py-4 text-xs text-[#64748B]">
+                    {row.dueDateShort}
+                  </td>
+
+                  {/* Overdue — aging dot + colored text */}
+                  <td className="px-6 py-4">
                     <span className="inline-flex items-center gap-1.5">
                       <span
                         className="inline-block h-2 w-2 shrink-0 rounded-full"
                         style={{ backgroundColor: row.agingDotColor }}
                       />
                       <span
-                        className="text-[13px] font-medium tabular-nums"
+                        className="text-xs font-semibold tabular-nums"
                         style={{ color: row.agingDotColor }}
                       >
-                        {row.daysOverdue} days
+                        {row.daysOverdue}d
                       </span>
                     </span>
                   </td>
 
-                  {/* Amount — red, bold, tabular */}
-                  <td className="px-4 py-3 text-right font-bold tabular-nums text-[#DC2626]">
+                  {/* Amount — red, bold, right-aligned */}
+                  <td className="px-6 py-4 text-right text-sm font-bold tabular-nums text-[#DC2626]">
                     {row.balanceDue}
                   </td>
 
-                  {/* Follow-up status pill */}
-                  <td className="px-4 py-3">
+                  {/* Status pill */}
+                  <td className="px-6 py-4">
                     <span
                       className={cn(
-                        "inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                        "inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase",
                         FOLLOW_UP_PILL[row.followUpStatus],
                       )}
                     >
@@ -483,7 +481,7 @@ export function OverdueWorklist({
                   </td>
 
                   {/* Action button */}
-                  <td className="px-4 py-3 pr-6">
+                  <td className="px-6 py-4">
                     <ActionButton
                       status={row.followUpStatus}
                       row={row}
@@ -495,7 +493,7 @@ export function OverdueWorklist({
 
                 {expandedId === row.id && (
                   <tr>
-                    <td colSpan={6} className="p-0">
+                    <td colSpan={8} className="p-0">
                       <ExpandedPanel row={row} />
                     </td>
                   </tr>
@@ -514,6 +512,6 @@ export function OverdueWorklist({
         total={total}
         onPageChange={onPageChange}
       />
-    </div>
+    </section>
   );
 }
