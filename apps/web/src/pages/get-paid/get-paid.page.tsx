@@ -1,4 +1,3 @@
-import { TriangleAlert } from "lucide-react";
 import { useGetPaidViewModel } from "./get-paid.view-model";
 import { OverdueWorklist } from "../../components/get-paid/overdue-worklist";
 import { StartFollowUpDialog } from "../../components/get-paid/start-follow-up-dialog";
@@ -7,32 +6,45 @@ import { formatDollars } from "../../lib/format";
 export function GetPaidPage() {
   const vm = useGetPaidViewModel();
 
-  // Urgency strip totals are capped at the 100-invoice fetch limit.
-  const showUrgency = !vm.isLoading && vm.overdueCount > 0;
+  // Hero block: show only when loaded and there are overdue invoices
+  const showHero = !vm.isLoading && vm.overdueCount > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-6 py-8 lg:px-10">
-      {/* Urgency strip */}
-      {showUrgency && (
-        <div className="flex items-center gap-3 rounded-lg border border-[#BA1A1A]/20 bg-[#FFDAD6] px-6 py-3 text-[#93000A]">
-          <TriangleAlert className="h-4 w-4 shrink-0 text-[#BA1A1A]" aria-hidden="true" />
-          <span className="text-sm font-medium">
-            Action Required:{" "}
-            <span className="font-semibold">{formatDollars(vm.totalOverdueCents)}</span> overdue
-            across {vm.overdueCount} {vm.overdueCount === 1 ? "invoice" : "invoices"}.
-          </span>
+      {/* Hero money block — replaces soft urgency strip */}
+      {showHero && (
+        <div className="flex items-stretch gap-4">
+          {/* Left accent rule */}
+          <div className="w-1 shrink-0 rounded-full bg-[#BA1A1A]" aria-hidden="true" />
+          <div className="flex flex-col gap-1">
+            {/* Eyebrow */}
+            <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#45464E]">
+              Get paid faster
+            </span>
+            {/* Hero number */}
+            <span className="text-4xl font-bold leading-none tracking-tight tabular-nums text-[#BA1A1A]">
+              {formatDollars(vm.totalOverdueCents)}
+            </span>
+            {/* Muted subline */}
+            <span className="text-[13px] text-[#45464E]">
+              overdue across {vm.overdueCount}{" "}
+              {vm.overdueCount === 1 ? "invoice" : "invoices"}
+            </span>
+          </div>
         </div>
       )}
 
-      {/* Page header */}
-      <div>
-        <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#1A1C1C]">
-          Get paid faster
-        </h2>
-        <p className="mt-1 text-sm text-[#45464E]">
-          Overdue invoices sorted by amount at risk.
-        </p>
-      </div>
+      {/* Page header — shown only when hero is hidden (loading / zero) */}
+      {!showHero && (
+        <div>
+          <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#1A1C1C]">
+            Get paid faster
+          </h2>
+          <p className="mt-1 text-sm text-[#45464E]">
+            Overdue invoices sorted by amount at risk.
+          </p>
+        </div>
+      )}
 
       {/* Already-running inline notice (appears after dialog closes) */}
       {vm.alreadyRunning && (
