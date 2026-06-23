@@ -1,4 +1,5 @@
 import { SignUp } from "@clerk/clerk-react";
+import { dark } from "@clerk/themes";
 import { OnboardingBrandPanel } from "../components/onboarding-brand-panel";
 import { BackToMarketingLink } from "../components/back-to-marketing-link";
 import { clerkAppearance } from "../lib/clerk-appearance";
@@ -26,7 +27,7 @@ export function SignUpPage() {
                 path="/sign-up"
                 signInUrl="/sign-in"
                 fallbackRedirectUrl="/onboarding"
-                appearance={clerkAppearance}
+                appearance={{ baseTheme: dark, ...clerkAppearance }}
               />
             </div>
           </div>

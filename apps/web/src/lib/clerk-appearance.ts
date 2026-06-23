@@ -1,22 +1,19 @@
 /**
- * Shared Clerk theming so <SignUp/> and <SignIn/> match the Figma onboarding
- * form: accent-blue primary, 6px inputs, Geist font, white social button.
- *
- * TODO: dark Clerk appearance — install @clerk/themes and pass
- * `appearance={{ baseTheme: dark }}` to <SignIn> and <SignUp> so the widget
- * matches the Midnight canvas. The colorBackground/colorText below are still
- * light-mode values.
+ * Shared Clerk theming for <SignIn/> and <SignUp/>, tuned to the dark
+ * "Midnight" canvas: indigo primary, near-white text, dark inputs, Geist font.
+ * The `dark` baseTheme is applied at the call site (sign-in/sign-up) so this
+ * exported object's inferred type stays portable.
  */
 export const clerkAppearance = {
   variables: {
-    colorPrimary: "#2563EB",
-    colorText: "#041534",
-    colorTextSecondary: "#64748B",
-    colorBackground: "#FFFFFF",
-    colorInputBackground: "#FFFFFF",
-    colorInputText: "#041534",
-    colorDanger: "#DC2626",
-    borderRadius: "6px",
+    colorPrimary: "#6366f1", // indigo-500 (matches --primary)
+    colorText: "#e7e9ee",
+    colorTextSecondary: "#94a0b8",
+    colorBackground: "transparent",
+    colorInputBackground: "#11141d",
+    colorInputText: "#e7e9ee",
+    colorDanger: "#f87171",
+    borderRadius: "10px",
     fontFamily: '"Geist", ui-sans-serif, system-ui, sans-serif',
   },
   elements: {
@@ -25,15 +22,15 @@ export const clerkAppearance = {
     header: "hidden",
     footer: "hidden",
     socialButtonsBlockButton:
-      "border border-[#E2E8F0] rounded-md h-10 hover:bg-gray-50",
-    socialButtonsBlockButtonText: "text-[#0F172A] font-medium",
-    dividerLine: "bg-[#E2E8F0]",
-    dividerText: "text-[#64748B]",
-    formFieldLabel: "text-[#64748B] font-medium",
+      "border border-[#232838] rounded-md h-10 bg-[#11141d] hover:bg-[#1a1e2b]",
+    socialButtonsBlockButtonText: "text-[#e7e9ee] font-medium",
+    dividerLine: "bg-[#232838]",
+    dividerText: "text-[#94a0b8]",
+    formFieldLabel: "text-[#94a0b8] font-medium",
     formFieldInput:
-      "border border-[#E2E8F0] rounded-md h-10 focus:border-[#2563EB] focus:ring-[#2563EB]",
+      "border border-[#2a3043] bg-[#11141d] text-[#e7e9ee] rounded-md h-10 focus:border-[#6366f1] focus:ring-[#6366f1]",
     formButtonPrimary:
-      "bg-[#2563EB] hover:bg-[#1D4ED8] text-white normal-case font-semibold shadow-sm",
-    footerActionLink: "text-[#2563EB] hover:text-[#1D4ED8] font-semibold",
+      "bg-[#6366f1] hover:bg-[#818cf8] text-white normal-case font-semibold shadow-sm",
+    footerActionLink: "text-[#818cf8] hover:text-[#a5b4fc] font-semibold",
   },
 };
