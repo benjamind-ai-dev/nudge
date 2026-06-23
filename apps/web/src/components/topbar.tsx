@@ -13,39 +13,41 @@ interface TopbarProps {
   onMenuClick?: () => void;
 }
 
-const themeOptions: { mode: ThemeMode; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+const themeOptions: {
+  mode: ThemeMode;
+  label: string;
+  Icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { mode: "light", label: "Light", Icon: Sun },
   { mode: "dark", label: "Dark", Icon: Moon },
   { mode: "system", label: "System", Icon: Monitor },
 ];
 
-export function Topbar({
-  hasNotifications = false,
-  onMenuClick,
-}: TopbarProps) {
+/**
+ * No full-width bar — that left an empty band above every page. Instead the
+ * global controls float in the corners over the content: a mobile menu button
+ * top-left, theme + notifications top-right. Pages start at the top.
+ */
+export function Topbar({ hasNotifications = false, onMenuClick }: TopbarProps) {
   const { mode, setMode } = useThemeStore();
-
-  // Determine icon to show based on current effective theme
-  // For system, we still show Monitor; for explicit light/dark show Sun/Moon
   const ActiveIcon = mode === "light" ? Sun : mode === "dark" ? Moon : Monitor;
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 sm:px-6">
-      {/* Page titles live in each page's own header — keep the bar chrome-only. */}
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label="Open menu"
-          onClick={onMenuClick}
-          className="lg:hidden"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-      </div>
-      <div className="flex items-center gap-1">
-        {/* Theme switcher */}
+    <>
+      {/* Mobile drawer trigger — top-left, content gets pt-12 on mobile to clear it */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label="Open menu"
+        onClick={onMenuClick}
+        className="fixed left-3 top-3 z-40 lg:hidden"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+
+      {/* Global actions — top-right, floating over the content (no band) */}
+      <div className="fixed right-4 top-3 z-40 flex items-center gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -72,7 +74,6 @@ export function Topbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Notifications */}
         <div className="relative">
           <Button
             type="button"
@@ -88,6 +89,6 @@ export function Topbar({
           )}
         </div>
       </div>
-    </header>
+    </>
   );
 }
