@@ -1,14 +1,39 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { formatDollars } from "../../lib/format";
 import { useActiveBusinessId } from "../../lib/hooks/use-active-business-id";
-import { useOverdueInvoices, useStartFollowUp } from "../../queries/use-overdue-invoices";
+import { useInvoicesInfinite } from "../../queries/use-invoices";
+import { useStartFollowUp } from "../../queries/use-overdue-invoices";
 import type { InvoiceListItem } from "../../api/invoices.api";
 
 export const PAGE_SIZE = 10;
 
-// ---- Aging dot colours per spec -------------------------------------------
+// ---- Status filter ---------------------------------------------------------
+export type StatusFilter = "unpaid" | "overdue" | "open" | "partial";
+
+export const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "unpaid", label: "Unpaid" },
+  { value: "overdue", label: "Overdue" },
+  { value: "open", label: "Open" },
+  { value: "partial", label: "Partial" },
+];
+
+function matchesStatusFilter(item: InvoiceListItem, filter: StatusFilter): boolean {
+  switch (filter) {
+    case "unpaid":
+      return item.status === "open" || item.status === "overdue" || item.status === "partial";
+    case "overdue":
+      return item.status === "overdue";
+    case "open":
+      return item.status === "open";
+    case "partial":
+      return item.status === "partial";
+  }
+}
+
+// ---- Aging dot colours per spec --------------------------------------------
 function agingDotColor(daysOverdue: number): string {
+  if (daysOverdue <= 0) return "#94A3B8"; // muted slate for on-time
   if (daysOverdue <= 30) return "#FBBF24"; // 1–30
   if (daysOverdue <= 60) return "#FB923C"; // 31–60
   if (daysOverdue <= 90) return "#EF4444"; // 61–90
@@ -54,12 +79,14 @@ export interface OverdueRow {
   balanceDue: string;        // formatDollars — no decimals
   paymentLinkUrl: string | null;
   agingDotColor: string;
+  agingLabel: string;        // "15 days" for overdue, "—" for on-time
   followUpStatus: FollowUpStatus;
   sequenceRunId: string | null;
   isSevere: boolean;         // daysOverdue >= 90 → faint red row tint
 }
 
 function toRow(item: InvoiceListItem): OverdueRow {
+  const isOverdue = item.daysOverdue > 0;
   return {
     id: item.id,
     invoiceNumber: item.invoiceNumber ? `#${item.invoiceNumber}` : "—",
@@ -72,6 +99,7 @@ function toRow(item: InvoiceListItem): OverdueRow {
     balanceDue: formatDollars(item.balanceDueCents),
     paymentLinkUrl: item.paymentLinkUrl,
     agingDotColor: agingDotColor(item.daysOverdue),
+    agingLabel: isOverdue ? `${item.daysOverdue} days` : "—",
     followUpStatus: followUpStatus(item),
     sequenceRunId: item.sequenceRun?.id ?? null,
     isSevere: item.daysOverdue >= 90,
@@ -82,11 +110,16 @@ function toRow(item: InvoiceListItem): OverdueRow {
 export interface GetPaidViewModel {
   // Paginated rows (current page slice)
   rows: OverdueRow[];
-  // All rows (full loaded set, up to 100 — see note in urgency strip)
+  // All rows (full loaded set after filter + no-sequence constraint)
   allRows: OverdueRow[];
   isLoading: boolean;
   error: unknown;
   refetch: () => void;
+
+  // Status filter
+  statusFilter: StatusFilter;
+  setStatusFilter: (f: StatusFilter) => void;
+  statusOptions: { value: StatusFilter; label: string }[];
 
   // Pagination
   page: number;
@@ -95,7 +128,7 @@ export interface GetPaidViewModel {
   total: number;
   setPage: (p: number) => void;
 
-  // Urgency strip totals (capped at 100-invoice fetch limit)
+  // Hero totals (reflect current filtered set)
   totalOverdueCents: number;
   overdueCount: number;
 
@@ -133,10 +166,26 @@ export interface GetPaidViewModel {
 
 export function useGetPaidViewModel(): GetPaidViewModel {
   const { businessId, isLoading: businessLoading } = useActiveBusinessId();
-  const query = useOverdueInvoices(businessId);
+  const invoicesQuery = useInvoicesInfinite(businessId);
   const startFollowUpMutation = useStartFollowUp();
   const navigate = useNavigate();
 
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = invoicesQuery;
+
+  // Pull every page so we can filter/paginate the full set locally.
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const [statusFilter, setStatusFilterState] = useState<StatusFilter>("unpaid");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dialogInvoiceId, setDialogInvoiceId] = useState<string | null>(null);
   const [dialogInvoiceNumber, setDialogInvoiceNumber] = useState("");
@@ -152,14 +201,21 @@ export function useGetPaidViewModel(): GetPaidViewModel {
   const [dialogIncludePaymentLink, setDialogIncludePaymentLink] = useState(true);
   const [dialogSendByEmail, setDialogSendByEmail] = useState(true);
 
-  // Get Paid is the action list: only overdue invoices with NO sequence yet
-  // (nothing already chasing them). Active/paused runs are handled elsewhere.
+  const allItems = useMemo(
+    () => (data?.pages ?? []).flatMap((p) => p.data),
+    [data],
+  );
+
+  // Get Paid is the action list: only invoices with no active/paused sequence
+  // AND matching the current status filter (default: unpaid = open + overdue + partial).
   const allRows = useMemo(
     () =>
-      (query.data?.data ?? [])
+      allItems
+        .filter((item) => matchesStatusFilter(item, statusFilter) && followUpStatus(item) === "none")
         .map(toRow)
-        .filter((r) => r.followUpStatus === "none"),
-    [query.data],
+        // Sort by amount descending
+        .sort((a, b) => b.balanceDueCents - a.balanceDueCents),
+    [allItems, statusFilter],
   );
 
   // Client-side pagination — clamp page when data changes
@@ -172,13 +228,17 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     [allRows, safePage],
   );
 
-  // Urgency strip totals — summed over the full loaded set.
-  // Note: capped at the 100-invoice fetch limit imposed by useOverdueInvoices.
+  // Hero totals — summed over the full filtered set.
   const totalOverdueCents = useMemo(
     () => allRows.reduce((sum, r) => sum + r.balanceDueCents, 0),
     [allRows],
   );
   const overdueCount = allRows.length;
+
+  const setStatusFilter = useCallback((f: StatusFilter) => {
+    setStatusFilterState(f);
+    setPageState(1);
+  }, []);
 
   const setPage = useCallback(
     (p: number) => {
@@ -268,9 +328,13 @@ export function useGetPaidViewModel(): GetPaidViewModel {
   return {
     rows,
     allRows,
-    isLoading: businessLoading || query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
+    isLoading: businessLoading || isLoading,
+    error,
+    refetch,
+
+    statusFilter,
+    setStatusFilter,
+    statusOptions: STATUS_OPTIONS,
 
     page: safePage,
     pageSize: PAGE_SIZE,

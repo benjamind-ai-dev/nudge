@@ -9,9 +9,15 @@ import {
   ArrowRight,
   ReceiptText,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -21,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "../../lib/utils";
-import type { FollowUpStatus, OverdueRow } from "../../pages/get-paid/get-paid.view-model";
+import type { OverdueRow, StatusFilter } from "../../pages/get-paid/get-paid.view-model";
 
 // ---- Props -----------------------------------------------------------------
 interface OverdueWorklistProps {
@@ -31,9 +37,6 @@ interface OverdueWorklistProps {
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
   onStartFollowUp: (row: OverdueRow) => void;
-  // Deep-linking to a specific sequence run is a follow-up TODO. Both
-  // "View sequence" and "Resume" navigate to the Sequences list page for now.
-  onViewSequence: () => void;
   onRetry: () => void;
   // Pagination
   page: number;
@@ -41,79 +44,31 @@ interface OverdueWorklistProps {
   totalPages: number;
   total: number;
   onPageChange: (p: number) => void;
-}
-
-// ---- Status badge ----------------------------------------------------------
-function StatusBadge({ status }: { status: FollowUpStatus }) {
-  if (status === "active") {
-    return (
-      <Badge className="border-transparent bg-emerald-500/15 text-emerald-300">
-        Active
-      </Badge>
-    );
-  }
-  if (status === "paused") {
-    return (
-      <Badge className="border-transparent bg-amber-500/15 text-amber-300">
-        Paused
-      </Badge>
-    );
-  }
-  return <Badge variant="secondary">No sequence</Badge>;
+  // Status filter
+  statusFilter: StatusFilter;
+  statusOptions: { value: StatusFilter; label: string }[];
+  onStatusChange: (f: StatusFilter) => void;
+  // Card title (driven by selected filter label)
+  cardTitle: string;
 }
 
 // ---- Action button ---------------------------------------------------------
 function ActionButton({
-  status,
   row,
   onStartFollowUp,
-  onViewSequence,
 }: {
-  status: FollowUpStatus;
   row: OverdueRow;
   onStartFollowUp: (row: OverdueRow) => void;
-  onViewSequence: () => void;
 }) {
-  if (status === "none") {
-    return (
-      <Button
-        size="sm"
-        onClick={(e) => {
-          e.stopPropagation();
-          onStartFollowUp(row);
-        }}
-      >
-        Start follow-up
-      </Button>
-    );
-  }
-  if (status === "active") {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={(e) => {
-          e.stopPropagation();
-          // Deep-linking to the specific sequence run is a follow-up TODO.
-          onViewSequence();
-        }}
-      >
-        View sequence
-      </Button>
-    );
-  }
-  // paused
   return (
     <Button
-      variant="outline"
       size="sm"
       onClick={(e) => {
         e.stopPropagation();
-        // Deep-linking to the specific sequence run is a follow-up TODO.
-        onViewSequence();
+        onStartFollowUp(row);
       }}
     >
-      Resume
+      Start follow-up
     </Button>
   );
 }
@@ -273,20 +228,23 @@ export function OverdueWorklist({
   expandedId,
   onToggleExpand,
   onStartFollowUp,
-  onViewSequence,
   onRetry,
   page,
   pageSize,
   totalPages,
   total,
   onPageChange,
+  statusFilter,
+  statusOptions,
+  onStatusChange,
+  cardTitle,
 }: OverdueWorklistProps) {
   if (error) {
     return (
       <Card>
         <CardContent className="px-6 py-12">
           <p className="text-sm text-muted-foreground">
-            Couldn&apos;t load overdue invoices.{" "}
+            Couldn&apos;t load invoices.{" "}
             <button
               type="button"
               onClick={onRetry}
@@ -315,11 +273,28 @@ export function OverdueWorklist({
   if (rows.length === 0 && total === 0) {
     return (
       <Card>
+        <CardHeader className="border-b px-6 py-5 [.border-b]:pb-6">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold">{cardTitle}</CardTitle>
+            <Select value={statusFilter} onValueChange={(v) => onStatusChange(v as StatusFilter)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
         <CardContent className="flex flex-col items-center gap-3 px-6 py-20 text-center">
           <span className="text-4xl">🎉</span>
-          <p className="text-base font-semibold text-foreground">No overdue invoices</p>
+          <p className="text-base font-semibold text-foreground">No invoices to action</p>
           <p className="max-w-xs text-sm text-muted-foreground">
-            All outstanding invoices are on time. Check back soon.
+            No invoices match this filter. Try a different status or check back soon.
           </p>
         </CardContent>
       </Card>
@@ -330,10 +305,24 @@ export function OverdueWorklist({
     <Card className="gap-0 py-0">
       <CardHeader className="border-b px-6 py-5 [.border-b]:pb-6">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold">Overdue invoices</CardTitle>
-          <span className="text-sm text-muted-foreground">
-            {total} {total === 1 ? "invoice" : "invoices"}
-          </span>
+          <CardTitle className="text-base font-semibold">{cardTitle}</CardTitle>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">
+              {total} {total === 1 ? "invoice" : "invoices"}
+            </span>
+            <Select value={statusFilter} onValueChange={(v) => onStatusChange(v as StatusFilter)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
 
@@ -355,7 +344,6 @@ export function OverdueWorklist({
                     </span>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <StatusBadge status={row.followUpStatus} />
                     {expandedId === row.id ? (
                       <ChevronUp className="h-4 w-4 text-muted-foreground" />
                     ) : (
@@ -369,8 +357,14 @@ export function OverdueWorklist({
                       className="inline-block h-2 w-2 rounded-full"
                       style={{ backgroundColor: row.agingDotColor }}
                     />
-                    <span className="text-xs tabular-nums" style={{ color: row.agingDotColor }}>
-                      {row.daysOverdue} days
+                    <span
+                      className={cn(
+                        "text-xs tabular-nums",
+                        row.daysOverdue <= 0 && "text-muted-foreground",
+                      )}
+                      style={row.daysOverdue > 0 ? { color: row.agingDotColor } : undefined}
+                    >
+                      {row.agingLabel}
                     </span>
                   </div>
                   <span className="text-sm font-semibold tabular-nums text-destructive">
@@ -378,12 +372,7 @@ export function OverdueWorklist({
                   </span>
                 </div>
                 <div className="mt-3">
-                  <ActionButton
-                    status={row.followUpStatus}
-                    row={row}
-                    onStartFollowUp={onStartFollowUp}
-                    onViewSequence={onViewSequence}
-                  />
+                  <ActionButton row={row} onStartFollowUp={onStartFollowUp} />
                 </div>
               </div>
             </button>
@@ -403,7 +392,6 @@ export function OverdueWorklist({
               <TableHead>Due Date</TableHead>
               <TableHead>Overdue</TableHead>
               <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
@@ -454,15 +442,21 @@ export function OverdueWorklist({
                     {row.dueDateShort}
                   </TableCell>
 
-                  {/* Overdue — aging dot + colored text */}
+                  {/* Overdue — aging dot + label */}
                   <TableCell className="px-4">
                     <span className="inline-flex items-center gap-1.5">
                       <span
                         className="inline-block h-2 w-2 shrink-0 rounded-full"
                         style={{ backgroundColor: row.agingDotColor }}
                       />
-                      <span className="text-sm tabular-nums" style={{ color: row.agingDotColor }}>
-                        {row.daysOverdue} days
+                      <span
+                        className={cn(
+                          "text-sm tabular-nums",
+                          row.daysOverdue <= 0 && "text-muted-foreground",
+                        )}
+                        style={row.daysOverdue > 0 ? { color: row.agingDotColor } : undefined}
+                      >
+                        {row.agingLabel}
                       </span>
                     </span>
                   </TableCell>
@@ -472,25 +466,15 @@ export function OverdueWorklist({
                     {row.balanceDue}
                   </TableCell>
 
-                  {/* Status badge */}
-                  <TableCell className="px-4">
-                    <StatusBadge status={row.followUpStatus} />
-                  </TableCell>
-
                   {/* Action button */}
                   <TableCell className="px-4">
-                    <ActionButton
-                      status={row.followUpStatus}
-                      row={row}
-                      onStartFollowUp={onStartFollowUp}
-                      onViewSequence={onViewSequence}
-                    />
+                    <ActionButton row={row} onStartFollowUp={onStartFollowUp} />
                   </TableCell>
                 </TableRow>
 
                 {expandedId === row.id && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={8} className="p-0">
+                    <TableCell colSpan={7} className="p-0">
                       <ExpandedPanel row={row} />
                     </TableCell>
                   </TableRow>

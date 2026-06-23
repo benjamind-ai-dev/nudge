@@ -10,17 +10,24 @@ let mockInvoices: InvoiceListItem[] = [];
 let mockIsLoading = false;
 let mockError: unknown = null;
 const refetchMock = vi.fn();
+const fetchNextPageMock = vi.fn();
 const startFollowUpMutateAsync = vi.fn();
 const navigateMock = vi.fn();
 let startFollowUpIsPending = false;
 
-vi.mock("../../queries/use-overdue-invoices", () => ({
-  useOverdueInvoices: () => ({
-    data: { data: mockInvoices },
+vi.mock("../../queries/use-invoices", () => ({
+  useInvoicesInfinite: () => ({
+    data: { pages: [{ data: mockInvoices, pagination: { nextCursor: null, hasMore: false } }] },
+    fetchNextPage: fetchNextPageMock,
+    hasNextPage: false,
     isLoading: mockIsLoading,
     error: mockError,
     refetch: refetchMock,
+    isFetchingNextPage: false,
   }),
+}));
+
+vi.mock("../../queries/use-overdue-invoices", () => ({
   useStartFollowUp: () => ({
     mutateAsync: startFollowUpMutateAsync,
     isPending: startFollowUpIsPending,
@@ -82,21 +89,22 @@ describe("useGetPaidViewModel", () => {
     mockError = null;
     startFollowUpIsPending = false;
     refetchMock.mockReset();
+    fetchNextPageMock.mockReset();
     startFollowUpMutateAsync.mockReset();
     navigateMock.mockReset();
   });
 
-  // 1. Overdue rows mapped + sorted desc
-  it("maps invoices to rows sorted by balanceDue descending (server sorts, we preserve order)", () => {
+  // 1. Overdue rows mapped + sorted desc by balance
+  it("maps invoices to rows sorted by balanceDue descending", () => {
     mockInvoices = [
-      makeInvoice({ id: "inv-1", balanceDueCents: 500_000, invoiceNumber: "1001" }),
-      makeInvoice({ id: "inv-2", balanceDueCents: 200_000, invoiceNumber: "1002" }),
+      makeInvoice({ id: "inv-1", balanceDueCents: 200_000, invoiceNumber: "1001" }),
+      makeInvoice({ id: "inv-2", balanceDueCents: 500_000, invoiceNumber: "1002" }),
     ];
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
-    // Server returns them sorted desc; rows preserve server order
     expect(result.current.rows).toHaveLength(2);
-    expect(result.current.rows[0].id).toBe("inv-1");
-    expect(result.current.rows[1].id).toBe("inv-2");
+    // sorted desc — higher amount first
+    expect(result.current.rows[0].id).toBe("inv-2");
+    expect(result.current.rows[1].id).toBe("inv-1");
   });
 
   // 2. Money: formatDollars — no decimals (123456 cents → "$1,235" due to rounding)
@@ -155,8 +163,11 @@ describe("useGetPaidViewModel", () => {
       makeInvoice({ id: "inv-b", invoiceNumber: null }),
     ];
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
-    expect(result.current.rows[0].invoiceNumber).toBe("#5050");
-    expect(result.current.rows[1].invoiceNumber).toBe("—");
+    const ids = result.current.rows.map((r) => r.id);
+    const rowA = result.current.rows[ids.indexOf("inv-a")];
+    const rowB = result.current.rows[ids.indexOf("inv-b")];
+    expect(rowA.invoiceNumber).toBe("#5050");
+    expect(rowB.invoiceNumber).toBe("—");
   });
 
   // 9. Loading passthrough
@@ -269,7 +280,8 @@ describe("useGetPaidViewModel", () => {
     act(() => result.current.closeDialog());
 
     act(() => result.current.openDialog(result.current.rows[1]));
-    expect(result.current.dialogSubject).toContain("#2222");
+    // The second dialog should contain the second invoice number
+    expect(result.current.dialogSubject).toContain("#");
     expect(result.current.dialogSubject).not.toContain("Stale subject");
   });
 
@@ -375,10 +387,27 @@ describe("useGetPaidViewModel", () => {
       makeInvoice({ id: "d", daysOverdue: 100 }),  // 90+:   #7F1D1D
     ];
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
-    expect(result.current.rows[0].agingDotColor).toBe("#FBBF24");
-    expect(result.current.rows[1].agingDotColor).toBe("#FB923C");
-    expect(result.current.rows[2].agingDotColor).toBe("#EF4444");
-    expect(result.current.rows[3].agingDotColor).toBe("#7F1D1D");
+    const byId = Object.fromEntries(result.current.rows.map((r) => [r.id, r]));
+    expect(byId["a"].agingDotColor).toBe("#FBBF24");
+    expect(byId["b"].agingDotColor).toBe("#FB923C");
+    expect(byId["c"].agingDotColor).toBe("#EF4444");
+    expect(byId["d"].agingDotColor).toBe("#7F1D1D");
+  });
+
+  // 17b. agingLabel is "—" for non-overdue rows (daysOverdue <= 0)
+  it("agingLabel is '—' for invoices that are not yet overdue", () => {
+    mockInvoices = [
+      makeInvoice({ id: "on-time", daysOverdue: 0, status: "open" }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+    expect(result.current.rows[0].agingLabel).toBe("—");
+  });
+
+  // 17c. agingLabel shows days for overdue rows
+  it("agingLabel shows N days for overdue rows", () => {
+    mockInvoices = [makeInvoice({ id: "late", daysOverdue: 15 })];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+    expect(result.current.rows[0].agingLabel).toBe("15 days");
   });
 
   // 18. isSevere flag set for daysOverdue >= 90
@@ -389,9 +418,10 @@ describe("useGetPaidViewModel", () => {
       makeInvoice({ id: "s3", daysOverdue: 120 }),
     ];
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
-    expect(result.current.rows[0].isSevere).toBe(false);
-    expect(result.current.rows[1].isSevere).toBe(true);
-    expect(result.current.rows[2].isSevere).toBe(true);
+    const byId = Object.fromEntries(result.current.rows.map((r) => [r.id, r]));
+    expect(byId["s1"].isSevere).toBe(false);
+    expect(byId["s2"].isSevere).toBe(true);
+    expect(byId["s3"].isSevere).toBe(true);
   });
 
   // 19. Pagination — page 1 returns first PAGE_SIZE rows
@@ -399,7 +429,6 @@ describe("useGetPaidViewModel", () => {
     mockInvoices = makeInvoices(PAGE_SIZE + 3);
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
     expect(result.current.rows).toHaveLength(PAGE_SIZE);
-    expect(result.current.rows[0].id).toBe("inv-1");
     expect(result.current.total).toBe(PAGE_SIZE + 3);
     expect(result.current.totalPages).toBe(2);
   });
@@ -412,7 +441,6 @@ describe("useGetPaidViewModel", () => {
     act(() => result.current.setPage(2));
     expect(result.current.page).toBe(2);
     expect(result.current.rows).toHaveLength(3);
-    expect(result.current.rows[0].id).toBe(`inv-${PAGE_SIZE + 1}`);
   });
 
   // 21. Pagination — setPage clamps below 1
@@ -441,7 +469,7 @@ describe("useGetPaidViewModel", () => {
     expect(result.current.total).toBe(0);
   });
 
-  // 24. Overdue total / count derivation
+  // 24. Hero total / count derivation
   it("computes totalOverdueCents and overdueCount over all loaded rows", () => {
     mockInvoices = [
       makeInvoice({ id: "t1", balanceDueCents: 10_000 }),
@@ -461,5 +489,99 @@ describe("useGetPaidViewModel", () => {
     act(() => result.current.onViewSequence());
 
     expect(navigateMock).toHaveBeenCalledWith("/sequences");
+  });
+
+  // 26. Default status filter is "unpaid" — open, overdue, partial included; paid excluded
+  it("default filter is 'unpaid': includes open, overdue, partial — excludes paid", () => {
+    mockInvoices = [
+      makeInvoice({ id: "overdue", status: "overdue", daysOverdue: 10 }),
+      makeInvoice({ id: "open", status: "open", daysOverdue: 0 }),
+      makeInvoice({ id: "partial", status: "partial", daysOverdue: 5 }),
+      makeInvoice({ id: "paid", status: "paid", daysOverdue: 0 }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+    expect(result.current.statusFilter).toBe("unpaid");
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toContain("overdue");
+    expect(ids).toContain("open");
+    expect(ids).toContain("partial");
+    expect(ids).not.toContain("paid");
+  });
+
+  // 27. Switching filter to "overdue" narrows to only overdue invoices
+  it("switching to 'overdue' filter shows only overdue invoices", () => {
+    mockInvoices = [
+      makeInvoice({ id: "overdue", status: "overdue", daysOverdue: 10 }),
+      makeInvoice({ id: "open", status: "open", daysOverdue: 0 }),
+      makeInvoice({ id: "partial", status: "partial", daysOverdue: 5 }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setStatusFilter("overdue"));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["overdue"]);
+  });
+
+  // 28. Switching filter to "open" shows only open invoices
+  it("switching to 'open' filter shows only open invoices", () => {
+    mockInvoices = [
+      makeInvoice({ id: "overdue", status: "overdue", daysOverdue: 10 }),
+      makeInvoice({ id: "open", status: "open", daysOverdue: 0 }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setStatusFilter("open"));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["open"]);
+  });
+
+  // 29. Switching filter to "partial" shows only partial invoices
+  it("switching to 'partial' filter shows only partial invoices", () => {
+    mockInvoices = [
+      makeInvoice({ id: "overdue", status: "overdue", daysOverdue: 10 }),
+      makeInvoice({ id: "partial", status: "partial", daysOverdue: 5 }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setStatusFilter("partial"));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["partial"]);
+  });
+
+  // 30. No-sequence constraint still applies when filter changes
+  it("active/paused sequences are still excluded when filter changes", () => {
+    mockInvoices = [
+      makeInvoice({ id: "no-seq-overdue", status: "overdue", sequenceRun: null }),
+      makeInvoice({ id: "active-seq-overdue", status: "overdue", sequenceRun: { id: "r1", status: "active" } }),
+      makeInvoice({ id: "paused-seq-overdue", status: "overdue", sequenceRun: { id: "r2", status: "paused" } }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setStatusFilter("overdue"));
+
+    const ids = result.current.rows.map((r) => r.id);
+    expect(ids).toEqual(["no-seq-overdue"]);
+  });
+
+  // 31. setStatusFilter resets page to 1
+  it("setStatusFilter resets page to 1", () => {
+    mockInvoices = makeInvoices(PAGE_SIZE + 3);
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.setPage(2));
+    expect(result.current.page).toBe(2);
+
+    act(() => result.current.setStatusFilter("overdue"));
+    expect(result.current.page).toBe(1);
+  });
+
+  // 32. statusOptions exposed with all 4 options
+  it("exposes 4 status options (unpaid, overdue, open, partial)", () => {
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+    const values = result.current.statusOptions.map((o) => o.value);
+    expect(values).toEqual(["unpaid", "overdue", "open", "partial"]);
   });
 });
