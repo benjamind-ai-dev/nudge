@@ -152,8 +152,13 @@ export function useGetPaidViewModel(): GetPaidViewModel {
   const [dialogIncludePaymentLink, setDialogIncludePaymentLink] = useState(true);
   const [dialogSendByEmail, setDialogSendByEmail] = useState(true);
 
+  // Get Paid is the action list: only overdue invoices with NO sequence yet
+  // (nothing already chasing them). Active/paused runs are handled elsewhere.
   const allRows = useMemo(
-    () => (query.data?.data ?? []).map(toRow),
+    () =>
+      (query.data?.data ?? [])
+        .map(toRow)
+        .filter((r) => r.followUpStatus === "none"),
     [query.data],
   );
 

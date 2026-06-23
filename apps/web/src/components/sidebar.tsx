@@ -24,8 +24,8 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/get-paid", label: "Get Paid", icon: HandCoins },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/sequences", label: "Sequences", icon: Send },
