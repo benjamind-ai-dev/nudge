@@ -83,6 +83,7 @@ function invoice(over: Partial<InvoiceListItem> = {}): InvoiceListItem {
     issuedDate: null,
     paymentLinkUrl: null,
     customer: { id: "cust-1", companyName: "Global Dynamics Inc." },
+    sequenceRun: null,
     ...over,
   };
 }
