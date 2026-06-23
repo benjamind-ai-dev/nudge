@@ -2,7 +2,7 @@ import { NavLink } from "react-router";
 import { useUser } from "@clerk/clerk-react";
 import {
   LayoutDashboard,
-  FileText,
+  HandCoins,
   BarChart3,
   Users,
   Send,
@@ -25,7 +25,7 @@ interface SidebarProps {
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/invoices", label: "Invoices", icon: FileText },
+  { to: "/get-paid", label: "Get Paid", icon: HandCoins },
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/sequences", label: "Sequences", icon: Send },

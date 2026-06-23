@@ -18,6 +18,7 @@ import Customers from "./pages/customers";
 import Invoices from "./pages/invoices";
 import Sequences from "./pages/sequences";
 import { ReportsPage } from "./pages/reports/reports.page";
+import { GetPaidPage } from "./pages/get-paid/get-paid.page";
 import Settings from "./pages/settings";
 import { BillingPage } from "./pages/billing/billing.page";
 
@@ -50,6 +51,7 @@ export default function App() {
             </Route>
             <Route element={<ConnectionGate />}>
               <Route element={<AppLayout />}>
+                <Route path="/get-paid" element={<GetPaidPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/invoices" element={<Invoices />} />
@@ -62,8 +64,8 @@ export default function App() {
           </Route>
         </Route>
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/get-paid" replace />} />
+        <Route path="*" element={<Navigate to="/get-paid" replace />} />
       </Routes>
     </>
   );

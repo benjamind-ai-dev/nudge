@@ -27,19 +27,11 @@ Frontend tasks that are **designed/wanted but blocked** because the page or surf
 - From Settings, let an agency connect/add another business later (reuse the onboarding create + OAuth flow), gated on `account.maxBusinesses > current count`. Complements the onboarding multi-connect.
 
 ## Get Paid page (overdue worklist) — landing screen
-**Blocked on:** Stitch designs (in progress) + the start-follow-up endpoint
-(backend being built now — see `docs/superpowers/specs/2026-06-22-get-paid-start-follow-up-design.md`).
-**Backend: being built** — `POST /v1/invoices/:id/start-follow-up` creates a
-`SequenceRun` on the resolved default sequence. Template preview reuses the existing
-`POST /v1/sequences/:id/steps/:stepId/preview`. Overdue invoice list reuses
-`GET /v1/invoices` (status filter).
-**To build when designs land:**
-- A `/get-paid` page: table of **overdue invoices only**, sorted by amount desc,
-  red/urgency styling; thin red total strip on top; row expands to invoice detail;
-  per-row **Start follow-up** button → modal (template preview + Send & start sequence,
-  **no** payment-link/channel toggles) wired to the start-follow-up endpoint.
-- **Landing route swap:** make `/get-paid` the post-onboarding landing route (demote
-  `/dashboard`) in `apps/web/src/App.tsx`.
+**DONE — built 2026-06-23 (feat/get-paid-page branch).**
+`/get-paid` is now the landing route. Table shows overdue invoices sorted by amount
+desc; per-row Start follow-up → confirm modal → `POST /v1/invoices/:id/start-follow-up`.
+Email history + Next step blocks in the expanded row are still placeholders ("No activity
+yet") — waiting on a BE field to expose them (see spec for detail).
 
 ## Sequences editor UI
 **Blocked on:** nothing technical — the page is a stub
