@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../lib/utils";
+import { Card } from "./ui/card";
 
 interface ProviderCardProps {
   provider: "quickbooks" | "xero";
@@ -19,28 +20,31 @@ export function ProviderCard({
   onSelect,
 }: ProviderCardProps) {
   return (
-    <button
-      type="button"
+    <Card
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(provider)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(provider);
+        }
+      }}
       className={cn(
-        "flex flex-1 cursor-pointer items-center gap-3 rounded-md border p-3 text-left transition-colors",
+        "flex flex-1 cursor-pointer flex-row items-center gap-3 rounded-md py-3 px-3 text-left transition-colors",
         selected
-          ? "border-2 border-[#2563EB] bg-blue-50"
-          : "border border-[#E2E8F0] bg-white hover:bg-gray-50",
+          ? "border-2 border-primary bg-accent"
+          : "border-border bg-card hover:bg-muted",
       )}
     >
       {/* Radio circle */}
       <span
         className={cn(
           "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2",
-          selected
-            ? "border-[#2563EB] bg-[#2563EB]"
-            : "border-[#E2E8F0] bg-white",
+          selected ? "border-primary bg-primary" : "border-border bg-card",
         )}
       >
-        {selected && (
-          <span className="h-1.5 w-1.5 rounded-full bg-white" />
-        )}
+        {selected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
       </span>
 
       {/* Logo */}
@@ -50,9 +54,9 @@ export function ProviderCard({
 
       {/* Text */}
       <span className="flex flex-col">
-        <span className="text-[15px] font-semibold text-[#1B2A4A]">{name}</span>
-        <span className="text-xs text-[#64748B]">{description}</span>
+        <span className="text-[15px] font-semibold text-foreground">{name}</span>
+        <span className="text-xs text-muted-foreground">{description}</span>
       </span>
-    </button>
+    </Card>
   );
 }
