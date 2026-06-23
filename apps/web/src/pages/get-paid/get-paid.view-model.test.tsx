@@ -169,8 +169,8 @@ describe("useGetPaidViewModel", () => {
   });
 
   // 11. openDialog populates dialog fields
-  it("openDialog sets dialogInvoiceId, number, and customer name", () => {
-    mockInvoices = [makeInvoice({ id: "inv-x", invoiceNumber: "9999" })];
+  it("openDialog sets dialogInvoiceId, number, customer name, and amount", () => {
+    mockInvoices = [makeInvoice({ id: "inv-x", invoiceNumber: "9999", balanceDueCents: 500_000 })];
     const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
 
     act(() => {
@@ -181,6 +181,7 @@ describe("useGetPaidViewModel", () => {
     expect(result.current.dialogInvoiceId).toBe("inv-x");
     expect(result.current.dialogInvoiceNumber).toBe("#9999");
     expect(result.current.dialogCustomerName).toBe("Acme Corp");
+    expect(result.current.dialogAmount).toBe("$5,000");
   });
 
   // 12. closeDialog resets state

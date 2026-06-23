@@ -63,6 +63,7 @@ export function GetPaidPage() {
         isOpen={vm.isDialogOpen}
         invoiceNumber={vm.dialogInvoiceNumber}
         customerName={vm.dialogCustomerName}
+        amount={vm.dialogAmount}
         isPending={vm.isStarting}
         error={vm.startError}
         onConfirm={vm.handleStartFollowUp}

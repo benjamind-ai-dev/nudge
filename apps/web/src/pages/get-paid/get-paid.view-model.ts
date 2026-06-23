@@ -107,6 +107,7 @@ export interface GetPaidViewModel {
   dialogInvoiceId: string | null;
   dialogInvoiceNumber: string;
   dialogCustomerName: string;
+  dialogAmount: string;
   isDialogOpen: boolean;
   openDialog: (row: OverdueRow) => void;
   closeDialog: () => void;
@@ -130,6 +131,7 @@ export function useGetPaidViewModel(): GetPaidViewModel {
   const [dialogInvoiceId, setDialogInvoiceId] = useState<string | null>(null);
   const [dialogInvoiceNumber, setDialogInvoiceNumber] = useState("");
   const [dialogCustomerName, setDialogCustomerName] = useState("");
+  const [dialogAmount, setDialogAmount] = useState("");
   const [startError, setStartError] = useState<string | null>(null);
   const [alreadyRunning, setAlreadyRunning] = useState(false);
   const [page, setPageState] = useState(1);
@@ -172,6 +174,7 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     setDialogInvoiceId(row.id);
     setDialogInvoiceNumber(row.invoiceNumber);
     setDialogCustomerName(row.customerName);
+    setDialogAmount(row.balanceDue);
     setStartError(null);
     setAlreadyRunning(false);
   }, []);
@@ -232,6 +235,7 @@ export function useGetPaidViewModel(): GetPaidViewModel {
     dialogInvoiceId,
     dialogInvoiceNumber,
     dialogCustomerName,
+    dialogAmount,
     isDialogOpen: dialogInvoiceId !== null,
     openDialog,
     closeDialog,
