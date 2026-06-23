@@ -22,6 +22,10 @@ export interface CreateSequenceRunData {
   status: "active";
   nextSendAt: Date;
   startedAt: Date;
+  firstStepSubject: string | null;
+  firstStepBody: string | null;
+  firstStepIncludePaymentLink: boolean | null;
+  firstStepSkip: boolean | null;
 }
 
 export interface StartFollowUpRepository {

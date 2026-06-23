@@ -119,6 +119,10 @@ export class PrismaStartFollowUpRepository implements StartFollowUpRepository {
             status: data.status,
             nextSendAt: data.nextSendAt,
             startedAt: data.startedAt,
+            firstStepSubject: data.firstStepSubject,
+            firstStepBody: data.firstStepBody,
+            firstStepIncludePaymentLink: data.firstStepIncludePaymentLink,
+            firstStepSkip: data.firstStepSkip,
           },
           select: { id: true },
         });

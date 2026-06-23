@@ -55,6 +55,10 @@ describe("StartFollowUpUseCase", () => {
         sequenceId: "seq-default",
         currentStepId: "step-1",
         status: "active",
+        firstStepSubject: null,
+        firstStepBody: null,
+        firstStepIncludePaymentLink: null,
+        firstStepSkip: null,
       }),
     );
   });
@@ -191,5 +195,70 @@ describe("StartFollowUpUseCase", () => {
     const useCase = new StartFollowUpUseCase(repo);
 
     await expect(useCase.execute(INVOICE_ID, BUSINESS_ID)).rejects.toBeInstanceOf(NoStepsError);
+  });
+
+  describe("opts mapping", () => {
+    it("maps subject, body, includePaymentLink to run create data", async () => {
+      const repo = makeRepo();
+      const useCase = new StartFollowUpUseCase(repo);
+
+      await useCase.execute(INVOICE_ID, BUSINESS_ID, {
+        subject: "Custom subject",
+        body: "Custom body text",
+        includePaymentLink: false,
+      });
+
+      expect(repo.createSequenceRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstStepSubject: "Custom subject",
+          firstStepBody: "Custom body text",
+          firstStepIncludePaymentLink: false,
+          firstStepSkip: null,
+        }),
+      );
+    });
+
+    it("sets firstStepSkip=true when sendByEmail is false", async () => {
+      const repo = makeRepo();
+      const useCase = new StartFollowUpUseCase(repo);
+
+      await useCase.execute(INVOICE_ID, BUSINESS_ID, { sendByEmail: false });
+
+      expect(repo.createSequenceRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstStepSkip: true,
+          firstStepSubject: null,
+          firstStepBody: null,
+          firstStepIncludePaymentLink: null,
+        }),
+      );
+    });
+
+    it("sets firstStepSkip=null when sendByEmail is true", async () => {
+      const repo = makeRepo();
+      const useCase = new StartFollowUpUseCase(repo);
+
+      await useCase.execute(INVOICE_ID, BUSINESS_ID, { sendByEmail: true });
+
+      expect(repo.createSequenceRun).toHaveBeenCalledWith(
+        expect.objectContaining({ firstStepSkip: null }),
+      );
+    });
+
+    it("sets all fields to null when no opts provided (default behavior unchanged)", async () => {
+      const repo = makeRepo();
+      const useCase = new StartFollowUpUseCase(repo);
+
+      await useCase.execute(INVOICE_ID, BUSINESS_ID);
+
+      expect(repo.createSequenceRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstStepSubject: null,
+          firstStepBody: null,
+          firstStepIncludePaymentLink: null,
+          firstStepSkip: null,
+        }),
+      );
+    });
   });
 });

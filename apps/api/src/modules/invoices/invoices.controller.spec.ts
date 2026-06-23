@@ -335,7 +335,7 @@ describe("InvoicesController", () => {
         expect.objectContaining({ created: true, status: "active" }),
       );
       expect(res.body.data.runId).toBeTruthy();
-      expect(startFollowUpUseCase.execute).toHaveBeenCalledWith(INV_ID, BIZ_ID);
+      expect(startFollowUpUseCase.execute).toHaveBeenCalledWith(INV_ID, BIZ_ID, undefined);
     });
 
     it("returns 200 with already_running on a second call (idempotent)", async () => {

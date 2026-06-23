@@ -10,6 +10,7 @@ import {
   NoActiveSequenceError,
   NoStepsError,
 } from "../domain/invoice.errors";
+import type { StartFollowUpBody } from "../dto/invoices.dto";
 
 const CHASEABLE_STATUSES = ["open", "overdue", "partial"];
 
@@ -28,7 +29,7 @@ export class StartFollowUpUseCase {
     private readonly repo: StartFollowUpRepository,
   ) {}
 
-  async execute(invoiceId: string, businessId: string): Promise<StartFollowUpResult> {
+  async execute(invoiceId: string, businessId: string, opts?: StartFollowUpBody): Promise<StartFollowUpResult> {
     const ctx = await this.repo.getFollowUpContext(invoiceId, businessId);
     if (!ctx) throw new InvoiceNotFoundError(invoiceId);
 
@@ -55,6 +56,10 @@ export class StartFollowUpUseCase {
       status: "active",
       nextSendAt,
       startedAt: new Date(),
+      firstStepSubject: opts?.subject ?? null,
+      firstStepBody: opts?.body ?? null,
+      firstStepIncludePaymentLink: opts?.includePaymentLink ?? null,
+      firstStepSkip: opts?.sendByEmail === false ? true : null,
     });
 
     if (created) {

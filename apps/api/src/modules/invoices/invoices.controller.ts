@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -18,10 +19,12 @@ import {
   getInvoiceQuerySchema,
   listInvoicesQuerySchema,
   startFollowUpQuerySchema,
+  startFollowUpBodySchema,
   type CreatePaymentLinkQuery,
   type GetInvoiceQuery,
   type ListInvoicesQuery,
   type StartFollowUpQuery,
+  type StartFollowUpBody,
 } from "./dto/invoices.dto";
 
 @Controller("v1/invoices")
@@ -76,9 +79,10 @@ export class InvoicesController {
     @Param("id") id: string,
     @Query(new ZodValidationPipe(startFollowUpQuerySchema))
     query: StartFollowUpQuery,
+    @Body(new ZodValidationPipe(startFollowUpBodySchema)) body: StartFollowUpBody,
   ) {
     await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, query.businessId);
-    const data = await this.startFollowUp.execute(id, query.businessId);
+    const data = await this.startFollowUp.execute(id, query.businessId, body);
     return { data };
   }
 }
