@@ -264,6 +264,11 @@ model SequenceRun {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
+  firstStepSubject            String?  @map("first_step_subject") @db.Text
+  firstStepBody               String?  @map("first_step_body") @db.Text
+  firstStepIncludePaymentLink Boolean? @map("first_step_include_payment_link")
+  firstStepSkip               Boolean? @map("first_step_skip")
+
   invoice     Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   sequence    Sequence      @relation(fields: [sequenceId], references: [id], onDelete: Restrict)
   currentStep SequenceStep? @relation("CurrentStep", fields: [currentStepId], references: [id], onDelete: SetNull)
