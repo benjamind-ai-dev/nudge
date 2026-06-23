@@ -12,7 +12,7 @@ import { SignInPage } from "./pages/sign-in";
 import { SignUpPage } from "./pages/sign-up";
 import { OnboardingPage } from "./pages/onboarding/onboarding.page";
 import { OnboardingBillingPage } from "./pages/onboarding-billing/onboarding-billing.page";
-import OnboardingComplete from "./pages/onboarding-complete/onboarding-complete.page";
+import { OnboardingCompletePage } from "./pages/onboarding-complete/onboarding-complete.page";
 import { DashboardPage } from "./pages/dashboard/dashboard.page";
 import { CustomersPage } from "./pages/customers";
 import { InvoicesPage } from "./pages/invoices";
@@ -44,7 +44,7 @@ export default function App() {
           <Route element={<BillingPaywallGate />}>
             <Route path="/onboarding/billing" element={<OnboardingBillingPage />} />
           </Route>
-          <Route path="/onboarding/complete" element={<OnboardingComplete />} />
+          <Route path="/onboarding/complete" element={<OnboardingCompletePage />} />
           <Route element={<BillingGate />}>
             <Route element={<OnboardingGate />}>
               <Route path="/onboarding" element={<OnboardingPage />} />

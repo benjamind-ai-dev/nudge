@@ -27,7 +27,7 @@ export function BillingPage() {
         </div>
       )}
       {vm.redirectStatus === "cancelled" && (
-        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           Checkout cancelled. No changes were made.
         </div>
       )}
