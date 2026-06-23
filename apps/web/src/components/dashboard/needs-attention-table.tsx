@@ -1,4 +1,15 @@
-import { cn } from "../../lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { AttentionRow } from "../../pages/dashboard/dashboard.view-model";
 
 interface NeedsAttentionTableProps {
@@ -9,9 +20,6 @@ interface NeedsAttentionTableProps {
   onViewAll: () => void;
 }
 
-const HEAD_CLASS =
-  "px-6 py-4 text-[11px] font-bold uppercase tracking-[0.05em] text-[#64748B]";
-
 export function NeedsAttentionTable({
   rows,
   isLoading,
@@ -20,93 +28,86 @@ export function NeedsAttentionTable({
   onViewAll,
 }: NeedsAttentionTableProps) {
   return (
-    <section className="flex flex-col rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-[#E2E8F0] px-6 py-5">
-        <h3 className="text-lg font-semibold tracking-[-0.01em] text-[#0F172A]">
-          Needs your attention
-        </h3>
-      </div>
+    <Card className="gap-0 py-0">
+      <CardHeader className="border-b px-6 py-5 [.border-b]:pb-6">
+        <CardTitle className="text-base font-semibold">Needs your attention</CardTitle>
+      </CardHeader>
 
-      {error ? (
-        <p className="px-6 py-10 text-sm text-[#64748B]">
-          Couldn&apos;t load attention items.{" "}
-          <button
-            type="button"
-            onClick={onRetry}
-            className="font-medium text-[#2563EB] hover:underline"
-          >
-            Retry
-          </button>
-        </p>
-      ) : isLoading ? (
-        <div className="space-y-3 p-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-12 animate-pulse rounded bg-gray-50" />
-          ))}
-        </div>
-      ) : rows.length === 0 ? (
-        <p className="px-6 py-10 text-center text-sm text-[#64748B]">
-          Nothing needs your attention right now. 🎉
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse">
-            <thead className="bg-[rgba(243,243,243,0.5)]">
-              <tr>
-                <th className={cn(HEAD_CLASS, "text-left")}>Customer</th>
-                <th className={cn(HEAD_CLASS, "text-left")}>Invoice</th>
-                <th className={cn(HEAD_CLASS, "text-right")}>Amount</th>
-                <th className={cn(HEAD_CLASS, "text-center")}>Overdue</th>
-                <th className={cn(HEAD_CLASS, "text-left")}>What happened</th>
-                <th className={cn(HEAD_CLASS, "text-left")}>Type</th>
-              </tr>
-            </thead>
-            <tbody>
+      <CardContent className="p-0">
+        {error ? (
+          <p className="px-6 py-10 text-sm text-muted-foreground">
+            Couldn&apos;t load attention items.{" "}
+            <Button variant="link" size="sm" className="h-auto p-0" onClick={onRetry}>
+              Retry
+            </Button>
+          </p>
+        ) : isLoading ? (
+          <div className="space-y-3 p-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 rounded-lg" />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="px-6 py-10 text-center text-sm text-muted-foreground">
+            Nothing needs your attention right now. 🎉
+          </p>
+        ) : (
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableHead className="px-6">Customer</TableHead>
+                <TableHead className="px-6">Invoice</TableHead>
+                <TableHead className="px-6 text-right">Amount</TableHead>
+                <TableHead className="px-6 text-center">Overdue</TableHead>
+                <TableHead className="px-6">What happened</TableHead>
+                <TableHead className="px-6">Type</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-t border-[#E2E8F0]">
-                  <td className="px-6 py-4 text-sm font-medium text-[#0F172A]">
+                <TableRow key={row.id}>
+                  <TableCell className="px-6 font-medium text-foreground">
                     {row.customerName}
-                  </td>
-                  <td className="px-6 py-4 text-xs text-[#64748B]">
+                  </TableCell>
+                  <TableCell className="px-6 text-muted-foreground">
                     {row.invoiceNumber}
-                  </td>
-                  <td className="px-6 py-4 text-right text-sm font-bold text-[#0F172A]">
+                  </TableCell>
+                  <TableCell className="px-6 text-right font-semibold text-foreground">
                     {row.amount}
-                  </td>
-                  <td className="px-6 py-4 text-center text-xs font-semibold text-[#DC2626]">
+                  </TableCell>
+                  <TableCell className="px-6 text-center font-semibold text-destructive">
                     {row.daysOverdue}d
-                  </td>
-                  <td className="max-w-[180px] px-6 py-4 text-xs italic text-[#64748B]">
+                  </TableCell>
+                  <TableCell className="max-w-[180px] px-6 text-xs italic text-muted-foreground">
                     {row.summary}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={cn(
-                        "inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase",
-                        row.badge.className,
-                      )}
+                  </TableCell>
+                  <TableCell className="px-6">
+                    <Badge
+                      variant="secondary"
+                      className={row.badge.className}
                     >
                       {row.badge.label}
-                    </span>
-                  </td>
-                </tr>
+                    </Badge>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
 
       {!isLoading && !error && rows.length > 0 && (
-        <div className="border-t border-[#E2E8F0] bg-[rgba(243,243,243,0.2)] p-4">
-          <button
-            type="button"
+        <div className="border-t bg-muted/20 p-4">
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onViewAll}
-            className="w-full py-2 text-center text-xs font-bold uppercase tracking-[0.1em] text-[#2563EB] hover:underline"
+            className="w-full text-xs font-bold uppercase tracking-widest text-primary"
           >
             View all attention items
-          </button>
+          </Button>
         </div>
       )}
-    </section>
+    </Card>
   );
 }
