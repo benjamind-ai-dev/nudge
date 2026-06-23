@@ -1,4 +1,3 @@
-import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -9,16 +8,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface StartFollowUpDialogProps {
   isOpen: boolean;
   invoiceNumber: string;
   customerName: string;
-  // Formatted balance string (e.g. "$4,500") shown in the email preview.
-  // A backend endpoint for the exact resolved template is a tracked follow-up.
-  amount: string;
   isPending: boolean;
   error: string | null;
+  // Editable fields
+  subject: string;
+  body: string;
+  includePaymentLink: boolean;
+  sendByEmail: boolean;
+  onSubjectChange: (v: string) => void;
+  onBodyChange: (v: string) => void;
+  onToggleIncludePaymentLink: () => void;
+  onToggleSendByEmail: () => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -27,9 +35,16 @@ export function StartFollowUpDialog({
   isOpen,
   invoiceNumber,
   customerName,
-  amount,
   isPending,
   error,
+  subject,
+  body,
+  includePaymentLink,
+  sendByEmail,
+  onSubjectChange,
+  onBodyChange,
+  onToggleIncludePaymentLink,
+  onToggleSendByEmail,
   onConfirm,
   onCancel,
 }: StartFollowUpDialogProps) {
@@ -40,7 +55,7 @@ export function StartFollowUpDialog({
         if (!open) onCancel();
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             Start follow-up — {invoiceNumber} · {customerName}
@@ -49,73 +64,79 @@ export function StartFollowUpDialog({
         </DialogHeader>
 
         <div className="space-y-5">
-          {/*
-           * Email preview card.
-           * This is a representative default preview, NOT the exact resolved sequence template.
-           * Exact preview requires a backend endpoint — tracked as a follow-up.
-           */}
-          <div className="rounded-lg border bg-muted p-5">
-            {/* Card label */}
-            <div className="mb-3 flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Email Preview
-              </span>
-            </div>
-
-            {/* Email body */}
-            <div className="space-y-3 text-sm leading-relaxed text-foreground">
-              <p>Hi {customerName} team,</p>
-              <p>
-                This is a friendly reminder that invoice {invoiceNumber} for{" "}
-                <span className="font-medium">{amount}</span> is currently past due.
-                We&apos;d appreciate it if you could process this payment at your earliest
-                convenience.
-              </p>
-              <p>If you&apos;ve already sent payment, please disregard this message.</p>
-              <p className="text-muted-foreground">
-                Best regards,
-                <br />
-                Nudge Billing
-              </p>
-            </div>
+          {/* Subject field */}
+          <div className="space-y-1.5">
+            <Label htmlFor="sfu-subject" className="text-sm font-medium text-foreground">
+              Subject
+            </Label>
+            <Input
+              id="sfu-subject"
+              value={subject}
+              onChange={(e) => onSubjectChange(e.target.value)}
+              disabled={isPending}
+              className="bg-card text-foreground"
+            />
           </div>
 
-          {/* Checkboxes — display only, both checked; backend ignores them */}
+          {/* Body field */}
+          <div className="space-y-1.5">
+            <Label htmlFor="sfu-body" className="text-sm font-medium text-foreground">
+              Message
+            </Label>
+            <Textarea
+              id="sfu-body"
+              value={body}
+              onChange={(e) => onBodyChange(e.target.value)}
+              disabled={isPending}
+              rows={8}
+              className="resize-none bg-card text-foreground"
+            />
+          </div>
+
+          {/* Checkboxes */}
           <div className="space-y-3">
-            {/* Checkbox 1: Include payment link */}
+            {/* Include payment link */}
             <div className="flex items-start gap-3">
               <Checkbox
                 id="sfu-payment-link"
-                checked
-                disabled
+                checked={includePaymentLink}
+                onCheckedChange={onToggleIncludePaymentLink}
+                disabled={isPending}
                 className="mt-0.5"
                 aria-label="Include payment link"
               />
               <div>
                 <label
                   htmlFor="sfu-payment-link"
-                  className="text-sm font-medium text-foreground"
+                  className="cursor-pointer text-sm font-medium text-foreground"
                 >
                   Include payment link
                 </label>
-                <p className="text-xs text-muted-foreground">
-                  Adds a payment link to the email body.
-                </p>
+                <p className="text-xs text-muted-foreground">Adds a payment link to the email</p>
               </div>
             </div>
 
-            {/* Checkbox 2: Send by email */}
-            <div className="flex items-center gap-3">
+            {/* Send by email */}
+            <div className="flex items-start gap-3">
               <Checkbox
                 id="sfu-send-email"
-                checked
-                disabled
+                checked={sendByEmail}
+                onCheckedChange={onToggleSendByEmail}
+                disabled={isPending}
+                className="mt-0.5"
                 aria-label="Send by email"
               />
-              <label htmlFor="sfu-send-email" className="text-sm font-medium text-foreground">
-                Send by email
-              </label>
+              <div>
+                <label
+                  htmlFor="sfu-send-email"
+                  className="cursor-pointer text-sm font-medium text-foreground"
+                >
+                  Send by email
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Send the first reminder now
+                </p>
+              </div>
             </div>
           </div>
 

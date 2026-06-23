@@ -57,9 +57,16 @@ export function GetPaidPage() {
         isOpen={vm.isDialogOpen}
         invoiceNumber={vm.dialogInvoiceNumber}
         customerName={vm.dialogCustomerName}
-        amount={vm.dialogAmount}
         isPending={vm.isStarting}
         error={vm.startError}
+        subject={vm.dialogSubject}
+        body={vm.dialogBody}
+        includePaymentLink={vm.dialogIncludePaymentLink}
+        sendByEmail={vm.dialogSendByEmail}
+        onSubjectChange={vm.setDialogSubject}
+        onBodyChange={vm.setDialogBody}
+        onToggleIncludePaymentLink={vm.toggleIncludePaymentLink}
+        onToggleSendByEmail={vm.toggleSendByEmail}
         onConfirm={vm.handleStartFollowUp}
         onCancel={vm.closeDialog}
       />

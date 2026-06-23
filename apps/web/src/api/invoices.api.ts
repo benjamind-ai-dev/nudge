@@ -63,11 +63,22 @@ export function listInvoices(
   return apiClient(`/v1/invoices?${qs}`);
 }
 
+export interface StartFollowUpBody {
+  includePaymentLink?: boolean;
+  sendByEmail?: boolean;
+  subject?: string;
+  body?: string;
+}
+
 export function startFollowUp(
   invoiceId: string,
   businessId: string,
+  body?: StartFollowUpBody,
 ): Promise<{ data: StartFollowUpResult }> {
   return apiClient(`/v1/invoices/${invoiceId}/start-follow-up?businessId=${businessId}`, {
     method: "POST",
+    ...(body !== undefined
+      ? { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }
+      : {}),
   });
 }

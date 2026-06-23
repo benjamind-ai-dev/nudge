@@ -184,6 +184,89 @@ describe("useGetPaidViewModel", () => {
     expect(result.current.dialogAmount).toBe("$5,000");
   });
 
+  // 11b. openDialog initialises editable dialog fields with defaults
+  it("openDialog initialises subject, body, and checkbox defaults", () => {
+    mockInvoices = [makeInvoice({ id: "inv-x", invoiceNumber: "9999", balanceDueCents: 500_000 })];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.openDialog(result.current.rows[0]));
+
+    expect(result.current.dialogSubject).toContain("#9999");
+    expect(result.current.dialogSubject).toContain("past due");
+    expect(result.current.dialogBody).toContain("Acme Corp");
+    expect(result.current.dialogBody).toContain("#9999");
+    expect(result.current.dialogIncludePaymentLink).toBe(true);
+    expect(result.current.dialogSendByEmail).toBe(true);
+  });
+
+  // 11c. setDialogSubject and setDialogBody update state
+  it("setDialogSubject and setDialogBody update their respective state", () => {
+    mockInvoices = [makeInvoice()];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.openDialog(result.current.rows[0]));
+    act(() => result.current.setDialogSubject("Custom subject"));
+    act(() => result.current.setDialogBody("Custom body text"));
+
+    expect(result.current.dialogSubject).toBe("Custom subject");
+    expect(result.current.dialogBody).toBe("Custom body text");
+  });
+
+  // 11d. toggleIncludePaymentLink and toggleSendByEmail flip their flags
+  it("toggleIncludePaymentLink and toggleSendByEmail flip their boolean state", () => {
+    mockInvoices = [makeInvoice()];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.openDialog(result.current.rows[0]));
+    expect(result.current.dialogIncludePaymentLink).toBe(true);
+    expect(result.current.dialogSendByEmail).toBe(true);
+
+    act(() => result.current.toggleIncludePaymentLink());
+    act(() => result.current.toggleSendByEmail());
+
+    expect(result.current.dialogIncludePaymentLink).toBe(false);
+    expect(result.current.dialogSendByEmail).toBe(false);
+  });
+
+  // 11e. handleStartFollowUp passes sendByEmail:false when toggled off
+  it("handleStartFollowUp passes sendByEmail:false when toggled off", async () => {
+    startFollowUpMutateAsync.mockResolvedValue({
+      data: { runId: "run-new", created: true, status: "active" },
+    });
+    mockInvoices = [makeInvoice({ id: "inv-toggle" })];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.openDialog(result.current.rows[0]));
+    act(() => result.current.toggleSendByEmail());
+
+    await act(async () => {
+      await result.current.handleStartFollowUp();
+    });
+
+    expect(startFollowUpMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ sendByEmail: false }),
+      }),
+    );
+  });
+
+  // 11f. openDialog re-inits fields on second open (no stale state)
+  it("openDialog re-inits editable fields when opened for a different invoice", () => {
+    mockInvoices = [
+      makeInvoice({ id: "inv-a", invoiceNumber: "1111" }),
+      makeInvoice({ id: "inv-b", invoiceNumber: "2222" }),
+    ];
+    const { result } = renderHook(() => useGetPaidViewModel(), { wrapper });
+
+    act(() => result.current.openDialog(result.current.rows[0]));
+    act(() => result.current.setDialogSubject("Stale subject"));
+    act(() => result.current.closeDialog());
+
+    act(() => result.current.openDialog(result.current.rows[1]));
+    expect(result.current.dialogSubject).toContain("#2222");
+    expect(result.current.dialogSubject).not.toContain("Stale subject");
+  });
+
   // 12. closeDialog resets state
   it("closeDialog resets dialog state", () => {
     mockInvoices = [makeInvoice()];
@@ -197,8 +280,8 @@ describe("useGetPaidViewModel", () => {
     expect(result.current.dialogInvoiceId).toBeNull();
   });
 
-  // 13. handleStartFollowUp calls mutation with correct args
-  it("handleStartFollowUp calls mutateAsync with invoiceId + businessId", async () => {
+  // 13. handleStartFollowUp calls mutation with correct args (incl. body fields)
+  it("handleStartFollowUp calls mutateAsync with invoiceId + businessId + body fields", async () => {
     startFollowUpMutateAsync.mockResolvedValue({
       data: { runId: "run-new", created: true, status: "active" },
     });
@@ -211,10 +294,18 @@ describe("useGetPaidViewModel", () => {
       await result.current.handleStartFollowUp();
     });
 
-    expect(startFollowUpMutateAsync).toHaveBeenCalledWith({
-      invoiceId: "inv-z",
-      businessId: "biz-test",
-    });
+    expect(startFollowUpMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        invoiceId: "inv-z",
+        businessId: "biz-test",
+        body: expect.objectContaining({
+          subject: expect.stringContaining("#1001"),
+          body: expect.stringContaining("Acme Corp"),
+          includePaymentLink: true,
+          sendByEmail: true,
+        }),
+      }),
+    );
     await waitFor(() => expect(result.current.isDialogOpen).toBe(false));
   });
 
