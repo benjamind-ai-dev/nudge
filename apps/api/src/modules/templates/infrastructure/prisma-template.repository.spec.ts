@@ -93,7 +93,7 @@ describe("PrismaTemplateRepository (integration)", () => {
         businessId,
         name: "First reminder",
         subject: "Hi",
-        body: "Body {{customer.company_name}}",
+        body: "Body {{company_name}}",
         signature: null,
       });
       expect(created.id).toBeDefined();

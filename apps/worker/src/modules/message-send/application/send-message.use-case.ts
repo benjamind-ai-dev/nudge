@@ -213,21 +213,15 @@ export class SendMessageUseCase {
     const daysOverdue = differenceInDays(new Date(), run.dueDate);
 
     return {
-      customer: {
-        company_name: run.customerCompanyName,
-        contact_name: run.customerContactName,
-      },
-      invoice: {
-        invoice_number: run.invoiceNumber,
-        amount: formatCents(run.amountCents),
-        balance_due: formatCents(run.balanceDueCents),
-        due_date: format(run.dueDate, "MMM d, yyyy"),
-        days_overdue: Math.max(0, daysOverdue),
-        payment_link: run.paymentLinkUrl,
-      },
-      business: {
-        sender_name: run.businessSenderName,
-      },
+      company_name: run.customerCompanyName,
+      contact_name: run.customerContactName,
+      invoice_number: run.invoiceNumber,
+      amount: formatCents(run.amountCents),
+      balance_due: formatCents(run.balanceDueCents),
+      due_date: format(run.dueDate, "MMM d, yyyy"),
+      days_overdue: Math.max(0, daysOverdue),
+      payment_link: run.paymentLinkUrl,
+      sender_name: run.businessSenderName,
     };
   }
 
