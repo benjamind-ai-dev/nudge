@@ -1,6 +1,12 @@
 import { Mail, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { TemplateRow } from "../../pages/templates/templates.view-model";
 
 interface TemplateListProps {
@@ -120,17 +126,34 @@ export function TemplateList({
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete({ id: row.id, name: row.name });
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex"
+                    >
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label="Delete"
+                        disabled={row.inUse}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete({ id: row.id, name: row.name });
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {row.inUse && (
+                    <TooltipContent side="top">
+                      In use by a sequence or customer — detach it first to delete.
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         ))}

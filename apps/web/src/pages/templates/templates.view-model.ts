@@ -8,6 +8,7 @@ export interface TemplateRow {
   name: string;
   subjectPreview: string;
   updatedLabel: string;
+  inUse: boolean;
 }
 
 interface DeleteTarget {
@@ -36,6 +37,7 @@ export function useTemplatesViewModel() {
   const deleteMut = useDeleteTemplate();
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const rows: TemplateRow[] = useMemo(
     () =>
@@ -44,20 +46,28 @@ export function useTemplatesViewModel() {
         name: t.name,
         subjectPreview: t.subject?.trim() ? t.subject : "No subject",
         updatedLabel: formatUpdated(t.updatedAt),
+        inUse: t.inUse,
       })),
     [data],
   );
 
   function openDelete(target: DeleteTarget) {
+    setDeleteError(null);
     setDeleteTarget(target);
   }
   function closeDelete() {
+    setDeleteError(null);
     setDeleteTarget(null);
   }
   async function confirmDelete() {
     if (!deleteTarget) return;
-    await deleteMut.mutateAsync({ id: deleteTarget.id, businessId });
-    setDeleteTarget(null);
+    try {
+      await deleteMut.mutateAsync({ id: deleteTarget.id, businessId });
+      setDeleteTarget(null);
+      setDeleteError(null);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Couldn't delete template");
+    }
   }
 
   return {
@@ -66,6 +76,7 @@ export function useTemplatesViewModel() {
     error,
     refetch,
     deleteTarget,
+    deleteError,
     openDelete,
     closeDelete,
     confirmDelete,

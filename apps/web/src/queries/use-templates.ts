@@ -8,10 +8,11 @@ import {
   updateTemplate,
   type CreateTemplateInput,
   type UpdateTemplateInput,
+  type TemplateListItem,
 } from "../api/templates.api";
 
 export function useTemplates(businessId: string) {
-  return useQuery({
+  return useQuery<{ data: TemplateListItem[] }>({
     queryKey: ["templates", businessId],
     queryFn: () => getTemplates(businessId),
     enabled: Boolean(businessId),

@@ -39,6 +39,7 @@ export function TemplatesPage() {
         isDeleting={vm.isDeleting}
         onCancel={vm.closeDelete}
         onConfirm={vm.confirmDelete}
+        error={vm.deleteError}
       />
     </div>
   );

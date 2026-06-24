@@ -13,6 +13,7 @@ interface DeleteTemplateDialogProps {
   isDeleting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  error?: string | null;
 }
 
 export function DeleteTemplateDialog({
@@ -20,6 +21,7 @@ export function DeleteTemplateDialog({
   isDeleting,
   onCancel,
   onConfirm,
+  error,
 }: DeleteTemplateDialogProps) {
   return (
     <Dialog open={Boolean(target)} onOpenChange={(open) => { if (!open) onCancel(); }}>
@@ -30,6 +32,9 @@ export function DeleteTemplateDialog({
             "{target?.name}" will be permanently removed. This can't be undone.
           </DialogDescription>
         </DialogHeader>
+        {error && (
+          <p className="text-sm font-medium text-destructive">{error}</p>
+        )}
         <DialogFooter>
           <Button variant="ghost" onClick={onCancel} disabled={isDeleting}>
             Cancel
