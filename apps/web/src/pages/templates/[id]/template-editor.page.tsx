@@ -35,8 +35,8 @@ export function TemplateEditorPage() {
           <Button variant="ghost" onClick={vm.handleDiscard} disabled={vm.isSaving}>
             Discard
           </Button>
-          <Button onClick={vm.handleSave} disabled={vm.isSaving}>
-            {vm.isSaving ? "Saving…" : "Save template"}
+          <Button onClick={vm.handleSave} disabled={vm.isSaving || (!vm.isNew && !vm.isDirty)}>
+            {vm.isSaving ? "Saving…" : vm.isNew ? "Save template" : "Save changes"}
           </Button>
         </div>
       </div>
@@ -58,6 +58,7 @@ export function TemplateEditorPage() {
           onBodyChange={vm.setBody}
           onSignatureChange={vm.setSignature}
           nameError={vm.errors.name}
+          subjectError={vm.errors.subject}
           bodyError={vm.errors.body}
         />
         <div className="rounded-[10px] border bg-card">

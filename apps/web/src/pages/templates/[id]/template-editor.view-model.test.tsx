@@ -54,17 +54,18 @@ describe("useTemplateEditorViewModel", () => {
     expect(result.current.canSave).toBe(false); // needs name + body
   });
 
-  it("becomes saveable once name and body are set, and creates", async () => {
+  it("becomes saveable once name, subject, and body are set, and creates", async () => {
     mockTemplate = undefined;
     const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
     act(() => { result.current.setName("Friendly reminder"); });
+    act(() => { result.current.setSubject("Payment due"); });
     act(() => { result.current.setBody("Hi {{contact_name}}"); });
     expect(result.current.canSave).toBe(true);
     await act(async () => { await result.current.handleSave(); });
     expect(createMutateAsync).toHaveBeenCalledWith({
       businessId: "biz-1",
       name: "Friendly reminder",
-      subject: null,
+      subject: "Payment due",
       body: "Hi {{contact_name}}",
       signature: null,
     });
@@ -123,10 +124,52 @@ describe("useTemplateEditorViewModel", () => {
     mockTemplate = undefined;
     const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
     act(() => { result.current.setName("Reminder"); });
+    act(() => { result.current.setSubject("Payment due"); });
     act(() => { result.current.setBody("Hi {{contact_name}}"); });
     await act(async () => { await result.current.handleSave(); });
     expect(createMutateAsync).toHaveBeenCalledTimes(1);
     expect(result.current.errors.name).toBeUndefined();
     expect(result.current.errors.body).toBeUndefined();
+  });
+
+  // --- Subject required (Change A) ---
+
+  it("blocks save and sets errors.subject when subject is blank", async () => {
+    mockTemplate = undefined;
+    const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
+    act(() => { result.current.setName("Reminder"); });
+    act(() => { result.current.setBody("Hi {{contact_name}}"); });
+    // subject intentionally left blank
+    await act(async () => { await result.current.handleSave(); });
+    expect(result.current.errors.subject).toBe("Subject is required.");
+    expect(createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("clears errors.subject when subject is filled", async () => {
+    mockTemplate = undefined;
+    const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
+    act(() => { result.current.setName("Reminder"); });
+    act(() => { result.current.setBody("Hi {{contact_name}}"); });
+    await act(async () => { await result.current.handleSave(); });
+    expect(result.current.errors.subject).toBeTruthy();
+    act(() => { result.current.setSubject("Payment overdue"); });
+    expect(result.current.errors.subject).toBeUndefined();
+  });
+
+  // --- Dirty tracking (Change B) ---
+
+  it("existing template starts isDirty === false and becomes true after a field change", async () => {
+    mockTemplate = { data: { id: "t-1", businessId: "biz-1", name: "Second notice", subject: "Overdue", body: "Body {{amount}}", signature: "Sig", createdAt: "", updatedAt: "" } };
+    const { result } = renderHook(() => useTemplateEditorViewModel("t-1"));
+    await waitFor(() => expect(result.current.name).toBe("Second notice"));
+    expect(result.current.isDirty).toBe(false);
+    act(() => { result.current.setBody("changed body"); });
+    expect(result.current.isDirty).toBe(true);
+  });
+
+  it("new template (undefined id) has isDirty === true", () => {
+    mockTemplate = undefined;
+    const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
+    expect(result.current.isDirty).toBe(true);
   });
 });
