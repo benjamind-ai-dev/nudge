@@ -2,8 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import {
   TEMPLATE_REPOSITORY,
   type TemplateRepository,
+  type TemplateWithUsage,
 } from "../domain/template.repository";
-import type { Template } from "../domain/template.entity";
 
 export interface ListTemplatesInput {
   businessId: string;
@@ -15,7 +15,7 @@ export class ListTemplatesUseCase {
     @Inject(TEMPLATE_REPOSITORY) private readonly repo: TemplateRepository,
   ) {}
 
-  execute(input: ListTemplatesInput): Promise<Template[]> {
+  execute(input: ListTemplatesInput): Promise<TemplateWithUsage[]> {
     return this.repo.list(input.businessId);
   }
 }
