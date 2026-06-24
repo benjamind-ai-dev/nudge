@@ -24,7 +24,7 @@ export const updateTemplateSchema = z.object({
 export type UpdateTemplateDto = z.infer<typeof updateTemplateSchema>;
 
 export const generateTemplateSchema = z.object({
-  description: z.string().min(1),
+  description: z.string().min(1).max(2000),
 });
 
 export type GenerateTemplateDto = z.infer<typeof generateTemplateSchema>;
