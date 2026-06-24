@@ -62,8 +62,8 @@ export function AiDraftBubble({
           <Textarea
             value={description}
             onChange={(e) => { setJustDrafted(false); onDescriptionChange(e.target.value); }}
-            rows={3}
-            className="resize-none text-sm"
+            rows={8}
+            className="min-h-44 resize-none text-sm"
             placeholder="e.g. a polite first reminder, warm but clear about the due date"
           />
           <Button

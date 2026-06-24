@@ -1,7 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { VariableTextarea } from "./variable-textarea";
+import { HtmlVariableEditor } from "./html-variable-editor";
 
 interface TemplateEditorFormProps {
   name: string;
@@ -81,28 +80,29 @@ export function TemplateEditorForm({
           <Label htmlFor="tpl-body">
             Body <span className="text-destructive">*</span>
           </Label>
-          <VariableTextarea
+          <HtmlVariableEditor
             id="tpl-body"
             value={body}
             onChange={onBodyChange}
             variables={VARIABLES}
-            rows={9}
+            minHeight="200px"
             placeholder="Hi {{contact_name}}, …  (HTML allowed)"
-            aria-invalid={Boolean(bodyError)}
-            className={bodyError ? "border-destructive focus-visible:ring-destructive/40" : undefined}
+            invalid={Boolean(bodyError)}
+            ariaLabel="Email body"
           />
           {bodyError && <p className="text-xs text-destructive">{bodyError}</p>}
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="tpl-sig">Signature</Label>
-          <Textarea
+          <HtmlVariableEditor
             id="tpl-sig"
             value={signature}
-            onChange={(e) => onSignatureChange(e.target.value)}
-            rows={3}
-            className="resize-none"
+            onChange={onSignatureChange}
+            variables={VARIABLES}
+            minHeight="100px"
             placeholder={"Thanks,\nSarah · Acme Books  (HTML allowed)"}
+            ariaLabel="Email signature"
           />
         </div>
       </div>
