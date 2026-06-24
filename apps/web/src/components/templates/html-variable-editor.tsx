@@ -8,7 +8,7 @@
  */
 
 import CodeMirror from "@uiw/react-codemirror";
-import { html } from "@codemirror/lang-html";
+import { html, htmlLanguage } from "@codemirror/lang-html";
 import { autocompletion, type CompletionContext, type CompletionResult } from "@codemirror/autocomplete";
 import { EditorView } from "@codemirror/view";
 import { useCallback, useMemo, useRef } from "react";
@@ -29,7 +29,7 @@ function makeVariableCompletionSource(variables: string[]) {
     return {
       from: result.from,
       options: result.options,
-      validFor: /^\w*$/,
+      validFor: /^\{\{\w*$/,
     };
   };
 }
@@ -131,11 +131,16 @@ export function HtmlVariableEditor({
   const extensions = useMemo(
     () => [
       html({ autoCloseTags: true }),
-      autocompletion({ override: [makeVariableCompletionSource(variables)] }),
+      // Register variable completion as a language-data source so it MERGES with
+      // HTML's own tag/attribute completions (registered the same way). Using
+      // `override` would shadow HTML completions entirely — don't use override.
+      htmlLanguage.data.of({ autocomplete: makeVariableCompletionSource(variables) }),
+      autocompletion(), // no override — picks up both language-data sources
       nudgeTheme,
       EditorView.lineWrapping,
+      EditorView.contentAttributes.of({ "aria-label": ariaLabel ?? "Template field" }),
     ],
-    [variables],
+    [variables, ariaLabel],
   );
 
   return (
