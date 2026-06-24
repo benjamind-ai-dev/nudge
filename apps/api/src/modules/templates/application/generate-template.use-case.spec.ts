@@ -52,6 +52,17 @@ describe("GenerateTemplateUseCase", () => {
     );
   });
 
+  it("strips email addresses from the description before calling the client", async () => {
+    const client = makeClient();
+    const uc = new GenerateTemplateUseCase(client);
+
+    await uc.execute({ description: "remind john@acme.com about overdue invoice" });
+
+    const call = client.generate.mock.calls[0][0];
+    expect(call.description).not.toContain("john@acme.com");
+    expect(call.description).toContain("[email removed]");
+  });
+
   it("exposes AI_TEMPLATE_SYSTEM_PROMPT constant", () => {
     expect(typeof AI_TEMPLATE_SYSTEM_PROMPT).toBe("string");
     expect(AI_TEMPLATE_SYSTEM_PROMPT.length).toBeGreaterThan(50);

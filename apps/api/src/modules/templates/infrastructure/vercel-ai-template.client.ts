@@ -27,7 +27,10 @@ export class VercelAiTemplateClient implements AiTemplateClient {
     const result = await generateObject({
       model: anthropic(modelId),
       system: AI_TEMPLATE_SYSTEM_PROMPT,
-      prompt: `Sandra wants a template for: ${request.description}`,
+      // The description is sanitized (emails stripped) upstream in the use case
+      // and wrapped in delimiters so the model treats it as untrusted data, not
+      // instructions (prompt-injection mitigation).
+      prompt: `<description>\n${request.description}\n</description>`,
       schema: draftSchema,
       abortSignal: AbortSignal.timeout(request.timeoutMs),
     });
