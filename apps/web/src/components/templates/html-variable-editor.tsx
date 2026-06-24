@@ -8,12 +8,15 @@
  */
 
 import CodeMirror from "@uiw/react-codemirror";
-import { html, htmlLanguage } from "@codemirror/lang-html";
+import { html, htmlCompletionSource } from "@codemirror/lang-html";
 import {
+  autocompletion,
+  completionKeymap,
   type CompletionContext,
   type CompletionResult,
 } from "@codemirror/autocomplete";
-import { EditorView } from "@codemirror/view";
+import { EditorView, keymap } from "@codemirror/view";
+import { Prec } from "@codemirror/state";
 import { useCallback, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { computeVariableCompletion } from "./variable-completion";
@@ -32,7 +35,9 @@ export function makeVariableCompletionSource(variables: string[]) {
     return {
       from: result.from,
       options: result.options,
-      validFor: /^\{\{\w*$/,
+      // `from` sits after the `{{`, so the active text is the partial word —
+      // keep the completion open while the user types word characters.
+      validFor: /^\w*$/,
     };
   };
 }
@@ -134,11 +139,21 @@ export function HtmlVariableEditor({
   const extensions = useMemo(
     () => [
       html({ autoCloseTags: true }),
-      // Register variable completion as a language-data source so it MERGES with
-      // HTML's own tag/attribute completions (registered the same way). basicSetup
-      // owns the autocompletion() plugin + completionKeymap (correct precedence,
-      // so Enter/↑/↓/Tab/Esc drive the list) — don't add a second one here.
-      htmlLanguage.data.of({ autocomplete: makeVariableCompletionSource(variables) }),
+      // Single combined completion source: in a `{{` context return ONLY the
+      // variable options (correct `from` so the token is replaced cleanly);
+      // otherwise fall through to HTML tag/attribute completion. Merging two
+      // separate language-data sources didn't work — their `from` positions
+      // differ and CM dropped the variable result.
+      autocompletion({
+        override: [
+          (ctx: CompletionContext): CompletionResult | null =>
+            makeVariableCompletionSource(variables)(ctx) ?? htmlCompletionSource(ctx),
+        ],
+      }),
+      // basicSetup.autocompletion is off (we own the plugin above), which also
+      // drops the completion keymap; re-add it at highest precedence so Enter/
+      // ↑/↓/Tab/Esc beat the default Enter→newline binding when the list is open.
+      Prec.highest(keymap.of(completionKeymap)),
       nudgeTheme,
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ "aria-label": ariaLabel ?? "Template field" }),
@@ -170,6 +185,7 @@ export function HtmlVariableEditor({
             foldGutter: false,
             highlightActiveLine: true,
             bracketMatching: false,
+            autocompletion: false, // we own the autocompletion() plugin in extensions
             indentOnInput: true,
             closeBrackets: false,
             highlightSelectionMatches: false,
