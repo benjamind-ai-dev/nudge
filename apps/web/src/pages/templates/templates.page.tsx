@@ -30,7 +30,6 @@ export function TemplatesPage() {
         onNew={vm.goToNew}
         onDraftWithAI={vm.goToNew}
         onEdit={vm.goToEdit}
-        onDuplicate={vm.duplicateById}
         onDelete={vm.openDelete}
         onRetry={vm.refetch}
       />

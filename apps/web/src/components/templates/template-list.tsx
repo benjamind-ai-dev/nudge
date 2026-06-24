@@ -1,4 +1,4 @@
-import { Copy, Mail, Pencil, Sparkles, Trash2 } from "lucide-react";
+import { Mail, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { TemplateRow } from "../../pages/templates/templates.view-model";
@@ -10,7 +10,6 @@ interface TemplateListProps {
   onNew: () => void;
   onDraftWithAI: () => void;
   onEdit: (id: string) => void;
-  onDuplicate: (id: string) => void;
   onDelete: (t: { id: string; name: string }) => void;
   onRetry: () => void;
 }
@@ -22,7 +21,6 @@ export function TemplateList({
   onNew,
   onDraftWithAI,
   onEdit,
-  onDuplicate,
   onDelete,
   onRetry,
 }: TemplateListProps) {
@@ -121,17 +119,6 @@ export function TemplateList({
                 }}
               >
                 <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Duplicate"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDuplicate(row.id);
-                }}
-              >
-                <Copy className="h-3.5 w-3.5" />
               </Button>
               <Button
                 variant="outline"

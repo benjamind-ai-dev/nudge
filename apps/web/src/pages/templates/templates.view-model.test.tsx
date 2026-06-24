@@ -7,13 +7,11 @@ import type { Template } from "../../api/templates.api";
 
 let mockTemplates: Template[] = [];
 const deleteMutateAsync = vi.fn().mockResolvedValue(undefined);
-const createMutateAsync = vi.fn().mockResolvedValue({ data: { id: "t-copy" } });
 const navigateMock = vi.fn();
 
 vi.mock("../../queries/use-templates", () => ({
   useTemplates: () => ({ data: { data: mockTemplates }, isLoading: false, error: null, refetch: vi.fn() }),
   useDeleteTemplate: () => ({ mutateAsync: deleteMutateAsync, isPending: false }),
-  useCreateTemplate: () => ({ mutateAsync: createMutateAsync, isPending: false }),
 }));
 vi.mock("../../lib/hooks/use-active-business-id", () => ({
   useActiveBusinessId: () => ({ businessId: "biz-1", isLoading: false, hasMultiple: false }),
@@ -54,16 +52,4 @@ describe("useTemplatesViewModel", () => {
     expect(result.current.deleteTarget).toBeNull();
   });
 
-  it("duplicate creates a copy with a 'Copy of' name", async () => {
-    mockTemplates = [makeTemplate()];
-    const { result } = renderHook(() => useTemplatesViewModel(), { wrapper });
-    await act(async () => { await result.current.handleDuplicate(makeTemplate()); });
-    expect(createMutateAsync).toHaveBeenCalledWith({
-      businessId: "biz-1",
-      name: "Copy of Friendly reminder",
-      subject: "Invoice {{invoice_number}}",
-      body: "Hi",
-      signature: null,
-    });
-  });
 });
