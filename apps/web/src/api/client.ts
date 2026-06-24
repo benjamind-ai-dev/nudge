@@ -25,5 +25,9 @@ export async function apiClient<T>(path: string, options?: RequestInit): Promise
     throw new Error(body?.message ?? `API error: ${response.status}`);
   }
 
+  if (response.status === 204 || response.headers.get("Content-Length") === "0") {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }

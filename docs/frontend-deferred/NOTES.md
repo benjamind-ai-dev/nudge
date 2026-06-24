@@ -43,11 +43,15 @@ text) wired to the sequences API. Lets users change their follow-up sequences af
 the Get Paid one-click start uses the default.
 
 ## Templates editor UI
-**Blocked on:** no templates page/route exists.
-**Backend: ready** — full CRUD: `GET/POST/PATCH/DELETE /v1/templates`,
-`POST /v1/templates/generate` (AI draft), attach/detach to customer.
-**To build:** a templates page (list + create/edit form, optional AI-generate) wired to
-the templates API. Complements the Sequences editor.
+**DONE — built 2026-06-24 (Part 1, feat/email-templates branch).**
+`/templates` (list) + `/templates/:id` & `/templates/new` (editor) shipped: CRUD,
+AI-generate, live sanitized email preview, light/dark. Body/signature authored as
+HTML via textarea.
+**Still deferred:**
+- **Part 2:** rich-text Visual⇄HTML toggle editor (WYSIWYG + raw HTML) + shared sanitize util.
+- **Attach to sequences** — needs a BE link (steps store inline text, no templateId).
+- **Attach to invoices** — no BE endpoint.
+- **Attach to customers** — BE ready (`POST /customers/:id/templates`); not surfaced in the templates UI yet.
 
 ## Invoice detail page (row click target)
 **Blocked on:** no invoice detail page / route yet (`/invoices/:id`).
