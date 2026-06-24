@@ -12,6 +12,7 @@ interface TemplateEditorFormProps {
   onBodyChange: (v: string) => void;
   onSignatureChange: (v: string) => void;
   nameError?: string;
+  subjectError?: string;
   bodyError?: string;
 }
 
@@ -36,6 +37,7 @@ export function TemplateEditorForm({
   onBodyChange,
   onSignatureChange,
   nameError,
+  subjectError,
   bodyError,
 }: TemplateEditorFormProps) {
   return (
@@ -60,13 +62,18 @@ export function TemplateEditorForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="tpl-subject">Subject</Label>
+          <Label htmlFor="tpl-subject">
+            Subject <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="tpl-subject"
             value={subject}
             onChange={(e) => onSubjectChange(e.target.value)}
             placeholder="Invoice {{invoice_number}} — a quick reminder"
+            aria-invalid={Boolean(subjectError)}
+            className={subjectError ? "border-destructive focus-visible:ring-destructive/40" : undefined}
           />
+          {subjectError && <p className="text-xs text-destructive">{subjectError}</p>}
         </div>
 
         <div className="space-y-1.5">

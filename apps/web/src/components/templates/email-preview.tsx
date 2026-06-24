@@ -37,10 +37,9 @@ export function EmailPreview({
   hasPaymentLink,
 }: EmailPreviewProps) {
   return (
-    // Always-light card: real inboxes render light regardless of app theme.
-    <div className="overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_12px_36px_-12px_rgba(15,23,42,0.35)]">
-      <div className="border-b border-slate-100 px-[18px] py-[15px]">
-        <div className="mb-[9px] text-[15px] font-semibold tracking-[-0.01em] text-slate-900">
+    <div className="overflow-hidden rounded-[10px] border border-border bg-card shadow-[0_12px_36px_-12px_rgba(15,23,42,0.35)]">
+      <div className="border-b border-border px-[18px] py-[15px]">
+        <div className="mb-[9px] text-[15px] font-semibold tracking-[-0.01em] text-foreground">
           {subject || "No subject"}
         </div>
         <div className="flex items-center gap-[10px]">
@@ -48,27 +47,27 @@ export function EmailPreview({
             {initials(senderName)}
           </span>
           <div>
-            <div className="text-[12.5px] font-semibold text-slate-900">{senderName}</div>
-            <div className="text-[11px] text-slate-500">to {recipientEmail}</div>
+            <div className="text-[12.5px] font-semibold text-foreground">{senderName}</div>
+            <div className="text-[11px] text-muted-foreground">to {recipientEmail}</div>
           </div>
         </div>
       </div>
-      <div className="px-[18px] py-[18px] text-[13px] leading-[1.6] text-slate-800">
+      <div className="px-[18px] py-[18px] text-[13px] leading-[1.6] text-foreground">
         <div
-          className="whitespace-pre-wrap [&_a]:text-indigo-600 [&_a]:underline [&_b]:text-slate-900 [&_strong]:text-slate-900"
+          className="whitespace-pre-wrap [&_a]:text-primary [&_a]:underline [&_b]:text-foreground [&_strong]:text-foreground"
           dangerouslySetInnerHTML={{ __html: clean(bodyHtml) }}
         />
         {hasPaymentLink && (
           <a
             href={SAMPLE_DATA_PAYMENT_LINK}
-            className="my-[14px] inline-block rounded-[8px] bg-indigo-600 px-5 py-[11px] text-[13px] font-semibold text-white no-underline"
+            className="my-[14px] inline-block rounded-[8px] bg-primary px-5 py-[11px] text-[13px] font-semibold text-primary-foreground no-underline"
           >
             Pay invoice →
           </a>
         )}
         {signatureHtml && (
           <div
-            className="mt-3 whitespace-pre-wrap border-t border-slate-100 pt-3 text-[12px] leading-[1.5] text-slate-500 [&_strong]:text-slate-900"
+            className="mt-3 whitespace-pre-wrap border-t border-border pt-3 text-[12px] leading-[1.5] text-muted-foreground [&_strong]:text-foreground"
             dangerouslySetInnerHTML={{ __html: clean(signatureHtml) }}
           />
         )}
