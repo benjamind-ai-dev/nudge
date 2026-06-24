@@ -64,7 +64,6 @@ export function useTemplatesViewModel() {
     try {
       await deleteMut.mutateAsync({ id: deleteTarget.id, businessId });
       setDeleteTarget(null);
-      setDeleteError(null);
     } catch (e) {
       setDeleteError(e instanceof Error ? e.message : "Couldn't delete template");
     }

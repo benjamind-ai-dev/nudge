@@ -95,38 +95,38 @@ export function TemplateList({
           {rows.length} {rows.length === 1 ? "template" : "templates"}
         </span>
       </div>
-      <div className="flex flex-col">
-        {rows.map((row) => (
-          <div
-            key={row.id}
-            onClick={() => onEdit(row.id)}
-            className="group flex cursor-pointer items-center gap-3.5 border-b px-[18px] py-[15px] last:border-b-0 hover:bg-accent/40"
-          >
-            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[9px] bg-accent text-accent-foreground">
-              <Mail className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-foreground">{row.name}</div>
-              <div className="truncate text-[12.5px] text-muted-foreground">
-                {row.subjectPreview}
+      <TooltipProvider>
+        <div className="flex flex-col">
+          {rows.map((row) => (
+            <div
+              key={row.id}
+              onClick={() => onEdit(row.id)}
+              className="group flex cursor-pointer items-center gap-3.5 border-b px-[18px] py-[15px] last:border-b-0 hover:bg-accent/40"
+            >
+              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[9px] bg-accent text-accent-foreground">
+                <Mail className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-foreground">{row.name}</div>
+                <div className="truncate text-[12.5px] text-muted-foreground">
+                  {row.subjectPreview}
+                </div>
               </div>
-            </div>
-            <span className="shrink-0 text-xs text-muted-foreground group-hover:hidden">
-              {row.updatedLabel}
-            </span>
-            <div className="hidden shrink-0 gap-1 group-hover:flex">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Edit"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(row.id);
-                }}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <TooltipProvider>
+              <span className="shrink-0 text-xs text-muted-foreground group-hover:hidden">
+                {row.updatedLabel}
+              </span>
+              <div className="hidden shrink-0 gap-1 group-hover:flex">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label="Edit"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(row.id);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
@@ -153,11 +153,11 @@ export function TemplateList({
                     </TooltipContent>
                   )}
                 </Tooltip>
-              </TooltipProvider>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </TooltipProvider>
     </Card>
   );
 }
