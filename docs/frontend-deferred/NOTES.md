@@ -6,6 +6,14 @@ Frontend tasks that are **designed/wanted but blocked** because the page or surf
 
 ---
 
+## Differentiate Get Paid / Reports / Dashboard (they look too alike)
+**Problem:** Get Paid and Reports both render the same filtered-invoice **table** with the same `InvoiceFilterBar` + density, so they feel like the same page. Dashboard is distinct (widgets) but the trio blurs.
+**Direction (lean each into its job, not three look-alike tables):**
+- **Get Paid = ACT** — urgent, focused, action-first (chase + one-click follow-up). Should NOT read as a generic data table; emphasize the action + urgency.
+- **Reports = ANALYZE** — aging breakdown / trends / export up front; the table is secondary to the visualization.
+- **Dashboard = OVERVIEW** — snapshot (keep).
+**Not yet built.** Revisit once the active feature work settles; give each page a distinct identity matched to its purpose.
+
 ## Settings → Business profile edit page
 **Blocked on:** the Settings page (currently a stub: `apps/web/src/pages/settings.tsx` returns `<h1>Settings</h1>`).
 **Backend: ready** — `PATCH /v1/businesses/:id` (`business.controller.ts`) accepts `name`, `senderName`, `senderEmail`, `emailSignature` (nullable), `timezone` (IANA), all optional.
