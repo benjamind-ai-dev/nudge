@@ -50,35 +50,51 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
   const updateMut = useUpdateTemplate();
   const generateMut = useGenerateTemplate();
 
-  const [name, setName] = useState("");
+  const [nameValue, setNameValue] = useState("");
   const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [bodyValue, setBodyValue] = useState("");
   const [signature, setSignature] = useState("");
   const [aiDescription, setAiDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ name?: string; body?: string }>({});
 
   // Hydrate from the loaded template once it arrives.
   useEffect(() => {
     if (data?.data) {
-      setName(data.data.name);
+      setNameValue(data.data.name);
       setSubject(data.data.subject ?? "");
-      setBody(data.data.body);
+      setBodyValue(data.data.body);
       setSignature(data.data.signature ?? "");
     }
   }, [data]);
 
-  const canSave = name.trim().length > 0 && body.trim().length > 0;
+  function setName(v: string) {
+    setNameValue(v);
+    if (v.trim()) setErrors((e) => ({ ...e, name: undefined }));
+  }
+
+  function setBody(v: string) {
+    setBodyValue(v);
+    if (v.trim()) setErrors((e) => ({ ...e, body: undefined }));
+  }
+
+  const canSave = nameValue.trim().length > 0 && bodyValue.trim().length > 0;
 
   async function handleSave() {
-    if (!canSave) return;
+    const nextErrors: { name?: string; body?: string } = {};
+    if (!nameValue.trim()) nextErrors.name = "Template name is required.";
+    if (!bodyValue.trim()) nextErrors.body = "Email body is required.";
+    setErrors(nextErrors);
+    if (nextErrors.name || nextErrors.body) return;
+
     setError(null);
     try {
       if (isNew) {
         await createMut.mutateAsync({
           businessId,
-          name: name.trim(),
+          name: nameValue.trim(),
           subject: subject.trim() ? subject.trim() : null,
-          body,
+          body: bodyValue,
           signature: signature.trim() ? signature.trim() : null,
         });
       } else {
@@ -86,9 +102,9 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
           id: templateId as string,
           input: {
             businessId,
-            name: name.trim(),
+            name: nameValue.trim(),
             subject: subject.trim() ? subject.trim() : null,
-            body,
+            body: bodyValue,
             signature: signature.trim() ? signature.trim() : null,
           },
         });
@@ -104,10 +120,11 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
     setError(null);
     try {
       const res = await generateMut.mutateAsync({ businessId, description: aiDescription });
-      setName(res.data.name);
+      setNameValue(res.data.name);
       setSubject(res.data.subject);
-      setBody(res.data.body);
+      setBodyValue(res.data.body);
       setSignature(res.data.signature);
+      setErrors({});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't draft the template.");
     }
@@ -118,9 +135,9 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
   }
 
   const preview: TemplatePreviewModel = useMemo(() => {
-    const hasPaymentLink = PAYMENT_LINK_TOKEN.test(body);
+    const hasPaymentLink = PAYMENT_LINK_TOKEN.test(bodyValue);
     PAYMENT_LINK_TOKEN.lastIndex = 0; // reset stateful global regex
-    const bodyNoLink = body.replace(PAYMENT_LINK_TOKEN, "");
+    const bodyNoLink = bodyValue.replace(PAYMENT_LINK_TOKEN, "");
     return {
       senderName: senderName || SAMPLE_DATA.sender_name,
       recipientEmail: "jordan@brightmail.co",
@@ -129,16 +146,17 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
       signatureHtml: signature.trim() ? resolveVariables(signature) : null,
       hasPaymentLink,
     };
-  }, [subject, body, signature, senderName]);
+  }, [subject, bodyValue, signature, senderName]);
 
   return {
-    name, subject, body, signature,
+    name: nameValue, subject, body: bodyValue, signature,
     setName, setSubject, setBody, setSignature,
     isNew,
     isLoading: !isNew && isLoading,
     isSaving: createMut.isPending || updateMut.isPending,
     isGenerating: generateMut.isPending,
     canSave,
+    errors,
     error,
     aiDescription, setAiDescription,
     handleGenerate, handleSave, handleDiscard,

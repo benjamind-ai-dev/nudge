@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useTemplateEditorViewModel } from "./template-editor.view-model";
 import { TemplateEditorForm } from "@/components/templates/template-editor-form";
 import { EmailPreview } from "@/components/templates/email-preview";
+import { AiDraftBubble } from "@/components/templates/ai-draft-bubble";
 
 export function TemplateEditorPage() {
   const { id } = useParams();
@@ -10,14 +11,14 @@ export function TemplateEditorPage() {
 
   if (vm.isLoading) {
     return (
-      <div className="mx-auto w-full max-w-[1180px] px-6 py-6 lg:px-10">
+      <div className="mx-auto w-full max-w-[1440px] px-6 py-6 lg:px-10">
         <div className="h-64 animate-pulse rounded-[10px] bg-muted" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] space-y-5 px-6 py-6 lg:px-10">
+    <div className="mx-auto w-full max-w-[1440px] space-y-5 px-6 py-6 lg:px-10">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs text-muted-foreground">
@@ -34,7 +35,7 @@ export function TemplateEditorPage() {
           <Button variant="ghost" onClick={vm.handleDiscard} disabled={vm.isSaving}>
             Discard
           </Button>
-          <Button onClick={vm.handleSave} disabled={!vm.canSave || vm.isSaving}>
+          <Button onClick={vm.handleSave} disabled={vm.isSaving}>
             {vm.isSaving ? "Saving…" : "Save template"}
           </Button>
         </div>
@@ -56,10 +57,8 @@ export function TemplateEditorPage() {
           onSubjectChange={vm.setSubject}
           onBodyChange={vm.setBody}
           onSignatureChange={vm.setSignature}
-          aiDescription={vm.aiDescription}
-          onAiDescriptionChange={vm.setAiDescription}
-          onGenerate={vm.handleGenerate}
-          isGenerating={vm.isGenerating}
+          nameError={vm.errors.name}
+          bodyError={vm.errors.body}
         />
         <div className="rounded-[10px] border bg-card">
           <div className="flex items-center justify-between border-b px-[18px] py-[14px]">
@@ -78,6 +77,13 @@ export function TemplateEditorPage() {
           </div>
         </div>
       </div>
+
+      <AiDraftBubble
+        description={vm.aiDescription}
+        onDescriptionChange={vm.setAiDescription}
+        onGenerate={vm.handleGenerate}
+        isGenerating={vm.isGenerating}
+      />
     </div>
   );
 }

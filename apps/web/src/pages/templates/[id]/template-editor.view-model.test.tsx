@@ -100,4 +100,33 @@ describe("useTemplateEditorViewModel", () => {
     expect(result.current.preview.hasPaymentLink).toBe(true);
     expect(result.current.preview.bodyHtml).not.toContain("{{payment_link}}");
   });
+
+  it("blocks save and sets errors when name and body are blank", async () => {
+    mockTemplate = undefined;
+    const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
+    await act(async () => { await result.current.handleSave(); });
+    expect(result.current.errors.name).toBe("Template name is required.");
+    expect(result.current.errors.body).toBe("Email body is required.");
+    expect(createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("clears a field error once the field is filled", async () => {
+    mockTemplate = undefined;
+    const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
+    await act(async () => { await result.current.handleSave(); });
+    expect(result.current.errors.name).toBeTruthy();
+    act(() => { result.current.setName("Reminder"); });
+    expect(result.current.errors.name).toBeUndefined();
+  });
+
+  it("saves and clears errors when valid", async () => {
+    mockTemplate = undefined;
+    const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
+    act(() => { result.current.setName("Reminder"); });
+    act(() => { result.current.setBody("Hi {{contact_name}}"); });
+    await act(async () => { await result.current.handleSave(); });
+    expect(createMutateAsync).toHaveBeenCalledTimes(1);
+    expect(result.current.errors.name).toBeUndefined();
+    expect(result.current.errors.body).toBeUndefined();
+  });
 });

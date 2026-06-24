@@ -1,5 +1,3 @@
-import { Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,10 +11,8 @@ interface TemplateEditorFormProps {
   onSubjectChange: (v: string) => void;
   onBodyChange: (v: string) => void;
   onSignatureChange: (v: string) => void;
-  aiDescription: string;
-  onAiDescriptionChange: (v: string) => void;
-  onGenerate: () => void;
-  isGenerating: boolean;
+  nameError?: string;
+  bodyError?: string;
 }
 
 const VARIABLES = [
@@ -39,10 +35,8 @@ export function TemplateEditorForm({
   onSubjectChange,
   onBodyChange,
   onSignatureChange,
-  aiDescription,
-  onAiDescriptionChange,
-  onGenerate,
-  isGenerating,
+  nameError,
+  bodyError,
 }: TemplateEditorFormProps) {
   return (
     <div className="rounded-[10px] border bg-card">
@@ -50,34 +44,19 @@ export function TemplateEditorForm({
         <span className="text-sm font-semibold text-foreground">Compose</span>
       </div>
       <div className="space-y-4 p-[18px]">
-        {/* AI draft bar */}
-        <div className="flex items-center gap-2 rounded-[10px] border border-indigo-200 bg-indigo-50/60 p-2.5 dark:border-indigo-500/30 dark:bg-indigo-500/10">
-          <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] bg-primary text-primary-foreground">
-            <Sparkles className="h-3.5 w-3.5" />
-          </span>
-          <input
-            value={aiDescription}
-            onChange={(e) => onAiDescriptionChange(e.target.value)}
-            placeholder="Describe the email you want — e.g. a polite first reminder"
-            className="flex-1 bg-transparent text-[12.5px] text-foreground outline-none placeholder:text-muted-foreground"
-          />
-          <Button
-            size="sm"
-            onClick={onGenerate}
-            disabled={isGenerating || !aiDescription.trim()}
-          >
-            {isGenerating ? "Drafting…" : "Draft"}
-          </Button>
-        </div>
-
         <div className="space-y-1.5">
-          <Label htmlFor="tpl-name">Template name</Label>
+          <Label htmlFor="tpl-name">
+            Template name <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="tpl-name"
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
             placeholder="Friendly reminder"
+            aria-invalid={Boolean(nameError)}
+            className={nameError ? "border-destructive focus-visible:ring-destructive/40" : undefined}
           />
+          {nameError && <p className="text-xs text-destructive">{nameError}</p>}
         </div>
 
         <div className="space-y-1.5">
@@ -91,15 +70,19 @@ export function TemplateEditorForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="tpl-body">Body</Label>
+          <Label htmlFor="tpl-body">
+            Body <span className="text-destructive">*</span>
+          </Label>
           <Textarea
             id="tpl-body"
             value={body}
             onChange={(e) => onBodyChange(e.target.value)}
             rows={9}
-            className="resize-none"
+            aria-invalid={Boolean(bodyError)}
+            className={bodyError ? "resize-none border-destructive focus-visible:ring-destructive/40" : "resize-none"}
             placeholder="Hi {{contact_name}}, …  (HTML allowed)"
           />
+          {bodyError && <p className="text-xs text-destructive">{bodyError}</p>}
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <span className="text-[10px] text-muted-foreground">Variables:</span>
             {VARIABLES.map((v) => (
