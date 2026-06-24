@@ -22,6 +22,8 @@ import { ReportsPage } from "./pages/reports/reports.page";
 import { GetPaidPage } from "./pages/get-paid/get-paid.page";
 import { SettingsPage } from "./pages/settings";
 import { BillingPage } from "./pages/billing/billing.page";
+import { TemplatesPage } from "./pages/templates/templates.page";
+import { TemplateEditorPage } from "./pages/templates/[id]/template-editor.page";
 
 function ClerkTokenBridge() {
   const { getToken } = useAuth();
@@ -63,6 +65,9 @@ export default function App() {
                 <Route path="/customers" element={<CustomersPage />} />
                 <Route path="/invoices" element={<InvoicesPage />} />
                 <Route path="/sequences" element={<SequencesPage />} />
+                <Route path="/templates" element={<TemplatesPage />} />
+                <Route path="/templates/new" element={<TemplateEditorPage />} />
+                <Route path="/templates/:id" element={<TemplateEditorPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/settings/billing" element={<BillingPage />} />
