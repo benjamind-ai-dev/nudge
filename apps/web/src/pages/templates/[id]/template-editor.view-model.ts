@@ -9,8 +9,8 @@ import {
 import { useActiveBusinessId } from "@/lib/hooks/use-active-business-id";
 
 export const SAMPLE_DATA: Record<string, string> = {
-  company_name: "Acme Books",
-  contact_name: "Jordan",
+  company_name: "Example Co.",
+  contact_name: "Sample Customer",
   invoice_number: "#INV-1042",
   amount: "$2,400",
   balance_due: "$2,400",
@@ -170,7 +170,7 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
     const bodyNoLink = bodyValue.replace(PAYMENT_LINK_TOKEN, "");
     return {
       senderName: senderName || SAMPLE_DATA.sender_name,
-      recipientEmail: "jordan@brightmail.co",
+      recipientEmail: "customer@example.com",
       subject: resolveVariables(subject),
       bodyHtml: resolveVariables(bodyNoLink),
       signatureHtml: signature.trim() ? resolveVariables(signature) : null,
