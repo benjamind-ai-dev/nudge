@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { VariableTextarea } from "./variable-textarea";
 
 interface TemplateEditorFormProps {
   name: string;
@@ -80,29 +81,17 @@ export function TemplateEditorForm({
           <Label htmlFor="tpl-body">
             Body <span className="text-destructive">*</span>
           </Label>
-          <Textarea
+          <VariableTextarea
             id="tpl-body"
             value={body}
-            onChange={(e) => onBodyChange(e.target.value)}
+            onChange={onBodyChange}
+            variables={VARIABLES}
             rows={9}
-            aria-invalid={Boolean(bodyError)}
-            className={bodyError ? "resize-none border-destructive focus-visible:ring-destructive/40" : "resize-none"}
             placeholder="Hi {{contact_name}}, …  (HTML allowed)"
+            aria-invalid={Boolean(bodyError)}
+            className={bodyError ? "border-destructive focus-visible:ring-destructive/40" : undefined}
           />
           {bodyError && <p className="text-xs text-destructive">{bodyError}</p>}
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="text-[10px] text-muted-foreground">Variables:</span>
-            {VARIABLES.map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => onBodyChange(`${body}{{${v}}}`)}
-                className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                {v}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="space-y-1.5">
