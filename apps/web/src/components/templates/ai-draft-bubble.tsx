@@ -25,8 +25,12 @@ export function AiDraftBubble({
 
   async function handleClick() {
     if (!description.trim() || isGenerating) return;
-    await onGenerate();
-    setJustDrafted(true);
+    try {
+      await onGenerate();
+      setJustDrafted(true);
+    } catch {
+      // the view model already surfaces the error; don't show false success
+    }
   }
 
   return (
@@ -57,7 +61,7 @@ export function AiDraftBubble({
         <div className="space-y-2.5 p-4">
           <Textarea
             value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
+            onChange={(e) => { setJustDrafted(false); onDescriptionChange(e.target.value); }}
             rows={3}
             className="resize-none text-sm"
             placeholder="e.g. a polite first reminder, warm but clear about the due date"
