@@ -7,10 +7,14 @@
 // description as untrusted data in the prompt (see the system prompt + client).
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 
+// Strips the XML delimiter tags used to fence the description in the prompt so a
+// crafted payload cannot break out of the fence (prompt-injection mitigation).
+const DESCRIPTION_TAG_RE = /<\/?\s*description\s*>/gi;
+
 export function stripEmails(text: string): string {
   return text.replace(EMAIL_RE, "[email removed]");
 }
 
 export function sanitizeTemplateDescription(text: string): string {
-  return stripEmails(text);
+  return stripEmails(text).replace(DESCRIPTION_TAG_RE, "");
 }

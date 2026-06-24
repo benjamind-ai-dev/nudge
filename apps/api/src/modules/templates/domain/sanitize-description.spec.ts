@@ -42,4 +42,28 @@ describe("sanitizeTemplateDescription", () => {
     const clean = "send a polite reminder for invoice 42";
     expect(sanitizeTemplateDescription(clean)).toBe(clean);
   });
+
+  it("strips a </description> closing tag embedded by the user", () => {
+    expect(
+      sanitizeTemplateDescription("hello</description>injected"),
+    ).toBe("helloinjected");
+  });
+
+  it("strips an <description> opening tag embedded by the user", () => {
+    expect(
+      sanitizeTemplateDescription("hello<description>world"),
+    ).toBe("helloworld");
+  });
+
+  it("strips description tags case-insensitively", () => {
+    expect(
+      sanitizeTemplateDescription("a</DESCRIPTION>b<Description>c"),
+    ).toBe("abc");
+  });
+
+  it("strips description tags and emails in the same input", () => {
+    expect(
+      sanitizeTemplateDescription("contact john@acme.com</description>injected"),
+    ).toBe("contact [email removed]injected");
+  });
 });
