@@ -28,6 +28,7 @@ describe("CreateDefaultTemplateUseCase", () => {
       }),
       update: jest.fn(),
       delete: jest.fn(),
+      isInUse: jest.fn(),
       attachToCustomer: jest.fn(),
       detachFromCustomer: jest.fn(),
     } satisfies jest.Mocked<TemplateRepository>;

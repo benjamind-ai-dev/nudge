@@ -1,18 +1,14 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useActiveBusinessId } from "../../lib/hooks/use-active-business-id";
-import {
-  useCreateTemplate,
-  useDeleteTemplate,
-  useTemplates,
-} from "../../queries/use-templates";
-import type { Template } from "../../api/templates.api";
+import { useDeleteTemplate, useTemplates } from "../../queries/use-templates";
 
 export interface TemplateRow {
   id: string;
   name: string;
   subjectPreview: string;
   updatedLabel: string;
+  inUse: boolean;
 }
 
 interface DeleteTarget {
@@ -39,9 +35,9 @@ export function useTemplatesViewModel() {
   const { businessId } = useActiveBusinessId();
   const { data, isLoading, error, refetch } = useTemplates(businessId);
   const deleteMut = useDeleteTemplate();
-  const createMut = useCreateTemplate();
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const rows: TemplateRow[] = useMemo(
     () =>
@@ -50,35 +46,27 @@ export function useTemplatesViewModel() {
         name: t.name,
         subjectPreview: t.subject?.trim() ? t.subject : "No subject",
         updatedLabel: formatUpdated(t.updatedAt),
+        inUse: t.inUse,
       })),
     [data],
   );
 
   function openDelete(target: DeleteTarget) {
+    setDeleteError(null);
     setDeleteTarget(target);
   }
   function closeDelete() {
+    setDeleteError(null);
     setDeleteTarget(null);
   }
   async function confirmDelete() {
     if (!deleteTarget) return;
-    await deleteMut.mutateAsync({ id: deleteTarget.id, businessId });
-    setDeleteTarget(null);
-  }
-
-  async function handleDuplicate(t: Template) {
-    await createMut.mutateAsync({
-      businessId,
-      name: `Copy of ${t.name}`,
-      subject: t.subject,
-      body: t.body,
-      signature: t.signature,
-    });
-  }
-
-  function duplicateById(id: string) {
-    const t = data?.data.find((tmpl) => tmpl.id === id);
-    if (t) return handleDuplicate(t);
+    try {
+      await deleteMut.mutateAsync({ id: deleteTarget.id, businessId });
+      setDeleteTarget(null);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Couldn't delete template");
+    }
   }
 
   return {
@@ -87,12 +75,11 @@ export function useTemplatesViewModel() {
     error,
     refetch,
     deleteTarget,
+    deleteError,
     openDelete,
     closeDelete,
     confirmDelete,
     isDeleting: deleteMut.isPending,
-    handleDuplicate,
-    duplicateById,
     goToNew: () => navigate("/templates/new"),
     goToEdit: (id: string) => navigate(`/templates/${id}`),
   };

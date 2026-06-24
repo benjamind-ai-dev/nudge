@@ -17,9 +17,9 @@ describe("VercelAiTemplateClient", () => {
     (generateObject as jest.Mock).mockResolvedValue({
       object: {
         name: "Polite first reminder",
-        subject: "Quick note about invoice {{invoice.invoice_number}}",
-        body: "Hi {{customer.contact_name}}, ...",
-        signature: "Thanks,\n{{business.sender_name}}",
+        subject: "Quick note about invoice {{invoice_number}}",
+        body: "Hi {{contact_name}}, ...",
+        signature: "Thanks,\n{{sender_name}}",
       },
     });
 
@@ -42,7 +42,7 @@ describe("VercelAiTemplateClient", () => {
     expect(call.abortSignal).toBeInstanceOf(AbortSignal);
 
     expect(result.name).toBe("Polite first reminder");
-    expect(result.body).toContain("{{customer.contact_name}}");
+    expect(result.body).toContain("{{contact_name}}");
   });
 
   it("propagates errors", async () => {

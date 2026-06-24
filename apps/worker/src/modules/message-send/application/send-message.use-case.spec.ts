@@ -29,8 +29,8 @@ const createMockRun = (overrides: Partial<RunReadyToSend> = {}): RunReadyToSend 
   stepId: "step-1",
   stepOrder: 1,
   stepChannel: "email",
-  stepSubjectTemplate: "Reminder: Invoice {{invoice.invoice_number}}",
-  stepBodyTemplate: "Hi {{customer.contact_name}}, your invoice is overdue.",
+  stepSubjectTemplate: "Reminder: Invoice {{invoice_number}}",
+  stepBodyTemplate: "Hi {{contact_name}}, your invoice is overdue.",
   stepSmsBodyTemplate: null,
   stepIsOwnerAlert: false,
   stepIncludePaymentLink: true,
@@ -66,7 +66,7 @@ describe("SendMessageUseCase", () => {
     };
 
     templateService = {
-      render: jest.fn((_cacheKey, _template, data) => `Rendered: ${data.customer.company_name}`),
+      render: jest.fn((_cacheKey, _template, data) => `Rendered: ${data.company_name}`),
     };
 
     emailService = {
@@ -610,8 +610,8 @@ describe("SendMessageUseCase", () => {
       const run = createMockRun({
         stepSubjectTemplate: "INLINE SUBJECT",
         stepBodyTemplate: "INLINE BODY",
-        stepTemplateSubject: "Template subject {{customer.company_name}}",
-        stepTemplateBody: "Template body {{customer.company_name}}",
+        stepTemplateSubject: "Template subject {{company_name}}",
+        stepTemplateBody: "Template body {{company_name}}",
         stepTemplateSignature: "Template sig",
         businessEmailSignature: "Business sig (should NOT appear when template signature present)",
       });
@@ -620,8 +620,8 @@ describe("SendMessageUseCase", () => {
       await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
 
       const renderedSources = templateService.render.mock.calls.map((c) => c[1]);
-      expect(renderedSources).toContain("Template subject {{customer.company_name}}");
-      expect(renderedSources).toContain("Template body {{customer.company_name}}");
+      expect(renderedSources).toContain("Template subject {{company_name}}");
+      expect(renderedSources).toContain("Template body {{company_name}}");
       expect(renderedSources).toContain("Template sig");
       expect(renderedSources).not.toContain("INLINE SUBJECT");
       expect(renderedSources).not.toContain("INLINE BODY");

@@ -7,9 +7,9 @@ import type { AiTemplateClient, AiTemplateDraft } from "./ports/ai-template.clie
 
 const VALID_DRAFT: AiTemplateDraft = {
   name: "Polite first reminder",
-  subject: "Quick note about invoice {{invoice.invoice_number}}",
-  body: "Hi {{customer.contact_name}}, ...",
-  signature: "Thanks,\n{{business.sender_name}}",
+  subject: "Quick note about invoice {{invoice_number}}",
+  body: "Hi {{contact_name}}, ...",
+  signature: "Thanks,\n{{sender_name}}",
 };
 
 function makeClient(overrides: Partial<jest.Mocked<AiTemplateClient>> = {}) {

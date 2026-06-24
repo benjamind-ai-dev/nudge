@@ -66,7 +66,7 @@ async function seedMinimalFixture(
       stepOrder: 1,
       delayDays: 3,
       channel: "email",
-      bodyTemplate: "Hello {{customer.company_name}}",
+      bodyTemplate: "Hello {{company_name}}",
     },
   });
 

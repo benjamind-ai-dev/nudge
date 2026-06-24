@@ -1,6 +1,12 @@
-import { Copy, Mail, Pencil, Sparkles, Trash2 } from "lucide-react";
+import { Mail, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { TemplateRow } from "../../pages/templates/templates.view-model";
 
 interface TemplateListProps {
@@ -10,7 +16,6 @@ interface TemplateListProps {
   onNew: () => void;
   onDraftWithAI: () => void;
   onEdit: (id: string) => void;
-  onDuplicate: (id: string) => void;
   onDelete: (t: { id: string; name: string }) => void;
   onRetry: () => void;
 }
@@ -22,7 +27,6 @@ export function TemplateList({
   onNew,
   onDraftWithAI,
   onEdit,
-  onDuplicate,
   onDelete,
   onRetry,
 }: TemplateListProps) {
@@ -91,63 +95,69 @@ export function TemplateList({
           {rows.length} {rows.length === 1 ? "template" : "templates"}
         </span>
       </div>
-      <div className="flex flex-col">
-        {rows.map((row) => (
-          <div
-            key={row.id}
-            onClick={() => onEdit(row.id)}
-            className="group flex cursor-pointer items-center gap-3.5 border-b px-[18px] py-[15px] last:border-b-0 hover:bg-accent/40"
-          >
-            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[9px] bg-accent text-accent-foreground">
-              <Mail className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-foreground">{row.name}</div>
-              <div className="truncate text-[12.5px] text-muted-foreground">
-                {row.subjectPreview}
+      <TooltipProvider>
+        <div className="flex flex-col">
+          {rows.map((row) => (
+            <div
+              key={row.id}
+              onClick={() => onEdit(row.id)}
+              className="group flex cursor-pointer items-center gap-3.5 border-b px-[18px] py-[15px] last:border-b-0 hover:bg-accent/40"
+            >
+              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[9px] bg-accent text-accent-foreground">
+                <Mail className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-foreground">{row.name}</div>
+                <div className="truncate text-[12.5px] text-muted-foreground">
+                  {row.subjectPreview}
+                </div>
+              </div>
+              <span className="shrink-0 text-xs text-muted-foreground group-hover:hidden">
+                {row.updatedLabel}
+              </span>
+              <div className="hidden shrink-0 gap-1 group-hover:flex">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label="Edit"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(row.id);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex"
+                    >
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label="Delete"
+                        disabled={row.inUse}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete({ id: row.id, name: row.name });
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {row.inUse && (
+                    <TooltipContent side="top">
+                      In use by a sequence or customer — detach it first to delete.
+                    </TooltipContent>
+                  )}
+                </Tooltip>
               </div>
             </div>
-            <span className="shrink-0 text-xs text-muted-foreground group-hover:hidden">
-              {row.updatedLabel}
-            </span>
-            <div className="hidden shrink-0 gap-1 group-hover:flex">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Edit"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(row.id);
-                }}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Duplicate"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDuplicate(row.id);
-                }}
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete({ id: row.id, name: row.name });
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </TooltipProvider>
     </Card>
   );
 }

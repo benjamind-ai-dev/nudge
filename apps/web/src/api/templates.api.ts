@@ -34,7 +34,11 @@ export type UpdateTemplateInput = {
   signature?: string | null;
 };
 
-export function getTemplates(businessId: string): Promise<{ data: Template[] }> {
+export interface TemplateListItem extends Template {
+  inUse: boolean;
+}
+
+export function getTemplates(businessId: string): Promise<{ data: TemplateListItem[] }> {
   return apiClient(`/v1/templates?businessId=${businessId}`);
 }
 
