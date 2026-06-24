@@ -34,6 +34,9 @@ describe("VercelAiTemplateClient", () => {
     expect(anthropic).toHaveBeenCalledWith("claude-sonnet-4-6");
     const call = (generateObject as jest.Mock).mock.calls[0][0];
     expect(call.prompt).toContain("polite first reminder");
+    expect(call.prompt).toContain("<description>");
+    expect(call.prompt).toContain("</description>");
+    expect(call.prompt).not.toContain("Sandra");
     expect(call.system).toBeTruthy();
     expect(call.schema).toBeDefined();
     expect(call.abortSignal).toBeInstanceOf(AbortSignal);
