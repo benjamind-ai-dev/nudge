@@ -10,12 +10,10 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { html, htmlLanguage } from "@codemirror/lang-html";
 import {
-  autocompletion,
-  completionKeymap,
   type CompletionContext,
   type CompletionResult,
 } from "@codemirror/autocomplete";
-import { EditorView, keymap } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
 import { useCallback, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { computeVariableCompletion } from "./variable-completion";
@@ -24,7 +22,7 @@ import { computeVariableCompletion } from "./variable-completion";
 // Variable completion source factory
 // ---------------------------------------------------------------------------
 
-function makeVariableCompletionSource(variables: string[]) {
+export function makeVariableCompletionSource(variables: string[]) {
   return function variableCompletionSource(
     ctx: CompletionContext,
   ): CompletionResult | null {
@@ -137,13 +135,10 @@ export function HtmlVariableEditor({
     () => [
       html({ autoCloseTags: true }),
       // Register variable completion as a language-data source so it MERGES with
-      // HTML's own tag/attribute completions (registered the same way). Using
-      // `override` would shadow HTML completions entirely — don't use override.
+      // HTML's own tag/attribute completions (registered the same way). basicSetup
+      // owns the autocompletion() plugin + completionKeymap (correct precedence,
+      // so Enter/↑/↓/Tab/Esc drive the list) — don't add a second one here.
       htmlLanguage.data.of({ autocomplete: makeVariableCompletionSource(variables) }),
-      autocompletion(), // no override — picks up both language-data sources
-      // basicSetup.autocompletion is off, which also drops the completion keymap;
-      // re-add it so ↑/↓/Enter/Tab/Esc drive the suggestion list.
-      keymap.of(completionKeymap),
       nudgeTheme,
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ "aria-label": ariaLabel ?? "Template field" }),
@@ -175,7 +170,6 @@ export function HtmlVariableEditor({
             foldGutter: false,
             highlightActiveLine: true,
             bracketMatching: false,
-            autocompletion: false, // we supply our own via extensions
             indentOnInput: true,
             closeBrackets: false,
             highlightSelectionMatches: false,
