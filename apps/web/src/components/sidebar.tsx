@@ -6,6 +6,7 @@ import {
   BarChart3,
   Users,
   Send,
+  Mail,
   Settings,
   X,
   type LucideIcon,
@@ -29,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/sequences", label: "Sequences", icon: Send },
+  { to: "/templates", label: "Templates", icon: Mail },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
