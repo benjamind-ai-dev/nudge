@@ -1,23 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { resolveVariables, SAMPLE_DATA } from "./template-editor.view-model";
-
-describe("resolveVariables", () => {
-  it("replaces known tokens with sample values", () => {
-    expect(resolveVariables("Hi {{contact_name}}")).toBe(`Hi ${SAMPLE_DATA.contact_name}`);
-  });
-
-  it("tolerates internal whitespace in tokens", () => {
-    expect(resolveVariables("Inv {{ invoice_number }}")).toBe(`Inv ${SAMPLE_DATA.invoice_number}`);
-  });
-
-  it("leaves unknown tokens literal so authors see typos", () => {
-    expect(resolveVariables("Hi {{frist_name}}")).toBe("Hi {{frist_name}}");
-  });
-});
-
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { vi } from "vitest";
-import { useTemplateEditorViewModel } from "./template-editor.view-model";
+import { resolveVariables, SAMPLE_DATA, useTemplateEditorViewModel } from "./template-editor.view-model";
 
 const navigateMock = vi.fn();
 const createMutateAsync = vi.fn().mockResolvedValue({ data: { id: "t-new" } });
@@ -41,7 +24,28 @@ vi.mock("react-router", async () => {
   return { ...actual, useNavigate: () => navigateMock };
 });
 
+describe("resolveVariables", () => {
+  it("replaces known tokens with sample values", () => {
+    expect(resolveVariables("Hi {{contact_name}}")).toBe(`Hi ${SAMPLE_DATA.contact_name}`);
+  });
+
+  it("tolerates internal whitespace in tokens", () => {
+    expect(resolveVariables("Inv {{ invoice_number }}")).toBe(`Inv ${SAMPLE_DATA.invoice_number}`);
+  });
+
+  it("leaves unknown tokens literal so authors see typos", () => {
+    expect(resolveVariables("Hi {{frist_name}}")).toBe("Hi {{frist_name}}");
+  });
+});
+
 describe("useTemplateEditorViewModel", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Re-establish default resolved values cleared by clearAllMocks
+    createMutateAsync.mockResolvedValue({ data: { id: "t-new" } });
+    updateMutateAsync.mockResolvedValue({ data: { id: "t-1" } });
+  });
+
   it("treats undefined id as new template (empty fields, not saveable)", () => {
     mockTemplate = undefined;
     const { result } = renderHook(() => useTemplateEditorViewModel(undefined));

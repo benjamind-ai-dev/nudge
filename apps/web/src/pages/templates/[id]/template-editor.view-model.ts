@@ -1,3 +1,13 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import {
+  useCreateTemplate,
+  useGenerateTemplate,
+  useTemplate,
+  useUpdateTemplate,
+} from "@/queries/use-templates";
+import { useActiveBusinessId } from "@/lib/hooks/use-active-business-id";
+
 export const SAMPLE_DATA: Record<string, string> = {
   company_name: "Acme Books",
   contact_name: "Jordan",
@@ -18,16 +28,6 @@ export function resolveVariables(
     key in data ? data[key] : match,
   );
 }
-
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import { useActiveBusinessId } from "@/lib/hooks/use-active-business-id";
-import {
-  useCreateTemplate,
-  useGenerateTemplate,
-  useTemplate,
-  useUpdateTemplate,
-} from "@/queries/use-templates";
 
 const PAYMENT_LINK_TOKEN = /\{\{\s*payment_link\s*\}\}/g;
 
@@ -77,9 +77,9 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
         await createMut.mutateAsync({
           businessId,
           name: name.trim(),
-          subject: subject.trim() ? subject : null,
+          subject: subject.trim() ? subject.trim() : null,
           body,
-          signature: signature.trim() ? signature : null,
+          signature: signature.trim() ? signature.trim() : null,
         });
       } else {
         await updateMut.mutateAsync({
@@ -87,9 +87,9 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
           input: {
             businessId,
             name: name.trim(),
-            subject: subject.trim() ? subject : null,
+            subject: subject.trim() ? subject.trim() : null,
             body,
-            signature: signature.trim() ? signature : null,
+            signature: signature.trim() ? signature.trim() : null,
           },
         });
       }
