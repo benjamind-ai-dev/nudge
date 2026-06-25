@@ -96,6 +96,7 @@ export class TemplatesController {
       subject: body.subject ?? null,
       body: body.body,
       signature: body.signature ?? null,
+      smsBody: body.smsBody ?? null,
     });
     return { data };
   }

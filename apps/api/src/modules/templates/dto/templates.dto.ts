@@ -9,6 +9,7 @@ export const createTemplateSchema = z.object({
   subject: z.string().nullable().optional(),
   body: z.string().min(1),
   signature: z.string().nullable().optional(),
+  smsBody: z.string().nullable().optional(),
 });
 
 export type CreateTemplateDto = z.infer<typeof createTemplateSchema>;
@@ -19,6 +20,7 @@ export const updateTemplateSchema = z.object({
   subject: z.string().nullable().optional(),
   body: z.string().min(1).optional(),
   signature: z.string().nullable().optional(),
+  smsBody: z.string().nullable().optional(),
 });
 
 export type UpdateTemplateDto = z.infer<typeof updateTemplateSchema>;

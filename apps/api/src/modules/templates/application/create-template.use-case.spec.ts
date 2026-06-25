@@ -17,7 +17,7 @@ function makeRepo(overrides: Partial<jest.Mocked<TemplateRepository>> = {}) {
 
 describe("CreateTemplateUseCase", () => {
   it("delegates to the repo and returns the created template", async () => {
-    const created = { id: "t1", businessId: "biz-1", name: "X", subject: "S", body: "B", signature: null, createdAt: new Date(), updatedAt: new Date() };
+    const created = { id: "t1", businessId: "biz-1", name: "X", subject: "S", body: "B", signature: null, smsBody: null, createdAt: new Date(), updatedAt: new Date() };
     const repo = makeRepo({ create: jest.fn().mockResolvedValue(created) });
     const uc = new CreateTemplateUseCase(repo);
 
@@ -27,6 +27,7 @@ describe("CreateTemplateUseCase", () => {
       subject: "S",
       body: "B",
       signature: null,
+      smsBody: null,
     });
 
     expect(repo.create).toHaveBeenCalledWith({
@@ -35,6 +36,7 @@ describe("CreateTemplateUseCase", () => {
       subject: "S",
       body: "B",
       signature: null,
+      smsBody: null,
     });
     expect(result).toEqual(created);
   });

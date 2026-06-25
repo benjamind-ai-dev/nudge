@@ -17,6 +17,7 @@ function toDomain(row: {
   subject: string | null;
   body: string;
   signature: string | null;
+  smsBody: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): Template {
@@ -27,6 +28,7 @@ function toDomain(row: {
     subject: row.subject,
     body: row.body,
     signature: row.signature,
+    smsBody: row.smsBody,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -101,6 +103,7 @@ export class PrismaTemplateRepository implements TemplateRepository {
         subject: input.subject,
         body: input.body,
         signature: input.signature,
+        smsBody: input.smsBody ?? null,
       },
     });
     return toDomain(row);

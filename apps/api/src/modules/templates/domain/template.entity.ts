@@ -5,6 +5,7 @@ export interface Template {
   subject: string | null;
   body: string;
   signature: string | null;
+  smsBody: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

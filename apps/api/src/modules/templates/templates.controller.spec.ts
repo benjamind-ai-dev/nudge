@@ -28,6 +28,7 @@ const templateFixture: Template = {
   subject: "Your invoice is due",
   body: "Hi {{contact_name}}, your invoice is due.",
   signature: "The Team",
+  smsBody: null,
   createdAt: new Date("2026-05-20T09:00:00Z"),
   updatedAt: new Date("2026-05-20T09:00:00Z"),
 };
@@ -179,6 +180,7 @@ describe("TemplatesController", () => {
         subject: validBody.subject,
         body: validBody.body,
         signature: validBody.signature,
+        smsBody: null,
       });
     });
 
