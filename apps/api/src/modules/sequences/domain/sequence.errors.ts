@@ -85,3 +85,27 @@ export class TemplateNotInBusinessError extends DomainError {
     this.name = "TemplateNotInBusinessError";
   }
 }
+
+export class SequenceNotActiveError extends DomainError {
+  readonly httpStatus = 409;
+  constructor(public readonly sequenceId: string) {
+    super(`Sequence ${sequenceId} is not active; activate it before enrolling invoices`);
+    this.name = "SequenceNotActiveError";
+  }
+}
+
+export class SequenceHasNoStepsError extends DomainError {
+  readonly httpStatus = 422;
+  constructor(public readonly sequenceId: string) {
+    super(`Sequence ${sequenceId} has no steps; add a step before enrolling invoices`);
+    this.name = "SequenceHasNoStepsError";
+  }
+}
+
+export class CustomerNotInBusinessError extends DomainError {
+  readonly httpStatus = 404;
+  constructor(public readonly customerId: string) {
+    super(`Customer ${customerId} not found in this business`);
+    this.name = "CustomerNotInBusinessError";
+  }
+}
