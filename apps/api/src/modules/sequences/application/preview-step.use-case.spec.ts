@@ -60,6 +60,7 @@ const createMockTemplateService = (): TemplateService => ({
 const createMockTemplateRepo = (overrides: Partial<TemplateRepository> = {}): TemplateRepository => ({
   list: jest.fn(),
   findById: jest.fn().mockResolvedValue(null),
+  isInUse: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
