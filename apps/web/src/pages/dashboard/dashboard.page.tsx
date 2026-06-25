@@ -9,7 +9,7 @@ export function DashboardPage() {
   const vm = useDashboardViewModel();
 
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-6 py-8 lg:px-10">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-6 py-6 lg:px-10">
       <DashboardHeader
         firstName={vm.firstName}
         isSyncing={vm.isSyncing}
@@ -21,8 +21,8 @@ export function DashboardPage() {
         <div
           className={
             vm.syncError
-              ? "rounded-lg border border-[#FFB4AB] bg-[#FFDAD6] px-4 py-3 text-sm text-[#93000A]"
-              : "rounded-lg border border-[#A7F3D0] bg-[#D1FAE5] px-4 py-3 text-sm text-[#065F46]"
+              ? "rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+              : "rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
           }
         >
           {vm.syncError ?? vm.syncMessage}

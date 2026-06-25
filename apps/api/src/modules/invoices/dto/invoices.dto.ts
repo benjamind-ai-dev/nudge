@@ -66,3 +66,13 @@ export const startFollowUpQuerySchema = z.object({
   businessId: z.string().uuid(),
 });
 export type StartFollowUpQuery = z.infer<typeof startFollowUpQuerySchema>;
+
+export const startFollowUpBodySchema = z
+  .object({
+    includePaymentLink: z.boolean().optional(),
+    sendByEmail: z.boolean().optional(),
+    subject: z.string().max(300).optional(),
+    body: z.string().max(10000).optional(),
+  })
+  .optional();
+export type StartFollowUpBody = z.infer<typeof startFollowUpBodySchema>;

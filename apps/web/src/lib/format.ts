@@ -9,3 +9,12 @@ export function formatCents(cents: number): string {
     currency: "USD",
   }).format(cents / 100);
 }
+
+/** Formats cents as whole-dollar currency — no decimals. E.g. 123456 → "$1,235". */
+export function formatDollars(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}

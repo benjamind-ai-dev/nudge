@@ -3,6 +3,8 @@ import { useBusinesses } from "../../queries/use-businesses";
 interface ActiveBusiness {
   /** "" until the businesses list resolves — pair with `enabled: Boolean(id)`. */
   businessId: string;
+  /** The active business's sender name (for email sign-offs); "" until resolved. */
+  senderName: string;
   isLoading: boolean;
   /** The account has more than one business — drives the deferred labeled view. */
   hasMultiple: boolean;
@@ -25,6 +27,7 @@ export function useActiveBusinessId(): ActiveBusiness {
 
   return {
     businessId: active?.id ?? "",
+    senderName: active?.senderName ?? "",
     isLoading,
     hasMultiple: businesses.length > 1,
   };

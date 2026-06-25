@@ -33,6 +33,7 @@ import { GenerateTemplateUseCase } from "./application/generate-template.use-cas
 import { AttachTemplateToCustomerUseCase } from "./application/attach-template-to-customer.use-case";
 import { DetachTemplateFromCustomerUseCase } from "./application/detach-template-from-customer.use-case";
 import type { Template } from "./domain/template.entity";
+import type { TemplateWithUsage } from "./domain/template.repository";
 import type { AiTemplateDraft } from "./application/ports/ai-template.client";
 
 @Controller("v1")
@@ -53,7 +54,7 @@ export class TemplatesController {
   async list(
     @AccountId() clerkUserId: string,
     @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
-  ): Promise<{ data: Template[] }> {
+  ): Promise<{ data: TemplateWithUsage[] }> {
     await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
     const data = await this.listUc.execute({ businessId });
     return { data };

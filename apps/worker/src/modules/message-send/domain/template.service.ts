@@ -1,19 +1,13 @@
 export interface TemplateData {
-  customer: {
-    company_name: string;
-    contact_name: string | null;
-  };
-  invoice: {
-    invoice_number: string | null;
-    amount: string;
-    balance_due: string;
-    due_date: string;
-    days_overdue: number;
-    payment_link: string | null;
-  };
-  business: {
-    sender_name: string;
-  };
+  company_name: string;
+  contact_name: string | null;
+  invoice_number: string | null;
+  amount: string;
+  balance_due: string;
+  due_date: string;
+  days_overdue: number;
+  payment_link: string | null;
+  sender_name: string;
 }
 
 export interface TemplateService {

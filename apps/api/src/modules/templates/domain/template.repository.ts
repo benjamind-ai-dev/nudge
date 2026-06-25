@@ -15,9 +15,12 @@ export interface UpdateTemplateInput {
   signature?: string | null;
 }
 
+export type TemplateWithUsage = Template & { inUse: boolean };
+
 export interface TemplateRepository {
-  list(businessId: string): Promise<Template[]>;
+  list(businessId: string): Promise<TemplateWithUsage[]>;
   findById(id: string, businessId: string): Promise<Template | null>;
+  isInUse(id: string, businessId: string): Promise<boolean>;
   create(input: CreateTemplateInput): Promise<Template>;
   update(
     id: string,

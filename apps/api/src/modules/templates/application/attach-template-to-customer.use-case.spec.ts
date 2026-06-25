@@ -11,6 +11,7 @@ function makeRepo(overrides: Partial<jest.Mocked<TemplateRepository>> = {}) {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    isInUse: jest.fn(),
     attachToCustomer: jest.fn().mockResolvedValue(undefined),
     detachFromCustomer: jest.fn(),
     ...overrides,
