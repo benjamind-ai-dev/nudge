@@ -1,6 +1,6 @@
 import { DeleteSequenceUseCase } from "./delete-sequence.use-case";
 import type { SequenceRepository } from "../domain/sequence.repository";
-import { SequenceInUseError } from "../domain/sequence.errors";
+import { SequenceInUseError, SequenceHasRunsError } from "../domain/sequence.errors";
 
 const createMockRepo = (overrides: Partial<SequenceRepository> = {}): SequenceRepository => ({
   findAllByBusiness: jest.fn(),
@@ -10,6 +10,7 @@ const createMockRepo = (overrides: Partial<SequenceRepository> = {}): SequenceRe
   update: jest.fn(),
   delete: jest.fn().mockResolvedValue(undefined),
   isReferencedByTierOrCustomer: jest.fn().mockResolvedValue(false),
+  hasRuns: jest.fn().mockResolvedValue(false),
   countByBusiness: jest.fn().mockResolvedValue(0),
   countActiveRuns: jest.fn().mockResolvedValue(0),
   replaceSteps: jest.fn(),
@@ -39,6 +40,16 @@ describe("DeleteSequenceUseCase", () => {
     const useCase = new DeleteSequenceUseCase(repo);
 
     await expect(useCase.execute("seq-1", "biz-1")).rejects.toThrow(SequenceInUseError);
+    expect(repo.delete).not.toHaveBeenCalled();
+  });
+
+  it("throws SequenceHasRunsError when the sequence has runs (active or historical)", async () => {
+    const repo = createMockRepo({
+      hasRuns: jest.fn().mockResolvedValue(true),
+    });
+    const useCase = new DeleteSequenceUseCase(repo);
+
+    await expect(useCase.execute("seq-1", "biz-1")).rejects.toThrow(SequenceHasRunsError);
     expect(repo.delete).not.toHaveBeenCalled();
   });
 });

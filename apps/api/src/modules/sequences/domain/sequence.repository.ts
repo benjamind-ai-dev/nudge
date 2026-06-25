@@ -52,6 +52,8 @@ export interface SequenceRepository {
   update(id: string, businessId: string, data: UpdateSequenceData): Promise<SequenceSummary>;
   delete(id: string, businessId: string): Promise<void>;
   isReferencedByTierOrCustomer(id: string, businessId: string): Promise<boolean>;
+  /** True if any run (active or historical) references this sequence — blocks delete (FK Restrict). */
+  hasRuns(id: string, businessId: string): Promise<boolean>;
   countByBusiness(businessId: string): Promise<number>;
   countActiveRuns(sequenceId: string, businessId: string): Promise<number>;
   replaceSteps(id: string, businessId: string, data: ReplaceSequenceData): Promise<SequenceWithSteps>;

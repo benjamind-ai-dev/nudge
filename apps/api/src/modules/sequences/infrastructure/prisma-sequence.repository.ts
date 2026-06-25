@@ -187,6 +187,15 @@ export class PrismaSequenceRepository implements SequenceRepository {
     });
   }
 
+  async hasRuns(id: string, businessId: string): Promise<boolean> {
+    // Any run (active or historical) — SequenceRun.sequence is onDelete: Restrict,
+    // so deleting a sequence with runs fails at the DB. Block it with a clear error.
+    const count = await this.prisma.sequenceRun.count({
+      where: { sequenceId: id, sequence: { businessId } },
+    });
+    return count > 0;
+  }
+
   async replaceSteps(id: string, businessId: string, data: ReplaceSequenceData): Promise<SequenceWithSteps> {
     const existing = await this.prisma.sequence.findFirst({ where: { id, businessId }, select: { id: true } });
     if (!existing) throw new SequenceNotFoundError(id);

@@ -28,6 +28,17 @@ export class SequenceInUseError extends DomainError {
   }
 }
 
+export class SequenceHasRunsError extends DomainError {
+  readonly httpStatus = 409;
+
+  constructor(public readonly sequenceId: string) {
+    super(
+      "This sequence has active or past follow-ups and can't be deleted. Pause it instead.",
+    );
+    this.name = "SequenceHasRunsError";
+  }
+}
+
 export class SequenceHasActiveRunsError extends DomainError {
   readonly httpStatus = 400;
 
