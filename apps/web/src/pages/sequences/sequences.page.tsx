@@ -17,26 +17,28 @@ export function SequencesPage() {
             Follow-up flows that chase your overdue invoices.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Input
-            placeholder="Filter by name…"
-            value={vm.search}
-            onChange={(e) => vm.setSearch(e.target.value)}
-            className="w-56"
-          />
-          <div className="flex gap-1 rounded-lg border p-1">
-            {STATUS_TABS.map((s) => (
-              <Button
-                key={s}
-                size="sm"
-                variant={vm.statusFilter === s ? "secondary" : "ghost"}
-                className="capitalize"
-                onClick={() => vm.setStatusFilter(s)}
-              >
-                {s}
-              </Button>
-            ))}
-          </div>
+        <Button onClick={vm.goToNew}>+ New sequence</Button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Input
+          placeholder="Filter by name…"
+          value={vm.search}
+          onChange={(e) => vm.setSearch(e.target.value)}
+          className="w-56"
+        />
+        <div className="flex gap-1 rounded-lg border p-1">
+          {STATUS_TABS.map((s) => (
+            <Button
+              key={s}
+              size="sm"
+              variant={vm.statusFilter === s ? "secondary" : "ghost"}
+              className="capitalize"
+              onClick={() => vm.setStatusFilter(s)}
+            >
+              {s}
+            </Button>
+          ))}
         </div>
       </div>
 

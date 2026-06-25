@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { useActiveBusinessId } from "@/lib/hooks/use-active-business-id";
 import { useSequences, useDeleteSequence } from "@/queries/use-sequences";
 import type { SequenceSummary } from "@/api/sequences.api";
@@ -20,6 +21,7 @@ function toRow(s: SequenceSummary): SequenceRow {
 
 export function useSequencesViewModel() {
   const { businessId } = useActiveBusinessId();
+  const navigate = useNavigate();
   const { data, isLoading, error } = useSequences(businessId);
   const deleteMut = useDeleteSequence();
 
@@ -54,5 +56,6 @@ export function useSequencesViewModel() {
     search, setSearch, statusFilter, setStatusFilter,
     deleteTarget, requestDelete, cancelDelete, confirmDelete,
     isDeleting: deleteMut.isPending, deleteError,
+    goToNew: () => navigate("/sequences/new"),
   };
 }
