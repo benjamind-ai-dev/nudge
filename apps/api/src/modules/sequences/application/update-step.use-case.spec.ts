@@ -2,11 +2,13 @@ import { PLAN_LIMITS } from "@nudge/shared";
 import { UpdateStepUseCase } from "./update-step.use-case";
 import type { SequenceRepository } from "../domain/sequence.repository";
 import type { SequenceStep } from "../domain/sequence.entity";
-import { SmsNotAvailableOnPlanError } from "../domain/sequence.errors";
+import { SmsNotAvailableOnPlanError, TemplateNotInBusinessError } from "../domain/sequence.errors";
 import type { EntitlementsService } from "../../../common/entitlements/entitlements.service";
+import type { TemplateRepository } from "../../templates/domain/template.repository";
 
 const mkStep = (over: Partial<SequenceStep> = {}): SequenceStep => ({
   id: "step-1",
+  templateId: null,
   stepOrder: 1,
   delayDays: 3,
   channel: "email",
@@ -26,6 +28,12 @@ const makeRepo = (over: Partial<SequenceRepository> = {}): SequenceRepository =>
     ...over,
   }) as unknown as SequenceRepository;
 
+const makeTemplateRepo = (over: Partial<TemplateRepository> = {}): TemplateRepository =>
+  ({
+    findById: jest.fn().mockResolvedValue({ id: "tmpl-1" }),
+    ...over,
+  }) as unknown as TemplateRepository;
+
 const makeEntitlements = (
   over: Partial<EntitlementsService> = {},
 ): EntitlementsService =>
@@ -39,7 +47,7 @@ const makeEntitlements = (
 describe("UpdateStepUseCase", () => {
   it("updates a step (no channel change)", async () => {
     const repo = makeRepo();
-    const useCase = new UpdateStepUseCase(repo, makeEntitlements());
+    const useCase = new UpdateStepUseCase(repo, makeEntitlements(), makeTemplateRepo());
 
     await useCase.execute("step-1", "seq-1", "biz-1", { delayDays: 5 });
     expect(repo.updateStep).toHaveBeenCalledWith("step-1", "seq-1", "biz-1", {
@@ -54,6 +62,7 @@ describe("UpdateStepUseCase", () => {
       makeEntitlements({
         limitsForBusiness: jest.fn().mockResolvedValue(PLAN_LIMITS.starter), // sms: false
       }),
+      makeTemplateRepo(),
     );
 
     await expect(
@@ -64,9 +73,22 @@ describe("UpdateStepUseCase", () => {
 
   it("allows switching to SMS when the plan includes SMS", async () => {
     const repo = makeRepo();
-    const useCase = new UpdateStepUseCase(repo, makeEntitlements()); // growth
+    const useCase = new UpdateStepUseCase(repo, makeEntitlements(), makeTemplateRepo()); // growth
 
     await useCase.execute("step-1", "seq-1", "biz-1", { channel: "email_and_sms" });
     expect(repo.updateStep).toHaveBeenCalled();
+  });
+
+  it("throws TemplateNotInBusinessError when templateId is not in the business", async () => {
+    const repo = makeRepo();
+    const templateRepo = makeTemplateRepo({
+      findById: jest.fn().mockResolvedValue(null), // not found in business
+    });
+    const useCase = new UpdateStepUseCase(repo, makeEntitlements(), templateRepo);
+
+    await expect(
+      useCase.execute("step-1", "seq-1", "biz-1", { templateId: "tmpl-x" }),
+    ).rejects.toThrow(TemplateNotInBusinessError);
+    expect(repo.updateStep).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { SEQUENCE_REPOSITORY, type SequenceRepository } from "../domain/sequence.repository";
 import { TEMPLATE_SERVICE, type TemplateService } from "../../../common/template/template.service";
+import { TEMPLATE_REPOSITORY, type TemplateRepository } from "../../templates/domain/template.repository";
 import { SequenceNotFoundError, SequenceStepNotFoundError } from "../domain/sequence.errors";
 
 export interface PreviewStepResult {
@@ -13,6 +14,7 @@ export class PreviewStepUseCase {
   constructor(
     @Inject(SEQUENCE_REPOSITORY) private readonly repo: SequenceRepository,
     @Inject(TEMPLATE_SERVICE) private readonly templates: TemplateService,
+    @Inject(TEMPLATE_REPOSITORY) private readonly templateRepo: TemplateRepository,
   ) {}
 
   async execute(sequenceId: string, stepId: string, businessId: string): Promise<PreviewStepResult> {
@@ -28,6 +30,16 @@ export class PreviewStepUseCase {
 
     const senderName = await this.repo.findSenderName(businessId);
 
+    let subjectSource = step.subjectTemplate ?? "";
+    let bodySource = step.bodyTemplate;
+    if (step.templateId) {
+      const tmpl = await this.templateRepo.findById(step.templateId, businessId);
+      if (tmpl) {
+        subjectSource = tmpl.subject ?? "";
+        bodySource = tmpl.body;
+      }
+    }
+
     const sampleData: Record<string, string> = {
       company_name: "Acme Corp",
       contact_name: "Jane Smith",
@@ -42,13 +54,13 @@ export class PreviewStepUseCase {
 
     const subject = this.templates.render(
       `step:${stepId}:subject`,
-      step.subjectTemplate ?? "",
+      subjectSource,
       sampleData,
     );
 
     const body = this.templates.render(
       `step:${stepId}:body`,
-      step.bodyTemplate,
+      bodySource,
       sampleData,
     );
 

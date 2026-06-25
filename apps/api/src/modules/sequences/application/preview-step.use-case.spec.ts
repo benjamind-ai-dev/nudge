@@ -2,9 +2,11 @@ import { PreviewStepUseCase } from "./preview-step.use-case";
 import type { SequenceRepository } from "../domain/sequence.repository";
 import type { SequenceWithSteps, SequenceStep } from "../domain/sequence.entity";
 import type { TemplateService } from "../../../common/template/template.service";
+import type { TemplateRepository } from "../../templates/domain/template.repository";
 
 const mkStep = (over: Partial<SequenceStep> = {}): SequenceStep => ({
   id: "step-1",
+  templateId: null,
   stepOrder: 1,
   delayDays: 3,
   channel: "email",
@@ -55,6 +57,18 @@ const createMockTemplateService = (): TemplateService => ({
   render: jest.fn().mockImplementation((_key: string, template: string) => template),
 });
 
+const createMockTemplateRepo = (overrides: Partial<TemplateRepository> = {}): TemplateRepository => ({
+  list: jest.fn(),
+  findById: jest.fn().mockResolvedValue(null),
+  isInUse: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+  attachToCustomer: jest.fn(),
+  detachFromCustomer: jest.fn(),
+  ...overrides,
+});
+
 describe("PreviewStepUseCase", () => {
   it("renders subject and body with sample data and real sender_name", async () => {
     const templateService: TemplateService = {
@@ -63,7 +77,8 @@ describe("PreviewStepUseCase", () => {
         .mockReturnValueOnce("Rendered Body"),
     };
     const repo = createMockRepo();
-    const useCase = new PreviewStepUseCase(repo, templateService);
+    const templateRepo = createMockTemplateRepo();
+    const useCase = new PreviewStepUseCase(repo, templateService, templateRepo);
 
     const result = await useCase.execute("seq-1", "step-1", "biz-1");
 
@@ -92,7 +107,8 @@ describe("PreviewStepUseCase", () => {
         }),
       ),
     });
-    const useCase = new PreviewStepUseCase(repo, realTemplateService);
+    const templateRepo = createMockTemplateRepo();
+    const useCase = new PreviewStepUseCase(repo, realTemplateService, templateRepo);
 
     const result = await useCase.execute("seq-1", "step-1", "biz-1");
 
@@ -104,7 +120,8 @@ describe("PreviewStepUseCase", () => {
     const repo = createMockRepo({
       findSenderName: jest.fn().mockResolvedValue("Custom Sender Name"),
     });
-    const useCase = new PreviewStepUseCase(repo, templateService);
+    const templateRepo = createMockTemplateRepo();
+    const useCase = new PreviewStepUseCase(repo, templateService, templateRepo);
 
     await useCase.execute("seq-1", "step-1", "biz-1");
 
@@ -113,5 +130,33 @@ describe("PreviewStepUseCase", () => {
       expect.any(String),
       expect.objectContaining({ sender_name: "Custom Sender Name" }),
     );
+  });
+
+  it("renders from the attached template when the step has a templateId", async () => {
+    const repo = createMockRepo({
+      findById: jest.fn().mockResolvedValue({
+        id: "seq-1",
+        steps: [{ id: "step-1", templateId: "tmpl-1", subjectTemplate: "INLINE", bodyTemplate: "inline body" }],
+      } as never),
+      findSenderName: jest.fn().mockResolvedValue("Acme"),
+    });
+    const templateRepo = createMockTemplateRepo({
+      findById: jest.fn().mockResolvedValue({
+        id: "tmpl-1", subject: "Invoice {{invoice_number}}", body: "Hi {{contact_name}}",
+      } as never),
+    });
+    const templateService: TemplateService = {
+      render: jest.fn().mockImplementation((_key: string, template: string, data: Record<string, string>) => {
+        return template.replace(/\{\{(\w+)\}\}/g, (_match: string, key: string) => {
+          return key in data ? data[key] : `{{${key}}}`;
+        });
+      }),
+    };
+    const useCase = new PreviewStepUseCase(repo, templateService, templateRepo);
+
+    const result = await useCase.execute("seq-1", "step-1", "biz-1");
+
+    expect(result.subject).toContain("INV-0001"); // from template, not "INLINE"
+    expect(templateRepo.findById).toHaveBeenCalledWith("tmpl-1", "biz-1");
   });
 });

@@ -6,6 +6,29 @@ Frontend tasks that are **designed/wanted but blocked** because the page or surf
 
 ---
 
+## Settings → New-invoice auto-enrollment behavior (+ onboarding explanation)
+**Blocked on:** the Settings page (stub) + a per-business config field (no backend yet).
+**The question (raised during Sequences design):** when a freshly *synced* invoice arrives
+from the provider, what happens to it? **Current behavior (automatic):** the worker
+`trigger-sequences.use-case.ts` periodically finds overdue invoices that have no run and
+auto-starts one, resolving the sequence by `customer.sequenceId` override → customer's tier
+sequence → default tier sequence → any active sequence. So **new invoices silently enter a
+follow-up sequence once overdue** — the business never opts in per-invoice.
+**Why it matters:** (a) users may be surprised/worried that Nudge starts emailing their
+clients automatically; (b) it interacts with the **Part 2 "attach specific invoices"** flow —
+if someone hand-picks invoices for a sequence, the auto-trigger may still enroll *other* new
+invoices via the default tier. Need a clear, configurable story.
+**To build when Settings exists:**
+- A business-level **auto-enroll toggle/policy** (e.g. "Automatically start follow-ups on new
+  overdue invoices: on / off / only for customers in a tier"). Needs a new backend field on
+  Business + the worker `trigger-sequences` resolution to honor it.
+- **Onboarding:** explain the auto-follow-up default up front (and let them turn it off from
+  scratch) so no one is blindsided. May require changing the onboarding flow to surface this.
+- Decide precedence: explicit per-invoice/customer attachment vs. the auto-default — which wins.
+**Seam now:** sequence selection lives in `apps/worker/.../sequence-trigger/` (worker) and
+`apps/api/.../invoices/application/start-follow-up.use-case.ts` (manual start). Both resolve
+sequence the same way; a config gate would live at those resolution points.
+
 ## Settings → Business profile edit page
 **Blocked on:** the Settings page (currently a stub: `apps/web/src/pages/settings.tsx` returns `<h1>Settings</h1>`).
 **Backend: ready** — `PATCH /v1/businesses/:id` (`business.controller.ts`) accepts `name`, `senderName`, `senderEmail`, `emailSignature` (nullable), `timezone` (IANA), all optional.

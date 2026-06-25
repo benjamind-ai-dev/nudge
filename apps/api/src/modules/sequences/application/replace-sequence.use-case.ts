@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { SEQUENCE_REPOSITORY, type SequenceRepository, type CreateStepData } from "../domain/sequence.repository";
 import { RELATIONSHIP_TIER_REPOSITORY, type RelationshipTierRepository } from "../../relationship-tiers/domain/relationship-tier.repository";
+import { TEMPLATE_REPOSITORY, type TemplateRepository } from "../../templates/domain/template.repository";
 import { MAX_STEPS_PER_SEQUENCE, channelUsesSms, type SequenceWithSteps } from "../domain/sequence.entity";
 import {
   SequenceNotFoundError,
@@ -8,6 +9,7 @@ import {
   StepLimitReachedError,
   InvalidStepOrderError,
   SmsNotAvailableOnPlanError,
+  TemplateNotInBusinessError,
 } from "../domain/sequence.errors";
 import { RelationshipTierNotFoundError } from "../../relationship-tiers/domain/relationship-tier.errors";
 import { EntitlementsService } from "../../../common/entitlements/entitlements.service";
@@ -24,6 +26,7 @@ export class ReplaceSequenceUseCase {
     @Inject(SEQUENCE_REPOSITORY) private readonly repo: SequenceRepository,
     @Inject(RELATIONSHIP_TIER_REPOSITORY) private readonly tierRepo: RelationshipTierRepository,
     private readonly entitlements: EntitlementsService,
+    @Inject(TEMPLATE_REPOSITORY) private readonly templateRepo: TemplateRepository,
   ) {}
 
   async execute(id: string, businessId: string, input: ReplaceSequenceInput): Promise<SequenceWithSteps> {
@@ -50,6 +53,12 @@ export class ReplaceSequenceUseCase {
 
     if (input.relationshipTierId) {
       await this.assertTierBelongsToBusiness(input.relationshipTierId, businessId);
+    }
+
+    const templateIds = [...new Set(input.steps.map((s) => s.templateId).filter((id): id is string => !!id))];
+    for (const templateId of templateIds) {
+      const tmpl = await this.templateRepo.findById(templateId, businessId);
+      if (!tmpl) throw new TemplateNotInBusinessError(templateId);
     }
 
     return this.repo.replaceSteps(id, businessId, {

@@ -6,6 +6,7 @@ export const businessIdQuerySchema = z.string().uuid();
 export type BusinessIdQuery = z.infer<typeof businessIdQuerySchema>;
 
 const stepSchema = z.object({
+  templateId: z.string().uuid().nullable().optional(),
   stepOrder: z.number().int().min(1),
   delayDays: z.number().int().min(0),
   channel: channelSchema,
@@ -41,6 +42,7 @@ export const updateSequenceSchema = z.object({
 export type UpdateSequenceDto = z.infer<typeof updateSequenceSchema>;
 
 export const addStepSchema = z.object({
+  templateId: z.string().uuid().nullable().optional(),
   stepOrder: z.number().int().min(1),
   delayDays: z.number().int().min(0),
   channel: channelSchema,
@@ -53,6 +55,7 @@ export const addStepSchema = z.object({
 export type AddStepDto = z.infer<typeof addStepSchema>;
 
 export const updateStepSchema = z.object({
+  templateId: z.string().uuid().nullable().optional(),
   stepOrder: z.number().int().min(1).optional(),
   delayDays: z.number().int().min(0).optional(),
   channel: channelSchema.optional(),

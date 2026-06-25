@@ -76,3 +76,12 @@ export class SmsNotAvailableOnPlanError extends DomainError {
     this.name = "SmsNotAvailableOnPlanError";
   }
 }
+
+export class TemplateNotInBusinessError extends DomainError {
+  readonly httpStatus = 422;
+
+  constructor(public readonly templateId: string) {
+    super(`Template ${templateId} does not belong to this business`);
+    this.name = "TemplateNotInBusinessError";
+  }
+}

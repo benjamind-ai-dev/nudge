@@ -15,6 +15,7 @@ import { SequenceNotFoundError, SequenceStepNotFoundError } from "../domain/sequ
 
 const STEP_SELECT = {
   id: true,
+  templateId: true,
   stepOrder: true,
   delayDays: true,
   channel: true,
@@ -48,6 +49,7 @@ const SUMMARY_SELECT = {
 
 function toStep(row: {
   id: string;
+  templateId: string | null;
   stepOrder: number;
   delayDays: number;
   channel: string;
@@ -61,6 +63,7 @@ function toStep(row: {
 }): SequenceStep {
   return {
     id: row.id,
+    templateId: row.templateId,
     stepOrder: row.stepOrder,
     delayDays: row.delayDays,
     channel: row.channel as SequenceStep["channel"],
@@ -151,6 +154,7 @@ export class PrismaSequenceRepository implements SequenceRepository {
         ...(data.relationshipTierId !== undefined && { relationshipTierId: data.relationshipTierId }),
         steps: {
           create: data.steps.map((s) => ({
+            templateId: s.templateId ?? null,
             stepOrder: s.stepOrder,
             delayDays: s.delayDays,
             channel: s.channel,
@@ -196,6 +200,7 @@ export class PrismaSequenceRepository implements SequenceRepository {
           ...(data.relationshipTierId !== undefined && { relationshipTierId: data.relationshipTierId }),
           steps: {
             create: data.steps.map((s) => ({
+              templateId: s.templateId ?? null,
               stepOrder: s.stepOrder,
               delayDays: s.delayDays,
               channel: s.channel,
@@ -263,6 +268,7 @@ export class PrismaSequenceRepository implements SequenceRepository {
     const row = await this.prisma.sequenceStep.create({
       data: {
         sequenceId,
+        templateId: data.templateId ?? null,
         stepOrder: data.stepOrder,
         delayDays: data.delayDays,
         channel: data.channel,
@@ -286,6 +292,7 @@ export class PrismaSequenceRepository implements SequenceRepository {
     await this.prisma.sequenceStep.updateMany({
       where: { id: stepId, sequenceId },
       data: {
+        ...(data.templateId !== undefined && { templateId: data.templateId }),
         ...(data.stepOrder !== undefined && { stepOrder: data.stepOrder }),
         ...(data.delayDays !== undefined && { delayDays: data.delayDays }),
         ...(data.channel !== undefined && { channel: data.channel }),
