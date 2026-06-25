@@ -30,7 +30,7 @@ interface StepListEditorProps {
   onDelay: (key: string, days: number) => void;
   onToggleOwnerAlert: (key: string) => void;
   onTogglePaymentLink: (key: string) => void;
-  onSms: (key: string, body: string) => void;
+  onSms?: (key: string, body: string) => void;
 }
 
 export function StepListEditor({
@@ -176,8 +176,8 @@ export function StepListEditor({
                   </Label>
                   <Textarea
                     id={`sms-${step.key}`}
-                    value={step.smsBodyTemplate}
-                    onChange={(e) => onSms(step.key, e.target.value)}
+                    value={(step as unknown as { smsBodyTemplate?: string }).smsBodyTemplate ?? ""}
+                    onChange={(e) => onSms?.(step.key, e.target.value)}
                     placeholder="Enter SMS message…"
                     rows={3}
                   />

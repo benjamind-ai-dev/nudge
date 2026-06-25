@@ -31,7 +31,7 @@ export function SequenceEditorPage() {
           steps={vm.steps} templates={vm.templates} hasNoTemplates={vm.hasNoTemplates}
           onAdd={vm.addStep} onRemove={vm.removeStep} onMove={vm.moveStep}
           onTemplate={vm.setStepTemplate} onChannel={vm.setStepChannel} onDelay={vm.setStepDelay}
-          onToggleOwnerAlert={vm.toggleOwnerAlert} onTogglePaymentLink={vm.togglePaymentLink} onSms={vm.setStepSms}
+          onToggleOwnerAlert={vm.toggleOwnerAlert} onTogglePaymentLink={vm.togglePaymentLink}
         />
       </div>
 

@@ -60,7 +60,7 @@ describe("useSequenceEditorViewModel", () => {
     await act(async () => { await result.current.save(); });
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
       businessId: "biz-1", name: "Standard",
-      steps: [expect.objectContaining({ stepOrder: 1, templateId: "t1", bodyTemplate: "Reminder body", subjectTemplate: "Reminder subj", channel: "email", delayDays: 0 })],
+      steps: [expect.objectContaining({ stepOrder: 1, templateId: "t1", bodyTemplate: "Reminder body", subjectTemplate: "Reminder subj", channel: "email", delayDays: 0, smsBodyTemplate: null })],
     }));
     expect(navigate).toHaveBeenCalledWith("/sequences");
   });
@@ -78,5 +78,45 @@ describe("useSequenceEditorViewModel", () => {
     mockTemplates.mockReturnValue({ data: { data: [] }, isLoading: false });
     const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
     expect(result.current.hasNoTemplates).toBe(true);
+  });
+
+  it("seeded step is active; adding a step makes the new one active", () => {
+    const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
+    const first = result.current.rows[0];
+    expect(first.isActive).toBe(true);
+    expect(first.index).toBe(0);
+    act(() => result.current.addStep());
+    const rows = result.current.rows;
+    expect(rows).toHaveLength(2);
+    expect(rows[1].isActive).toBe(true);   // new step active
+    expect(rows[0].isActive).toBe(false);  // first collapsed
+  });
+
+  it("computes cumulative display day from delays", () => {
+    const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
+    act(() => result.current.setStepTemplate(result.current.rows[0].step.key, "t1"));
+    act(() => result.current.setStepDelay(result.current.rows[0].step.key, 0));
+    act(() => result.current.addStep());
+    act(() => result.current.setStepDelay(result.current.rows[1].step.key, 3));
+    act(() => result.current.addStep());
+    act(() => result.current.setStepDelay(result.current.rows[2].step.key, 4));
+    expect(result.current.rows.map((r) => r.displayDay)).toEqual([0, 3, 7]);
+  });
+
+  it("doneStep collapses the active complete step; editStep re-expands", () => {
+    const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
+    const k = result.current.rows[0].step.key;
+    act(() => result.current.setStepTemplate(k, "t1"));
+    act(() => result.current.doneStep());
+    expect(result.current.rows[0].isActive).toBe(false);
+    act(() => result.current.editStep(k));
+    expect(result.current.rows[0].isActive).toBe(true);
+  });
+
+  it("isComplete reflects whether a template is chosen", () => {
+    const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
+    expect(result.current.rows[0].isComplete).toBe(false);
+    act(() => result.current.setStepTemplate(result.current.rows[0].step.key, "t1"));
+    expect(result.current.rows[0].isComplete).toBe(true);
   });
 });
