@@ -184,6 +184,20 @@ describe("TemplatesController", () => {
       });
     });
 
+    it("passes smsBody through to the use case and returns it in the response", async () => {
+      const smsBody = "Pay {{invoice_number}}: {{payment_link}}";
+      const withSms = { ...templateFixture, smsBody };
+      createUc.execute.mockResolvedValue(withSms);
+
+      const res = await request(app.getHttpServer())
+        .post("/v1/templates")
+        .send({ ...validBody, smsBody })
+        .expect(201);
+
+      expect(createUc.execute).toHaveBeenCalledWith(expect.objectContaining({ smsBody }));
+      expect(res.body.data.smsBody).toBe(smsBody);
+    });
+
     it("returns 400 when body is missing required fields", async () => {
       await request(app.getHttpServer())
         .post("/v1/templates")
