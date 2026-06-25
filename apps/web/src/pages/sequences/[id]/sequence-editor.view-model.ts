@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useActiveBusinessId } from "@/lib/hooks/use-active-business-id";
 import { useCreateSequence } from "@/queries/use-sequences";
@@ -33,18 +33,12 @@ export function useSequenceEditorViewModel() {
   const createMut = useCreateSequence();
 
   const [name, setName] = useState("");
-  // Start with one empty step so the editor isn't blank — the user fills it in
-  // rather than having to click "Add step" for the first one.
-  const [steps, setSteps] = useState<DraftStep[]>(() => {
-    const seeded = newStep();
-    return [seeded];
-  });
-  const [activeStepKey, setActiveStepKey] = useState<string | null>(() => {
-    // Initialize to the seeded step's key — but since useState initializer runs
-    // independently, we capture by synchronizing with steps init below.
-    // We use a module-level trick: SEQ was incremented in newStep(), so the key is `s${SEQ}`.
-    return `s${SEQ}`;
-  });
+  // Seed once via a ref so both useState calls derive from the same newStep() call,
+  // with no reliance on SEQ ordering or lazy-initializer sequencing.
+  const seededRef = useRef<DraftStep[] | null>(null);
+  if (!seededRef.current) seededRef.current = [newStep()];
+  const [steps, setSteps] = useState<DraftStep[]>(seededRef.current);
+  const [activeStepKey, setActiveStepKey] = useState<string | null>(seededRef.current[0].key);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ name?: string; steps?: string }>({});
 
@@ -61,7 +55,7 @@ export function useSequenceEditorViewModel() {
   function addStep() {
     if (steps.length >= 10) return;
     const step = newStep();
-    setSteps((p) => (p.length >= 10 ? p : [...p, step]));
+    setSteps((p) => [...p, step]);
     setActiveStepKey(step.key);
   }
   function removeStep(key: string) {
@@ -96,11 +90,10 @@ export function useSequenceEditorViewModel() {
     let cumulative = 0;
     return steps.map((step, index) => {
       cumulative += step.delayDays;
-      const displayDay = index === 0 ? 0 : cumulative;
       return {
         step,
         index,
-        displayDay,
+        displayDay: cumulative,
         isActive: step.key === activeStepKey,
         isComplete: isStepComplete(step),
       };
