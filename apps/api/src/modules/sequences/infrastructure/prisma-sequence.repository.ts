@@ -40,8 +40,11 @@ const SUMMARY_SELECT = {
     select: {
       steps: true,
       runs: { where: { status: SEQUENCE_RUN_STATUSES.ACTIVE } },
+      tiersUsingAsDefault: true,
+      customersUsingAsOverride: true,
     },
   },
+  runs: { select: { id: true }, take: 1 },
   relationshipTier: {
     select: { id: true, name: true },
   },
@@ -84,16 +87,24 @@ function toSummary(row: {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-  _count: { steps: number; runs: number };
+  _count: { steps: number; runs: number; tiersUsingAsDefault: number; customersUsingAsOverride: number };
+  runs: { id: string }[];
   relationshipTier: { id: string; name: string } | null;
 }): SequenceSummary {
+  const activeRuns = row._count.runs;
+  const hasAnyRun = row.runs.length > 0;
+  const assigned = row._count.tiersUsingAsDefault > 0 || row._count.customersUsingAsOverride > 0;
+  const inUseReason: SequenceSummary["inUseReason"] =
+    activeRuns > 0 ? "running" : assigned ? "assigned" : hasAnyRun ? "history" : null;
   return {
     id: row.id,
     businessId: row.businessId,
     name: row.name,
     isActive: row.isActive,
     stepCount: row._count.steps,
-    activeRuns: row._count.runs,
+    activeRuns,
+    inUse: inUseReason !== null,
+    inUseReason,
     relationshipTier: row.relationshipTier
       ? { id: row.relationshipTier.id, name: row.relationshipTier.name }
       : null,

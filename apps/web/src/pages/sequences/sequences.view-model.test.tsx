@@ -20,7 +20,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 const seq = (o: Partial<any> = {}) => ({
   id: "s1", businessId: "biz-1", name: "Standard reminders", isActive: true,
   stepCount: 4, activeRuns: 12, relationshipTier: { id: "t1", name: "Default" },
-  createdAt: "", updatedAt: "", ...o,
+  createdAt: "", updatedAt: "", inUse: false, inUseReason: null, ...o,
 });
 
 beforeEach(() => { mockUseSequences.mockReset(); mockDelete.mockReset(); });
@@ -63,5 +63,27 @@ describe("useSequencesViewModel", () => {
     mockUseSequences.mockReturnValue({ data: undefined, isLoading: false, error: new Error("boom") });
     const { result } = renderHook(useSequencesViewModel, { wrapper });
     expect(result.current.error).toBe("boom");
+  });
+
+  it("maps inUse:true + inUseReason:'running' to inUse row field and running reason text", () => {
+    mockUseSequences.mockReturnValue({
+      data: { data: [seq({ inUse: true, inUseReason: "running" })] },
+      isLoading: false, error: null,
+    });
+    const { result } = renderHook(useSequencesViewModel, { wrapper });
+    expect(result.current.rows[0].inUse).toBe(true);
+    expect(result.current.rows[0].deleteBlockedReason).toBe(
+      "Invoices are running this sequence — stop them before deleting.",
+    );
+  });
+
+  it("maps inUse:false to deleteBlockedReason null", () => {
+    mockUseSequences.mockReturnValue({
+      data: { data: [seq({ inUse: false, inUseReason: null })] },
+      isLoading: false, error: null,
+    });
+    const { result } = renderHook(useSequencesViewModel, { wrapper });
+    expect(result.current.rows[0].inUse).toBe(false);
+    expect(result.current.rows[0].deleteBlockedReason).toBeNull();
   });
 });

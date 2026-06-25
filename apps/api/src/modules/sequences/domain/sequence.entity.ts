@@ -30,6 +30,8 @@ export interface SequenceSummary {
   isActive: boolean;
   stepCount: number;
   activeRuns: number;
+  inUse: boolean;
+  inUseReason: "running" | "assigned" | "history" | null;
   relationshipTier: { id: string; name: string } | null;
   createdAt: Date;
   updatedAt: Date;

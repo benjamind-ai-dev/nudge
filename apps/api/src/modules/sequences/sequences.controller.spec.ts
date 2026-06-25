@@ -33,6 +33,8 @@ const summary: SequenceSummary = {
   isActive: true,
   stepCount: 2,
   activeRuns: 0,
+  inUse: false,
+  inUseReason: null,
   relationshipTier: null,
   createdAt: new Date("2026-05-20T09:00:00Z"),
   updatedAt: new Date("2026-05-20T09:00:00Z"),
