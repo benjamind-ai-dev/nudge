@@ -2,7 +2,7 @@ import { PLAN_LIMITS } from "@nudge/shared";
 import { AddStepUseCase } from "./add-step.use-case";
 import type { SequenceRepository } from "../domain/sequence.repository";
 import type { SequenceWithSteps, SequenceStep } from "../domain/sequence.entity";
-import { StepLimitReachedError, SmsNotAvailableOnPlanError, TemplateNotInBusinessError } from "../domain/sequence.errors";
+import { StepLimitReachedError, SmsNotAvailableOnPlanError, TemplateNotInBusinessError, SequenceHasActiveRunsError } from "../domain/sequence.errors";
 import type { EntitlementsService } from "../../../common/entitlements/entitlements.service";
 import type { TemplateRepository } from "../../templates/domain/template.repository";
 
@@ -158,5 +158,18 @@ describe("AddStepUseCase", () => {
         bodyTemplate: "Hi",
       }),
     ).rejects.toThrow(TemplateNotInBusinessError);
+  });
+
+  it("throws SequenceHasActiveRunsError when the sequence has active runs", async () => {
+    const repo = createMockRepo({
+      findById: jest.fn().mockResolvedValue({ id: "seq-1", steps: [], businessId: "biz-1" } as never),
+      countActiveRuns: jest.fn().mockResolvedValue(3),
+    });
+    const useCase = new AddStepUseCase(repo, makeEntitlements(), createMockTemplateRepo());
+
+    await expect(
+      useCase.execute("seq-1", "biz-1", { stepOrder: 1, delayDays: 0, channel: "email", bodyTemplate: "Hi" }),
+    ).rejects.toThrow(SequenceHasActiveRunsError);
+    expect(repo.addStep).not.toHaveBeenCalled();
   });
 });

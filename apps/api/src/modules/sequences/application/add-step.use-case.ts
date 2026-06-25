@@ -3,6 +3,7 @@ import { SEQUENCE_REPOSITORY, type SequenceRepository, type CreateStepData } fro
 import { MAX_STEPS_PER_SEQUENCE, channelUsesSms, type SequenceStep } from "../domain/sequence.entity";
 import {
   SequenceNotFoundError,
+  SequenceHasActiveRunsError,
   StepLimitReachedError,
   SmsNotAvailableOnPlanError,
   TemplateNotInBusinessError,
@@ -22,6 +23,11 @@ export class AddStepUseCase {
     const sequence = await this.repo.findById(sequenceId, businessId);
     if (!sequence) {
       throw new SequenceNotFoundError(sequenceId);
+    }
+
+    const activeRuns = await this.repo.countActiveRuns(sequenceId, businessId);
+    if (activeRuns > 0) {
+      throw new SequenceHasActiveRunsError(sequenceId);
     }
 
     if (sequence.steps.length >= MAX_STEPS_PER_SEQUENCE) {
