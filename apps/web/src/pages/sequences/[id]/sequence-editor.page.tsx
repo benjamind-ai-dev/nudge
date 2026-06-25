@@ -1,5 +1,5 @@
 import { useSequenceEditorViewModel } from "./sequence-editor.view-model";
-import { StepListEditor } from "@/components/sequences/step-list-editor";
+import { StepSpineEditor } from "@/components/sequences/step-spine-editor";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -27,9 +27,9 @@ export function SequenceEditorPage() {
       <div className="space-y-2">
         <Label>Steps</Label>
         {vm.errors.steps && <p className="text-sm text-destructive">{vm.errors.steps}</p>}
-        <StepListEditor
-          steps={vm.steps} templates={vm.templates} hasNoTemplates={vm.hasNoTemplates}
-          onAdd={vm.addStep} onRemove={vm.removeStep} onMove={vm.moveStep}
+        <StepSpineEditor
+          rows={vm.rows} templates={vm.templates} hasNoTemplates={vm.hasNoTemplates}
+          onAdd={vm.addStep} onEdit={vm.editStep} onDone={vm.doneStep} onRemove={vm.removeStep}
           onTemplate={vm.setStepTemplate} onChannel={vm.setStepChannel} onDelay={vm.setStepDelay}
           onToggleOwnerAlert={vm.toggleOwnerAlert} onTogglePaymentLink={vm.togglePaymentLink}
         />
