@@ -12,6 +12,8 @@ const mkSummary = (over: Partial<SequenceSummary> = {}): SequenceSummary => ({
   isActive: true,
   stepCount: 3,
   activeRuns: 0,
+  inUse: false,
+  inUseReason: null,
   relationshipTier: null,
   createdAt: new Date("2026-01-01"),
   updatedAt: new Date("2026-01-01"),

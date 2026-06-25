@@ -39,6 +39,8 @@ const mkWithSteps = (steps: SequenceStep[]): SequenceWithSteps => ({
   isActive: true,
   stepCount: steps.length,
   activeRuns: 0,
+  inUse: false,
+  inUseReason: null,
   relationshipTier: null,
   steps,
   createdAt: new Date("2026-01-01"),

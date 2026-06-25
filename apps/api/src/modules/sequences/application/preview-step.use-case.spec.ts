@@ -27,6 +27,8 @@ const mkWithSteps = (over: Partial<SequenceWithSteps> = {}): SequenceWithSteps =
   isActive: true,
   stepCount: 1,
   activeRuns: 0,
+  inUse: false,
+  inUseReason: null,
   relationshipTier: null,
   steps: [mkStep()],
   createdAt: new Date("2026-01-01"),
