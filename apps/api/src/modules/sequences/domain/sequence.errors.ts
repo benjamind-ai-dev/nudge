@@ -101,3 +101,11 @@ export class SequenceHasNoStepsError extends DomainError {
     this.name = "SequenceHasNoStepsError";
   }
 }
+
+export class CustomerNotInBusinessError extends DomainError {
+  readonly httpStatus = 404;
+  constructor(public readonly customerId: string) {
+    super(`Customer ${customerId} not found in this business`);
+    this.name = "CustomerNotInBusinessError";
+  }
+}
