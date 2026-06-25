@@ -15,7 +15,12 @@ describe("STOPPED_REASONS", () => {
       MANUALLY_STOPPED: "manual_stop",
       SUBSCRIPTION_CANCELLED: "subscription_cancelled",
       EMAIL_BOUNCED: "email_bounced",
+      REASSIGNED: "reassigned",
     });
+  });
+
+  it("exposes the reassigned stopped reason", () => {
+    expect(STOPPED_REASONS.REASSIGNED).toBe("reassigned");
   });
 
   it("StoppedReason union covers every value", () => {
@@ -26,8 +31,9 @@ describe("STOPPED_REASONS", () => {
       "manual_stop",
       "subscription_cancelled",
       "email_bounced",
+      "reassigned",
     ];
-    expect(values).toHaveLength(6);
+    expect(values).toHaveLength(7);
   });
 });
 

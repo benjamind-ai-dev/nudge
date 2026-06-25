@@ -5,6 +5,7 @@ export const STOPPED_REASONS = {
   MANUALLY_STOPPED: "manual_stop",
   SUBSCRIPTION_CANCELLED: "subscription_cancelled",
   EMAIL_BOUNCED: "email_bounced",
+  REASSIGNED: "reassigned",
 } as const;
 
 export type StoppedReason =
