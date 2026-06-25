@@ -57,13 +57,25 @@ Email history + Next step blocks in the expanded row are still placeholders ("No
 yet") — waiting on a BE field to expose them (see spec for detail).
 
 ## Sequences editor UI
-**Blocked on:** nothing technical — the page is a stub
-(`apps/web/src/pages/sequences.tsx` returns `<h1>Sequences</h1>`).
-**Backend: ready** — full CRUD: list/get/create/update/delete sequences; add/update/
-delete/reorder steps (subject, body, channel, delay); `POST /v1/sequences/:id/steps/:stepId/preview`.
-**To build:** sequences list + sequence editor (steps, channels, delays, template
-text) wired to the sequences API. Lets users change their follow-up sequences after
-the Get Paid one-click start uses the default.
+**Part 3 (LIST) DONE — 2026-06-25 (feat/sequences-list-fe).** `/sequences` now a real
+filterable table (name+tier, steps, status, active runs) with delete (409 in-use guarded),
+replacing the stub. Backend Parts 1+2 merged (templateId on steps + active-runs structure
+lock; `POST /v1/sequences/:id/enroll` + `:id/attach-customer`). Spec/plans under
+`docs/superpowers/` (local, gitignored).
+**Still deferred:**
+- **List mini-spine sparkline + $ total** — needs a BE addition: a compact `stepsPreview`
+  (per-step channel + delayDays) and a running-total amount on `SequenceSummary` /
+  `GET /v1/sequences`. The list currently shows step **count** only. When that BE field
+  lands, render the escalation-gradient sparkline in the table's flow column.
+- **"New sequence" button + row→detail navigation** — wire into the list page when the
+  targets exist: Part 4 (create, `/sequences/new`) adds the New button; Part 5 (detail map
+  + Audience tab, `/sequences/:id`) makes rows clickable. (Left out now to avoid 404s.)
+- **Part 4 — Create page** (`/sequences/new`): name + step track + per-step template
+  picker + inline audience picker (enroll specific invoices / attach whole customer via the
+  Part 2 enroll/attach-customer endpoints).
+- **Part 5 — Detail map + Audience tab** (`/sequences/:id`): horizontal escalation-spine
+  map (step→template, parked runs, drag-reorder, active-runs structure lock UI) + Audience
+  tab (persistent attach picker, add/remove). See design spec for the visual language.
 
 ## Templates editor UI
 **DONE — built 2026-06-24 (Part 1, feat/email-templates branch).**
