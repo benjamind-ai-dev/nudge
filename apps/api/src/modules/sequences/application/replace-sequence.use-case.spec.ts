@@ -80,7 +80,7 @@ const createMockTierRepo = (overrides: Partial<RelationshipTierRepository> = {})
 
 describe("ReplaceSequenceUseCase", () => {
   it("replaces sequence name, tier, and steps on happy path", async () => {
-    const result = mkWithSteps({ name: "Updated", steps: [{ id: "step-1", stepOrder: 1, delayDays: 1, channel: "email", subjectTemplate: null, bodyTemplate: "Body", smsBodyTemplate: null, isOwnerAlert: false, includePaymentLink: false, createdAt: new Date(), updatedAt: new Date() }] });
+    const result = mkWithSteps({ name: "Updated", steps: [{ id: "step-1", templateId: null, stepOrder: 1, delayDays: 1, channel: "email", subjectTemplate: null, bodyTemplate: "Body", smsBodyTemplate: null, isOwnerAlert: false, includePaymentLink: false, createdAt: new Date(), updatedAt: new Date() }] });
     const repo = createMockRepo({ replaceSteps: jest.fn().mockResolvedValue(result) });
     const tierRepo = createMockTierRepo();
     const useCase = new ReplaceSequenceUseCase(repo, tierRepo, makeEntitlements());

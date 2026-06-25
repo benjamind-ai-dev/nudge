@@ -7,6 +7,7 @@ import type { EntitlementsService } from "../../../common/entitlements/entitleme
 
 const mkStep = (over: Partial<SequenceStep> = {}): SequenceStep => ({
   id: "step-1",
+  templateId: null,
   stepOrder: 1,
   delayDays: 3,
   channel: "email",

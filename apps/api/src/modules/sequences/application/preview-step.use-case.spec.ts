@@ -5,6 +5,7 @@ import type { TemplateService } from "../../../common/template/template.service"
 
 const mkStep = (over: Partial<SequenceStep> = {}): SequenceStep => ({
   id: "step-1",
+  templateId: null,
   stepOrder: 1,
   delayDays: 3,
   channel: "email",

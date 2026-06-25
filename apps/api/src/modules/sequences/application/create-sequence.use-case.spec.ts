@@ -95,7 +95,7 @@ describe("CreateSequenceUseCase", () => {
   });
 
   it("creates a sequence with steps when steps are provided", async () => {
-    const resultWithSteps = mkWithSteps({ steps: [{ id: "s1", stepOrder: 1, delayDays: 1, channel: "email", subjectTemplate: null, bodyTemplate: "Body", smsBodyTemplate: null, isOwnerAlert: false, includePaymentLink: false, createdAt: new Date(), updatedAt: new Date() }] });
+    const resultWithSteps = mkWithSteps({ steps: [{ id: "s1", templateId: null, stepOrder: 1, delayDays: 1, channel: "email", subjectTemplate: null, bodyTemplate: "Body", smsBodyTemplate: null, isOwnerAlert: false, includePaymentLink: false, createdAt: new Date(), updatedAt: new Date() }] });
     const repo = createMockRepo({ createWithSteps: jest.fn().mockResolvedValue(resultWithSteps) });
     const tierRepo = createMockTierRepo();
     const useCase = new CreateSequenceUseCase(repo, tierRepo, makeEntitlements());

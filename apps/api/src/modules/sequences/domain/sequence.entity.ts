@@ -10,6 +10,7 @@ export function channelUsesSms(channel: Channel): boolean {
 
 export interface SequenceStep {
   id: string;
+  templateId: string | null;
   stepOrder: number;
   delayDays: number;
   channel: Channel;

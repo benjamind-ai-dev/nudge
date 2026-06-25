@@ -15,6 +15,7 @@ export interface UpdateSequenceData {
 }
 
 export interface CreateStepData {
+  templateId?: string | null;
   stepOrder: number;
   delayDays: number;
   channel: Channel;
@@ -26,6 +27,7 @@ export interface CreateStepData {
 }
 
 export interface UpdateStepData {
+  templateId?: string | null;
   stepOrder?: number;
   delayDays?: number;
   channel?: Channel;

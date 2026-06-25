@@ -41,6 +41,7 @@ const sequenceWithSteps: SequenceWithSteps = {
   steps: [
     {
       id: STEP_ID,
+      templateId: null,
       stepOrder: 1,
       delayDays: 0,
       channel: "email",
