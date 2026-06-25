@@ -5,14 +5,17 @@ import {
   SequenceNotFoundError,
   StepLimitReachedError,
   SmsNotAvailableOnPlanError,
+  TemplateNotInBusinessError,
 } from "../domain/sequence.errors";
 import { EntitlementsService } from "../../../common/entitlements/entitlements.service";
+import { TEMPLATE_REPOSITORY, type TemplateRepository } from "../../templates/domain/template.repository";
 
 @Injectable()
 export class AddStepUseCase {
   constructor(
     @Inject(SEQUENCE_REPOSITORY) private readonly repo: SequenceRepository,
     private readonly entitlements: EntitlementsService,
+    @Inject(TEMPLATE_REPOSITORY) private readonly templateRepo: TemplateRepository,
   ) {}
 
   async execute(sequenceId: string, businessId: string, data: CreateStepData): Promise<SequenceStep> {
@@ -28,6 +31,11 @@ export class AddStepUseCase {
     if (channelUsesSms(data.channel)) {
       const limits = await this.entitlements.limitsForBusiness(businessId);
       if (!limits.sms) throw new SmsNotAvailableOnPlanError();
+    }
+
+    if (data.templateId) {
+      const tmpl = await this.templateRepo.findById(data.templateId, businessId);
+      if (!tmpl) throw new TemplateNotInBusinessError(data.templateId);
     }
 
     return this.repo.addStep(sequenceId, businessId, data);

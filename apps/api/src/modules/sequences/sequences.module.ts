@@ -15,6 +15,8 @@ import { PreviewStepUseCase } from "./application/preview-step.use-case";
 import { SequencesController } from "./sequences.controller";
 import { RELATIONSHIP_TIER_REPOSITORY } from "../relationship-tiers/domain/relationship-tier.repository";
 import { PrismaRelationshipTierRepository } from "../relationship-tiers/infrastructure/prisma-relationship-tier.repository";
+import { TEMPLATE_REPOSITORY } from "../templates/domain/template.repository";
+import { PrismaTemplateRepository } from "../templates/infrastructure/prisma-template.repository";
 import { TEMPLATE_SERVICE } from "../../common/template/template.service";
 import { HandlebarsTemplateService } from "../../common/template/handlebars-template.service";
 
@@ -34,6 +36,7 @@ import { HandlebarsTemplateService } from "../../common/template/handlebars-temp
     PreviewStepUseCase,
     { provide: SEQUENCE_REPOSITORY, useClass: PrismaSequenceRepository },
     { provide: RELATIONSHIP_TIER_REPOSITORY, useClass: PrismaRelationshipTierRepository },
+    { provide: TEMPLATE_REPOSITORY, useClass: PrismaTemplateRepository },
     { provide: TEMPLATE_SERVICE, useClass: HandlebarsTemplateService },
   ],
 })
