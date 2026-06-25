@@ -66,6 +66,7 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
       const existing = await tx.sequenceRun.findFirst({
         where: {
           invoiceId: args.invoiceId,
+          invoice: { businessId: args.businessId },
           status: { in: [SEQUENCE_RUN_STATUSES.ACTIVE, SEQUENCE_RUN_STATUSES.PAUSED] },
         },
         select: { id: true },
