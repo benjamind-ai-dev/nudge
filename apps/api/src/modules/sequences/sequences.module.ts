@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common";
 import { SEQUENCE_REPOSITORY } from "./domain/sequence.repository";
 import { PrismaSequenceRepository } from "./infrastructure/prisma-sequence.repository";
+import { ENROLLMENT_REPOSITORY } from "./domain/enrollment.repository";
+import { PrismaEnrollmentRepository } from "./infrastructure/prisma-enrollment.repository";
+import { EnrollInvoicesUseCase } from "./application/enroll-invoices.use-case";
 import { ListSequencesUseCase } from "./application/list-sequences.use-case";
 import { GetSequenceUseCase } from "./application/get-sequence.use-case";
 import { CreateSequenceUseCase } from "./application/create-sequence.use-case";
@@ -34,7 +37,9 @@ import { HandlebarsTemplateService } from "../../common/template/handlebars-temp
     DeleteStepUseCase,
     ReorderStepsUseCase,
     PreviewStepUseCase,
+    EnrollInvoicesUseCase,
     { provide: SEQUENCE_REPOSITORY, useClass: PrismaSequenceRepository },
+    { provide: ENROLLMENT_REPOSITORY, useClass: PrismaEnrollmentRepository },
     { provide: RELATIONSHIP_TIER_REPOSITORY, useClass: PrismaRelationshipTierRepository },
     { provide: TEMPLATE_REPOSITORY, useClass: PrismaTemplateRepository },
     { provide: TEMPLATE_SERVICE, useClass: HandlebarsTemplateService },
