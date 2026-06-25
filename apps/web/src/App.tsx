@@ -17,7 +17,7 @@ import { OnboardingCompletePage } from "./pages/onboarding-complete/onboarding-c
 import { DashboardPage } from "./pages/dashboard/dashboard.page";
 import { CustomersPage } from "./pages/customers";
 import { InvoicesPage } from "./pages/invoices";
-import { SequencesPage } from "./pages/sequences";
+import { SequencesPage } from "./pages/sequences/sequences.page";
 import { ReportsPage } from "./pages/reports/reports.page";
 import { GetPaidPage } from "./pages/get-paid/get-paid.page";
 import { SettingsPage } from "./pages/settings";
