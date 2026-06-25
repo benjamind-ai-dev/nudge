@@ -120,8 +120,12 @@ export function StepListEditor({
                   id={`delay-${step.key}`}
                   type="number"
                   min={0}
-                  value={step.delayDays}
-                  onChange={(e) => onDelay(step.key, Number(e.target.value))}
+                  value={step.delayDays === 0 ? "" : step.delayDays}
+                  placeholder="0"
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    onDelay(step.key, Number.isNaN(n) ? 0 : n);
+                  }}
                   className="w-28"
                 />
                 {isFirst && (
