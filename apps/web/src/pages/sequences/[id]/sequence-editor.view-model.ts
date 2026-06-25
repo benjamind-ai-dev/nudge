@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useActiveBusinessId } from "@/lib/hooks/use-active-business-id";
 import { useCreateSequence } from "@/queries/use-sequences";
@@ -9,13 +9,21 @@ import type { CreateSequenceStep } from "@/api/sequences.api";
 export interface DraftStep {
   key: string; templateId: string | null; templateName: string;
   channel: "email" | "sms" | "email_and_sms"; delayDays: number;
-  isOwnerAlert: boolean; includePaymentLink: boolean; smsBodyTemplate: string;
+  isOwnerAlert: boolean; includePaymentLink: boolean;
 }
 
 let SEQ = 0;
 function newStep(): DraftStep {
   SEQ += 1;
-  return { key: `s${SEQ}`, templateId: null, templateName: "", channel: "email", delayDays: 0, isOwnerAlert: false, includePaymentLink: true, smsBodyTemplate: "" };
+  return { key: `s${SEQ}`, templateId: null, templateName: "", channel: "email", delayDays: 0, isOwnerAlert: false, includePaymentLink: true };
+}
+
+export interface StepRow {
+  step: DraftStep;
+  index: number;
+  displayDay: number;
+  isActive: boolean;
+  isComplete: boolean;
 }
 
 export function useSequenceEditorViewModel() {
@@ -25,18 +33,42 @@ export function useSequenceEditorViewModel() {
   const createMut = useCreateSequence();
 
   const [name, setName] = useState("");
-  const [steps, setSteps] = useState<DraftStep[]>([]);
+  // Seed once via a ref so both useState calls derive from the same newStep() call,
+  // with no reliance on SEQ ordering or lazy-initializer sequencing.
+  const seededRef = useRef<DraftStep[] | null>(null);
+  if (!seededRef.current) seededRef.current = [newStep()];
+  const [steps, setSteps] = useState<DraftStep[]>(seededRef.current);
+  const [activeStepKey, setActiveStepKey] = useState<string | null>(seededRef.current[0].key);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ name?: string; steps?: string }>({});
 
   const templates: TemplateListItem[] = tmplData?.data ?? [];
   const hasNoTemplates = !templatesLoading && templates.length === 0;
 
+  function isStepComplete(s: DraftStep): boolean {
+    return !!s.templateId;
+  }
+
   function patch(key: string, p: Partial<DraftStep>) {
     setSteps((prev) => prev.map((s) => (s.key === key ? { ...s, ...p } : s)));
   }
-  function addStep() { setSteps((p) => (p.length >= 10 ? p : [...p, newStep()])); }
-  function removeStep(key: string) { setSteps((p) => p.filter((s) => s.key !== key)); }
+  function addStep() {
+    if (steps.length >= 10) return;
+    const step = newStep();
+    setSteps((p) => [...p, step]);
+    setActiveStepKey(step.key);
+  }
+  function removeStep(key: string) {
+    setSteps((p) => p.filter((s) => s.key !== key));
+    setActiveStepKey((prev) => (prev === key ? null : prev));
+  }
+  function editStep(key: string) { setActiveStepKey(key); }
+  function doneStep() {
+    const active = steps.find((s) => s.key === activeStepKey);
+    if (active && isStepComplete(active)) {
+      setActiveStepKey(null);
+    }
+  }
   function moveStep(key: string, dir: "up" | "down") {
     setSteps((p) => {
       const i = p.findIndex((s) => s.key === key);
@@ -53,7 +85,20 @@ export function useSequenceEditorViewModel() {
   const setStepDelay = (key: string, delayDays: number) => patch(key, { delayDays: Math.max(0, Math.floor(delayDays || 0)) });
   const toggleOwnerAlert = (key: string) => setSteps((p) => p.map((s) => s.key === key ? { ...s, isOwnerAlert: !s.isOwnerAlert } : s));
   const togglePaymentLink = (key: string) => setSteps((p) => p.map((s) => s.key === key ? { ...s, includePaymentLink: !s.includePaymentLink } : s));
-  const setStepSms = (key: string, body: string) => patch(key, { smsBodyTemplate: body });
+
+  const rows: StepRow[] = useMemo(() => {
+    let cumulative = 0;
+    return steps.map((step, index) => {
+      cumulative += step.delayDays;
+      return {
+        step,
+        index,
+        displayDay: cumulative,
+        isActive: step.key === activeStepKey,
+        isComplete: isStepComplete(step),
+      };
+    });
+  }, [steps, activeStepKey]);
 
   const canSave = name.trim().length > 0 && steps.length > 0 && steps.every((s) => s.templateId);
 
@@ -75,7 +120,7 @@ export function useSequenceEditorViewModel() {
         channel: s.channel,
         subjectTemplate: t?.subject ?? null,
         bodyTemplate: t?.body ?? "",          // API requires bodyTemplate; source from the template
-        smsBodyTemplate: s.channel === "email" ? null : (s.smsBodyTemplate || null),
+        smsBodyTemplate: null,               // SMS content comes from the template (Part 5)
         isOwnerAlert: s.isOwnerAlert,
         includePaymentLink: s.includePaymentLink,
       };
@@ -91,9 +136,9 @@ export function useSequenceEditorViewModel() {
   function cancel() { navigate("/sequences"); }
 
   return {
-    name, setName, steps,
-    addStep, removeStep, moveStep,
-    setStepTemplate, setStepChannel, setStepDelay, toggleOwnerAlert, togglePaymentLink, setStepSms,
+    name, setName, steps, rows, activeStepKey,
+    addStep, removeStep, moveStep, editStep, doneStep, isStepComplete,
+    setStepTemplate, setStepChannel, setStepDelay, toggleOwnerAlert, togglePaymentLink,
     templates, templatesLoading, hasNoTemplates,
     canSave, isSaving: createMut.isPending, error, errors, save, cancel,
   };
