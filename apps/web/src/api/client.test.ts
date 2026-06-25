@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { apiClient, setTokenGetter } from "./client";
+import { apiClient, setTokenGetter, ApiError, shouldRetryQuery } from "./client";
 
 /** Minimal Response-like object. All ok responses need headers.get for the 204 guard. */
 function makeResponse(opts: {
@@ -159,5 +159,32 @@ describe("apiClient", () => {
     );
 
     await expect(apiClient("/v1/templates/bad-id")).rejects.toThrow("Template not found");
+  });
+
+  it("throws an ApiError carrying the HTTP status (e.g. 429)", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      makeResponse({ ok: false, status: 429, json: async () => ({ message: "Too Many Requests" }) }),
+    );
+
+    await expect(apiClient("/v1/businesses")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 429,
+      message: "Too Many Requests",
+    });
+  });
+});
+
+describe("shouldRetryQuery", () => {
+  it("never retries a 4xx (429 rate limit) — backing off, not hammering", () => {
+    expect(shouldRetryQuery(0, new ApiError("Too Many Requests", 429))).toBe(false);
+    expect(shouldRetryQuery(0, new ApiError("Bad Request", 400))).toBe(false);
+  });
+
+  it("retries server errors and unknown/network errors up to 2 times", () => {
+    expect(shouldRetryQuery(0, new ApiError("Server", 500))).toBe(true);
+    expect(shouldRetryQuery(1, new ApiError("Server", 503))).toBe(true);
+    expect(shouldRetryQuery(2, new ApiError("Server", 500))).toBe(false);
+    expect(shouldRetryQuery(0, new Error("network down"))).toBe(true);
+    expect(shouldRetryQuery(2, new Error("network down"))).toBe(false);
   });
 });
