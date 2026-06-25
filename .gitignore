@@ -14,3 +14,10 @@ graphify-out/
 .claude/skills/cave*
 skills-lock.json
 logs/
+
+# Superpowers brainstorm visual companion (local mockups)
+.superpowers/
+
+# Brainstorm scratch screenshots (playwright mockup captures)
+/*.png
+.playwright-mcp/
