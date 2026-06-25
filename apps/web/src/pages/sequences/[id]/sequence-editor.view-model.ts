@@ -25,7 +25,9 @@ export function useSequenceEditorViewModel() {
   const createMut = useCreateSequence();
 
   const [name, setName] = useState("");
-  const [steps, setSteps] = useState<DraftStep[]>([]);
+  // Start with one empty step so the editor isn't blank — the user fills it in
+  // rather than having to click "Add step" for the first one.
+  const [steps, setSteps] = useState<DraftStep[]>(() => [newStep()]);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ name?: string; steps?: string }>({});
 

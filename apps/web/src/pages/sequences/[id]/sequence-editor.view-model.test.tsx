@@ -23,13 +23,14 @@ beforeEach(() => { navigate.mockReset(); mockCreate.mockReset(); mockTemplates.m
 describe("useSequenceEditorViewModel", () => {
   it("starts empty and cannot save without a name and a step", () => {
     const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
-    expect(result.current.steps).toHaveLength(0);
+    expect(result.current.steps).toHaveLength(1);
+    expect(result.current.steps[0].templateId).toBeNull();
     expect(result.current.canSave).toBe(false);
   });
 
   it("add/remove/move steps", () => {
     const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
-    act(() => { result.current.addStep(); result.current.addStep(); });
+    act(() => result.current.addStep());
     expect(result.current.steps).toHaveLength(2);
     const k0 = result.current.steps[0].key;
     act(() => result.current.removeStep(k0));
@@ -38,7 +39,6 @@ describe("useSequenceEditorViewModel", () => {
 
   it("picking a template sets templateId + display name", () => {
     const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
-    act(() => result.current.addStep());
     const k = result.current.steps[0].key;
     act(() => result.current.setStepTemplate(k, "t2"));
     expect(result.current.steps[0]).toMatchObject({ templateId: "t2", templateName: "Past due" });
@@ -46,8 +46,8 @@ describe("useSequenceEditorViewModel", () => {
 
   it("canSave true once name + a step with a template exist", () => {
     const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
-    act(() => { result.current.setName("Standard"); result.current.addStep(); });
-    expect(result.current.canSave).toBe(false); // step has no template yet
+    act(() => result.current.setName("Standard"));
+    expect(result.current.canSave).toBe(false); // seeded step has no template yet
     act(() => result.current.setStepTemplate(result.current.steps[0].key, "t1"));
     expect(result.current.canSave).toBe(true);
   });
@@ -55,7 +55,7 @@ describe("useSequenceEditorViewModel", () => {
   it("save() builds steps payload (stepOrder, body/subject from template) and navigates to /sequences", async () => {
     mockCreate.mockResolvedValue({ data: { id: "seq-1" } });
     const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
-    act(() => { result.current.setName("Standard"); result.current.addStep(); });
+    act(() => result.current.setName("Standard"));
     act(() => result.current.setStepTemplate(result.current.steps[0].key, "t1"));
     await act(async () => { await result.current.save(); });
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
@@ -68,7 +68,7 @@ describe("useSequenceEditorViewModel", () => {
   it("surfaces a save error (e.g. SMS not on plan)", async () => {
     mockCreate.mockRejectedValue(new Error("SMS reminders aren't included in your plan. Upgrade to use SMS."));
     const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
-    act(() => { result.current.setName("X"); result.current.addStep(); });
+    act(() => result.current.setName("X"));
     act(() => result.current.setStepTemplate(result.current.steps[0].key, "t1"));
     await act(async () => { await result.current.save(); });
     await waitFor(() => expect(result.current.error).toMatch(/SMS/i));
