@@ -11,6 +11,7 @@ export interface CreateTemplateInput {
   subject: string | null;
   body: string;
   signature: string | null;
+  smsBody: string | null;
 }
 
 @Injectable()

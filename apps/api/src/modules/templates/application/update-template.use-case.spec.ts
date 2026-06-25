@@ -40,4 +40,16 @@ describe("UpdateTemplateUseCase", () => {
       uc.execute({ id: "missing", businessId: "biz-1", patch: { name: "Y" } }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it("persists and returns updated smsBody", async () => {
+    const smsBody = "Pay {{invoice_number}}: {{payment_link}}";
+    const updated = { id: "t1", businessId: "biz-1", name: "X", subject: null, body: "B", signature: null, smsBody, createdAt: new Date(), updatedAt: new Date() };
+    const repo = makeRepo({ update: jest.fn().mockResolvedValue(updated) });
+    const uc = new UpdateTemplateUseCase(repo);
+
+    const result = await uc.execute({ id: "t1", businessId: "biz-1", patch: { smsBody } });
+
+    expect(repo.update).toHaveBeenCalledWith("t1", "biz-1", { smsBody });
+    expect(result.smsBody).toBe(smsBody);
+  });
 });

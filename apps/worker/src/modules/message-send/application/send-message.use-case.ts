@@ -382,7 +382,7 @@ export class SendMessageUseCase {
       return { sent: false, skippedReason: "no_recipient" };
     }
 
-    const smsTemplate = run.stepSmsBodyTemplate ?? run.stepBodyTemplate;
+    const smsTemplate = run.stepTemplateSms ?? run.stepSmsBodyTemplate ?? run.stepBodyTemplate;
     const body = this.templateService.render(`${run.stepId}-sms`, smsTemplate, templateData);
     const messageId = randomUUID();
 

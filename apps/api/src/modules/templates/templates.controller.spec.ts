@@ -28,6 +28,7 @@ const templateFixture: Template = {
   subject: "Your invoice is due",
   body: "Hi {{contact_name}}, your invoice is due.",
   signature: "The Team",
+  smsBody: null,
   createdAt: new Date("2026-05-20T09:00:00Z"),
   updatedAt: new Date("2026-05-20T09:00:00Z"),
 };
@@ -179,7 +180,22 @@ describe("TemplatesController", () => {
         subject: validBody.subject,
         body: validBody.body,
         signature: validBody.signature,
+        smsBody: null,
       });
+    });
+
+    it("passes smsBody through to the use case and returns it in the response", async () => {
+      const smsBody = "Pay {{invoice_number}}: {{payment_link}}";
+      const withSms = { ...templateFixture, smsBody };
+      createUc.execute.mockResolvedValue(withSms);
+
+      const res = await request(app.getHttpServer())
+        .post("/v1/templates")
+        .send({ ...validBody, smsBody })
+        .expect(201);
+
+      expect(createUc.execute).toHaveBeenCalledWith(expect.objectContaining({ smsBody }));
+      expect(res.body.data.smsBody).toBe(smsBody);
     });
 
     it("returns 400 when body is missing required fields", async () => {

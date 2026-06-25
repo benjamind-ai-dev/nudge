@@ -6,6 +6,7 @@ export interface CreateTemplateInput {
   subject: string | null;
   body: string;
   signature: string | null;
+  smsBody?: string | null;
 }
 
 export interface UpdateTemplateInput {
@@ -13,6 +14,7 @@ export interface UpdateTemplateInput {
   subject?: string | null;
   body?: string;
   signature?: string | null;
+  smsBody?: string | null;
 }
 
 export type TemplateWithUsage = Template & { inUse: boolean };

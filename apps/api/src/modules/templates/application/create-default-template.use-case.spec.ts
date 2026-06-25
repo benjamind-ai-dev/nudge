@@ -22,6 +22,7 @@ describe("CreateDefaultTemplateUseCase", () => {
           subject: input.subject,
           body: input.body,
           signature: input.signature,
+          smsBody: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
