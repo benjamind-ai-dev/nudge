@@ -24,16 +24,22 @@ import { DeleteStepUseCase } from "./application/delete-step.use-case";
 import { ReorderStepsUseCase } from "./application/reorder-steps.use-case";
 import { ReplaceSequenceUseCase } from "./application/replace-sequence.use-case";
 import { PreviewStepUseCase } from "./application/preview-step.use-case";
+import { EnrollInvoicesUseCase } from "./application/enroll-invoices.use-case";
+import { AttachCustomerUseCase } from "./application/attach-customer.use-case";
 import {
   addStepSchema,
+  attachCustomerSchema,
   businessIdQuerySchema,
   createSequenceSchema,
+  enrollInvoicesSchema,
   replaceSequenceSchema,
   reorderStepsSchema,
   updateSequenceSchema,
   updateStepSchema,
   type AddStepDto,
+  type AttachCustomerDto,
   type CreateSequenceDto,
+  type EnrollInvoicesDto,
   type ReplaceSequenceDto,
   type ReorderStepsDto,
   type UpdateSequenceDto,
@@ -54,6 +60,8 @@ export class SequencesController {
     private readonly deleteStep: DeleteStepUseCase,
     private readonly reorderSteps: ReorderStepsUseCase,
     private readonly previewStep: PreviewStepUseCase,
+    private readonly enrollInvoices: EnrollInvoicesUseCase,
+    private readonly attachCustomerUseCase: AttachCustomerUseCase,
     private readonly businessAuth: BusinessAuthorizationService,
   ) {}
 
@@ -191,5 +199,31 @@ export class SequencesController {
     await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
     const result = await this.previewStep.execute(sequenceId, stepId, businessId);
     return { data: result };
+  }
+
+  @Post(":id/enroll")
+  @HttpCode(200)
+  async enroll(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
+    @Body(new ZodValidationPipe(enrollInvoicesSchema)) dto: EnrollInvoicesDto,
+  ) {
+    await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+    const data = await this.enrollInvoices.execute(id, businessId, dto.invoiceIds);
+    return { data };
+  }
+
+  @Post(":id/attach-customer")
+  @HttpCode(200)
+  async attachCustomer(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
+    @Body(new ZodValidationPipe(attachCustomerSchema)) dto: AttachCustomerDto,
+  ) {
+    await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+    const data = await this.attachCustomerUseCase.execute(id, businessId, dto.customerId);
+    return { data };
   }
 }

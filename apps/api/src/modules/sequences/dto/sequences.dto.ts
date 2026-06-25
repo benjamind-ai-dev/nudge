@@ -71,3 +71,13 @@ export const reorderStepsSchema = z.object({
   steps: z.array(z.object({ stepId: z.string().uuid(), stepOrder: z.number().int().min(1) })),
 });
 export type ReorderStepsDto = z.infer<typeof reorderStepsSchema>;
+
+export const enrollInvoicesSchema = z.object({
+  invoiceIds: z.array(z.string().uuid()).min(1).max(500),
+});
+export type EnrollInvoicesDto = z.infer<typeof enrollInvoicesSchema>;
+
+export const attachCustomerSchema = z.object({
+  customerId: z.string().uuid(),
+});
+export type AttachCustomerDto = z.infer<typeof attachCustomerSchema>;

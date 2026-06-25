@@ -14,6 +14,8 @@ import { DeleteStepUseCase } from "./application/delete-step.use-case";
 import { ReorderStepsUseCase } from "./application/reorder-steps.use-case";
 import { ReplaceSequenceUseCase } from "./application/replace-sequence.use-case";
 import { PreviewStepUseCase } from "./application/preview-step.use-case";
+import { EnrollInvoicesUseCase } from "./application/enroll-invoices.use-case";
+import { AttachCustomerUseCase } from "./application/attach-customer.use-case";
 import { SequenceNotFoundError } from "./domain/sequence.errors";
 import type { SequenceSummary, SequenceWithSteps } from "./domain/sequence.entity";
 import { BusinessAuthorizationService } from "../../common/auth-context/business-authorization.service";
@@ -69,6 +71,8 @@ describe("SequencesController", () => {
   let reorderStepsUseCase: { execute: jest.Mock };
   let replaceUseCase: { execute: jest.Mock };
   let previewStepUseCase: { execute: jest.Mock };
+  let enrollInvoices: { execute: jest.Mock };
+  let attachCustomer: { execute: jest.Mock };
   let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
 
   beforeEach(async () => {
@@ -83,6 +87,8 @@ describe("SequencesController", () => {
     reorderStepsUseCase = { execute: jest.fn() };
     replaceUseCase = { execute: jest.fn() };
     previewStepUseCase = { execute: jest.fn() };
+    enrollInvoices = { execute: jest.fn() };
+    attachCustomer = { execute: jest.fn() };
     businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
@@ -99,6 +105,8 @@ describe("SequencesController", () => {
         { provide: ReorderStepsUseCase, useValue: reorderStepsUseCase },
         { provide: ReplaceSequenceUseCase, useValue: replaceUseCase },
         { provide: PreviewStepUseCase, useValue: previewStepUseCase },
+        { provide: EnrollInvoicesUseCase, useValue: enrollInvoices },
+        { provide: AttachCustomerUseCase, useValue: attachCustomer },
         { provide: BusinessAuthorizationService, useValue: businessAuth },
       ],
     }).compile();
@@ -163,6 +171,29 @@ describe("SequencesController", () => {
         .get(`/v1/sequences/${SEQ_ID}`)
         .query({ businessId: BIZ_ID })
         .expect(404);
+    });
+  });
+
+  describe("POST /v1/sequences/:id/enroll", () => {
+    it("returns 200 with enrollment summary", async () => {
+      enrollInvoices.execute.mockResolvedValue({ enrolled: 2, moved: 1, skipped: 0, items: [] });
+      const res = await request(app.getHttpServer())
+        .post("/v1/sequences/seq-1/enroll?businessId=11111111-1111-1111-1111-111111111111")
+        .send({ invoiceIds: ["22222222-2222-2222-2222-222222222222"] })
+        .expect(200);
+      expect(res.body.data).toMatchObject({ enrolled: 2, moved: 1, skipped: 0 });
+      expect(businessAuth.assertCallerOwnsBusiness).toHaveBeenCalled();
+    });
+  });
+
+  describe("POST /v1/sequences/:id/attach-customer", () => {
+    it("returns 200", async () => {
+      attachCustomer.execute.mockResolvedValue({ customerId: "c", overrideSet: true, enrollment: { enrolled: 1, moved: 0, skipped: 0, items: [] } });
+      await request(app.getHttpServer())
+        .post("/v1/sequences/seq-1/attach-customer?businessId=11111111-1111-1111-1111-111111111111")
+        .send({ customerId: "33333333-3333-3333-3333-333333333333" })
+        .expect(200);
+      expect(businessAuth.assertCallerOwnsBusiness).toHaveBeenCalled();
     });
   });
 
