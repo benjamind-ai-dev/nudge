@@ -39,6 +39,7 @@ const createMockRun = (id: string, businessId = "biz-1"): RunReadyToSend => ({
   stepTemplateSubject: null,
   stepTemplateBody: null,
   stepTemplateSignature: null,
+  stepTemplateSms: null,
   firstStepSubject: null,
   firstStepBody: null,
   firstStepIncludePaymentLink: null,

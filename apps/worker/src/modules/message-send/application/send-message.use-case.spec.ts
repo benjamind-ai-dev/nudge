@@ -37,6 +37,7 @@ const createMockRun = (overrides: Partial<RunReadyToSend> = {}): RunReadyToSend 
   stepTemplateSubject: null,
   stepTemplateBody: null,
   stepTemplateSignature: null,
+  stepTemplateSms: null,
   firstStepSubject: null,
   firstStepBody: null,
   firstStepIncludePaymentLink: null,
@@ -645,6 +646,45 @@ describe("SendMessageUseCase", () => {
       expect(renderedSources).toContain("INLINE SUBJECT");
       expect(renderedSources).toContain("INLINE BODY");
       expect(renderedSources).toContain("Business sig");
+    });
+  });
+
+  describe("SMS template body (stepTemplateSms)", () => {
+    it("renders SMS body from stepTemplateSms when set, ignoring stepSmsBodyTemplate and stepBodyTemplate", async () => {
+      const run = createMockRun({
+        stepChannel: "sms",
+        stepSmsBodyTemplate: "INLINE SMS BODY",
+        stepBodyTemplate: "INLINE FALLBACK BODY",
+        stepTemplateSms: "Template SMS body {{company_name}}",
+      });
+      repo.findRunById.mockResolvedValue(run);
+      repo.findNextStep.mockResolvedValue(null);
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const renderedSources = templateService.render.mock.calls.map((c) => c[1]);
+      expect(renderedSources).toContain("Template SMS body {{company_name}}");
+      expect(renderedSources).not.toContain("INLINE SMS BODY");
+      expect(renderedSources).not.toContain("INLINE FALLBACK BODY");
+      expect(smsService.send).toHaveBeenCalled();
+    });
+
+    it("falls back to stepSmsBodyTemplate when stepTemplateSms is null", async () => {
+      const run = createMockRun({
+        stepChannel: "sms",
+        stepSmsBodyTemplate: "INLINE SMS BODY",
+        stepBodyTemplate: "INLINE FALLBACK BODY",
+        stepTemplateSms: null,
+      });
+      repo.findRunById.mockResolvedValue(run);
+      repo.findNextStep.mockResolvedValue(null);
+
+      await useCase.execute({ sequenceRunId: "run-1", businessId: "biz-1" });
+
+      const renderedSources = templateService.render.mock.calls.map((c) => c[1]);
+      expect(renderedSources).toContain("INLINE SMS BODY");
+      expect(renderedSources).not.toContain("INLINE FALLBACK BODY");
+      expect(smsService.send).toHaveBeenCalled();
     });
   });
 

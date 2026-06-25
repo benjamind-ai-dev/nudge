@@ -46,6 +46,7 @@ export interface RunReadyToSend {
   stepTemplateSubject: string | null;
   stepTemplateBody: string | null;
   stepTemplateSignature: string | null;
+  stepTemplateSms: string | null;
   firstStepSubject: string | null;
   firstStepBody: string | null;
   firstStepIncludePaymentLink: boolean | null;
