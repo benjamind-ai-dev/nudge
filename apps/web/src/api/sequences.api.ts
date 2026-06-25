@@ -10,6 +10,8 @@ export interface SequenceSummary {
   relationshipTier: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
+  inUse: boolean;
+  inUseReason: "running" | "assigned" | "history" | null;
 }
 
 export function getSequences(businessId: string): Promise<{ data: SequenceSummary[] }> {

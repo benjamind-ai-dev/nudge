@@ -5,8 +5,14 @@ import { useSequences, useDeleteSequence } from "@/queries/use-sequences";
 import type { SequenceSummary } from "@/api/sequences.api";
 
 export type StatusFilter = "all" | "active" | "paused";
-export interface SequenceRow { id: string; name: string; tierName: string; stepCountLabel: string; isActive: boolean; statusLabel: string; activeRuns: number; }
+export interface SequenceRow { id: string; name: string; tierName: string; stepCountLabel: string; isActive: boolean; statusLabel: string; activeRuns: number; inUse: boolean; deleteBlockedReason: string | null; }
 export interface DeleteTarget { id: string; name: string; }
+
+const REASON_TEXT: Record<NonNullable<SequenceSummary["inUseReason"]>, string> = {
+  running: "Invoices are running this sequence — stop them before deleting.",
+  assigned: "Assigned to a tier or customer — detach it before deleting.",
+  history: "This sequence has past follow-ups — pause it instead of deleting.",
+};
 
 function toRow(s: SequenceSummary): SequenceRow {
   return {
@@ -16,6 +22,8 @@ function toRow(s: SequenceSummary): SequenceRow {
     isActive: s.isActive,
     statusLabel: s.isActive ? "Active" : "Paused",
     activeRuns: s.activeRuns,
+    inUse: s.inUse,
+    deleteBlockedReason: s.inUseReason ? REASON_TEXT[s.inUseReason] : null,
   };
 }
 

@@ -2,6 +2,12 @@ import { Trash2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   ListCard,
   ListCardHeader,
   ListMessageCard,
@@ -71,37 +77,52 @@ export function SequenceList({
   return (
     <ListCard>
       <ListCardHeader label="All sequences" count={rows.length} noun="sequence" />
-      {rows.map((row) => (
-        <ListRow
-          key={row.id}
-          icon={<Workflow className="h-4 w-4" />}
-          title={row.name}
-          subtitle={`${row.tierName} · ${row.stepCountLabel}`}
-          right={
-            <>
-              <StatusBadge isActive={row.isActive} />
-              <span
-                className={cn(
-                  "w-24 shrink-0 text-right text-[12.5px] text-muted-foreground group-hover:hidden",
-                  row.activeRuns === 0 && "opacity-60",
-                )}
-              >
-                {row.activeRuns} running
-              </span>
-              <div className="hidden w-24 shrink-0 justify-end group-hover:flex">
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label="Delete sequence"
-                  onClick={() => onRequestDelete(row)}
+      <TooltipProvider>
+        {rows.map((row) => (
+          <ListRow
+            key={row.id}
+            icon={<Workflow className="h-4 w-4" />}
+            title={row.name}
+            subtitle={`${row.tierName} · ${row.stepCountLabel}`}
+            right={
+              <>
+                <StatusBadge isActive={row.isActive} />
+                <span
+                  className={cn(
+                    "w-24 shrink-0 text-right text-[12.5px] text-muted-foreground group-hover:hidden",
+                    row.activeRuns === 0 && "opacity-60",
+                  )}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </>
-          }
-        />
-      ))}
+                  {row.activeRuns} running
+                </span>
+                <div className="hidden w-24 shrink-0 justify-end group-hover:flex">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span onClick={(e) => e.stopPropagation()} className="inline-flex">
+                        <Button
+                          variant="outline"
+                          size="icon-sm"
+                          aria-label="Delete sequence"
+                          disabled={row.inUse}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRequestDelete(row);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {row.inUse && (
+                      <TooltipContent side="top">{row.deleteBlockedReason}</TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+              </>
+            }
+          />
+        ))}
+      </TooltipProvider>
     </ListCard>
   );
 }
