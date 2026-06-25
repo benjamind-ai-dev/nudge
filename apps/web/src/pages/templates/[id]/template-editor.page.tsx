@@ -77,6 +77,14 @@ export function TemplateEditorPage() {
               signatureHtml={vm.preview.signatureHtml}
               hasPaymentLink={vm.preview.hasPaymentLink}
             />
+            {vm.preview.smsText && (
+              <div className="mt-4">
+                <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">SMS</div>
+                <div className="max-w-[280px] rounded-2xl rounded-bl-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground whitespace-pre-wrap break-words">
+                  {vm.preview.smsText}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
