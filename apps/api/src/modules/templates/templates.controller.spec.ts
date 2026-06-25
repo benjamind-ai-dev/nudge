@@ -26,7 +26,7 @@ const templateFixture: Template = {
   businessId: BIZ_ID,
   name: "Payment Reminder",
   subject: "Your invoice is due",
-  body: "Hi {{customer.contact_name}}, your invoice is due.",
+  body: "Hi {{contact_name}}, your invoice is due.",
   signature: "The Team",
   createdAt: new Date("2026-05-20T09:00:00Z"),
   updatedAt: new Date("2026-05-20T09:00:00Z"),
@@ -35,8 +35,8 @@ const templateFixture: Template = {
 const aiDraftFixture: AiTemplateDraft = {
   name: "Gentle Reminder",
   subject: "Friendly invoice reminder",
-  body: "Hi {{customer.contact_name}}, just a reminder about your invoice.",
-  signature: "{{business.sender_name}}",
+  body: "Hi {{contact_name}}, just a reminder about your invoice.",
+  signature: "{{sender_name}}",
 };
 
 describe("TemplatesController", () => {
@@ -160,7 +160,7 @@ describe("TemplatesController", () => {
       businessId: BIZ_ID,
       name: "Payment Reminder",
       subject: "Your invoice is due",
-      body: "Hi {{customer.contact_name}}, your invoice is due.",
+      body: "Hi {{contact_name}}, your invoice is due.",
       signature: "The Team",
     };
 

@@ -62,6 +62,15 @@ export class PrismaStartFollowUpRepository implements StartFollowUpRepository {
     return tier?.sequenceId ?? null;
   }
 
+  async findAnyActiveSequenceId(businessId: string): Promise<string | null> {
+    const sequence = await this.prisma.sequence.findFirst({
+      where: { businessId, isActive: true },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+    });
+    return sequence?.id ?? null;
+  }
+
   async findSequenceFirstStep(sequenceId: string): Promise<SequenceFirstStep | null> {
     const step = await this.prisma.sequenceStep.findFirst({
       where: { sequenceId },
@@ -110,6 +119,10 @@ export class PrismaStartFollowUpRepository implements StartFollowUpRepository {
             status: data.status,
             nextSendAt: data.nextSendAt,
             startedAt: data.startedAt,
+            firstStepSubject: data.firstStepSubject,
+            firstStepBody: data.firstStepBody,
+            firstStepIncludePaymentLink: data.firstStepIncludePaymentLink,
+            firstStepSkip: data.firstStepSkip,
           },
           select: { id: true },
         });

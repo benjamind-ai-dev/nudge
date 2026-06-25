@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DateRangePicker, type DateRange } from "./date-range-picker";
 
@@ -24,9 +24,26 @@ describe("DateRangePicker", () => {
     const onChange = vi.fn();
     render(<DateRangePicker value={EMPTY} onChange={onChange} />);
 
+    // Open the popover
     fireEvent.click(screen.getByRole("button", { name: /Due date/ }));
-    fireEvent.click(screen.getByRole("button", { name: "10" }));
-    fireEvent.click(screen.getByRole("button", { name: "20" }));
+
+    // Click the 10th and 20th of the current month by their full accessible names
+    act(() => {
+      const day10 = screen.getAllByRole("button").find(
+        (b) => /\b10th\b/.test(b.getAttribute("aria-label") ?? ""),
+      );
+      expect(day10).toBeTruthy();
+      fireEvent.click(day10!);
+    });
+
+    act(() => {
+      const day20 = screen.getAllByRole("button").find(
+        (b) => /\b20th\b/.test(b.getAttribute("aria-label") ?? ""),
+      );
+      expect(day20).toBeTruthy();
+      fireEvent.click(day20!);
+    });
+
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(onChange).toHaveBeenCalledTimes(1);
@@ -41,8 +58,24 @@ describe("DateRangePicker", () => {
     render(<DateRangePicker value={EMPTY} onChange={onChange} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Due date/ }));
-    fireEvent.click(screen.getByRole("button", { name: "20" }));
-    fireEvent.click(screen.getByRole("button", { name: "10" }));
+
+    // Click 20th first, then 10th — react-day-picker range mode auto-orders
+    act(() => {
+      const day20 = screen.getAllByRole("button").find(
+        (b) => /\b20th\b/.test(b.getAttribute("aria-label") ?? ""),
+      );
+      expect(day20).toBeTruthy();
+      fireEvent.click(day20!);
+    });
+
+    act(() => {
+      const day10 = screen.getAllByRole("button").find(
+        (b) => /\b10th\b/.test(b.getAttribute("aria-label") ?? ""),
+      );
+      expect(day10).toBeTruthy();
+      fireEvent.click(day10!);
+    });
+
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     const arg = onChange.mock.calls[0][0] as DateRange;
@@ -58,7 +91,7 @@ describe("DateRangePicker", () => {
         onChange={onChange}
       />,
     );
-    // The × clear control sits inside the trigger.
+    // The × clear control sits inside the trigger button.
     const trigger = screen.getByRole("button", { name: /Oct 1/ });
     const clearIcon = trigger.querySelector("svg:last-child");
     fireEvent.click(clearIcon as Element);

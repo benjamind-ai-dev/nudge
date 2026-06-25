@@ -39,6 +39,10 @@ const createMockRun = (id: string, businessId = "biz-1"): RunReadyToSend => ({
   stepTemplateSubject: null,
   stepTemplateBody: null,
   stepTemplateSignature: null,
+  firstStepSubject: null,
+  firstStepBody: null,
+  firstStepIncludePaymentLink: null,
+  firstStepSkip: null,
 });
 
 describe("EnqueueReadyRunsUseCase", () => {
@@ -52,6 +56,7 @@ describe("EnqueueReadyRunsUseCase", () => {
       findRunById: jest.fn(),
       findNextStep: jest.fn(),
       messageExistsForRunStep: jest.fn(),
+      runHasSentMessages: jest.fn(),
       createMessage: jest.fn(),
       updateMessageStatus: jest.fn(),
       advanceRunToNextStep: jest.fn(),

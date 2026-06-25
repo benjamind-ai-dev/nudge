@@ -17,9 +17,9 @@ describe("VercelAiTemplateClient", () => {
     (generateObject as jest.Mock).mockResolvedValue({
       object: {
         name: "Polite first reminder",
-        subject: "Quick note about invoice {{invoice.invoice_number}}",
-        body: "Hi {{customer.contact_name}}, ...",
-        signature: "Thanks,\n{{business.sender_name}}",
+        subject: "Quick note about invoice {{invoice_number}}",
+        body: "Hi {{contact_name}}, ...",
+        signature: "Thanks,\n{{sender_name}}",
       },
     });
 
@@ -34,12 +34,15 @@ describe("VercelAiTemplateClient", () => {
     expect(anthropic).toHaveBeenCalledWith("claude-sonnet-4-6");
     const call = (generateObject as jest.Mock).mock.calls[0][0];
     expect(call.prompt).toContain("polite first reminder");
+    expect(call.prompt).toContain("<description>");
+    expect(call.prompt).toContain("</description>");
+    expect(call.prompt).not.toContain("Sandra");
     expect(call.system).toBeTruthy();
     expect(call.schema).toBeDefined();
     expect(call.abortSignal).toBeInstanceOf(AbortSignal);
 
     expect(result.name).toBe("Polite first reminder");
-    expect(result.body).toContain("{{customer.contact_name}}");
+    expect(result.body).toContain("{{contact_name}}");
   });
 
   it("propagates errors", async () => {

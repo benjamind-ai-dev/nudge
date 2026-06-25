@@ -1,21 +1,193 @@
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 
-@theme {
-  /* Body + UI + buttons + labels: Geist (free OFL neutral grotesque,
-     close to ABC Diatype). --font is a runtime override hook. */
-  --font-sans: var(--font, "Geist"), ui-sans-serif, system-ui, sans-serif;
-  /* Display / hero headings: Geist Light. */
-  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+/* ---------------------------------------------------------------------------
+   Design system — "Clean Bright" (light) + "Midnight" (dark).
+   shadcn/ui reads CSS variables; .dark on <html> switches to the dark palette.
+   The @theme inline block maps variables onto Tailwind utilities.
+--------------------------------------------------------------------------- */
+
+/* Light theme — "Clean Bright" */
+:root {
+  color-scheme: light;
+  --radius: 0.625rem; /* 10px */
+
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --primary: #4f46e5; /* indigo-600 — pops on light */
+  --primary-foreground: #ffffff;
+
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  --accent: #eef2ff; /* indigo-50 */
+  --accent-foreground: #4338ca; /* indigo-700 */
+
+  --destructive: #dc2626; /* red-600 — readable on light */
+  --destructive-foreground: #ffffff;
+
+  --success: #059669; /* emerald-600 */
+  --success-foreground: #ffffff;
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #6366f1; /* indigo-500 focus */
+
+  /* Accent gradient + glow for buttons / hero. */
+  --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  --glow-primary: 0 0 0 1px rgba(79, 70, 229, 0.3), 0 8px 24px -6px rgba(79, 70, 229, 0.35);
 }
 
-/* Every interactive control gets a pointer cursor (Tailwind preflight leaves
-   native buttons/selects on the default arrow). Disabled controls stay default. */
+/* Dark theme — "Midnight" (softer bg so cards clearly raise) */
+.dark {
+  color-scheme: dark;
+
+  --background: #0e1119; /* deep navy, not pure black */
+  --foreground: #e7e9ee;
+
+  --card: #171c28; /* visibly lighter than bg */
+  --card-foreground: #e7e9ee;
+  --popover: #171c28;
+  --popover-foreground: #e7e9ee;
+
+  --primary: #6366f1; /* indigo-500 — pops on dark */
+  --primary-foreground: #ffffff;
+
+  --secondary: #1c2230;
+  --secondary-foreground: #e7e9ee;
+
+  --muted: #161b26;
+  --muted-foreground: #94a0b8;
+
+  --accent: #1f2535;
+  --accent-foreground: #c7d2fe; /* indigo-200 */
+
+  --destructive: #f87171; /* red-400 — readable on dark */
+  --destructive-foreground: #ffffff;
+
+  --success: #34d399; /* emerald-400 */
+  --success-foreground: #062a1e;
+
+  --border: #262d3d;
+  --input: #2c3344;
+  --ring: #818cf8; /* indigo-400 focus glow */
+
+  /* Accent gradient + glow for buttons / hero. */
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --glow-primary: 0 0 0 1px rgba(99, 102, 241, 0.35), 0 8px 24px -6px rgba(99, 102, 241, 0.45);
+}
+
+@theme inline {
+  --font-sans: var(--font, "Sora"), ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
 @layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  /* Dark mode: subtle ambient indigo glow so the canvas isn't flat */
+  .dark body {
+    background-image: radial-gradient(
+      60rem 40rem at 12% -10%,
+      rgba(99, 102, 241, 0.07),
+      transparent 60%
+    );
+    background-attachment: fixed;
+  }
+
+  /* Every interactive control gets a pointer cursor (Tailwind preflight leaves
+     native buttons/selects on the default arrow). Disabled controls stay default. */
   button:not(:disabled),
   select:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   a[href] {
     cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Reusable craft utilities — applied in components for the "dramatic" feel. */
+
+  /* Primary action: indigo→violet gradient + glow + press feedback. */
+  .btn-glow {
+    background-image: var(--accent-gradient);
+    box-shadow: var(--glow-primary);
+    transition:
+      box-shadow 150ms ease,
+      transform 100ms ease,
+      filter 150ms ease;
+  }
+  .btn-glow:hover {
+    filter: brightness(1.08);
+    box-shadow:
+      0 0 0 1px rgba(129, 140, 248, 0.5),
+      0 10px 30px -6px rgba(99, 102, 241, 0.6);
+  }
+  .btn-glow:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  /* List/stat cards: subtle lift + accent border on hover. */
+  .card-lift {
+    transition:
+      transform 150ms ease,
+      box-shadow 150ms ease,
+      border-color 150ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
   }
 }

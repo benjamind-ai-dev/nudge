@@ -7,9 +7,9 @@ import type { AiTemplateClient, AiTemplateDraft } from "./ports/ai-template.clie
 
 const VALID_DRAFT: AiTemplateDraft = {
   name: "Polite first reminder",
-  subject: "Quick note about invoice {{invoice.invoice_number}}",
-  body: "Hi {{customer.contact_name}}, ...",
-  signature: "Thanks,\n{{business.sender_name}}",
+  subject: "Quick note about invoice {{invoice_number}}",
+  body: "Hi {{contact_name}}, ...",
+  signature: "Thanks,\n{{sender_name}}",
 };
 
 function makeClient(overrides: Partial<jest.Mocked<AiTemplateClient>> = {}) {
@@ -50,6 +50,17 @@ describe("GenerateTemplateUseCase", () => {
     await expect(uc.execute({ description: "anything" })).rejects.toBeInstanceOf(
       BadGatewayException,
     );
+  });
+
+  it("strips email addresses from the description before calling the client", async () => {
+    const client = makeClient();
+    const uc = new GenerateTemplateUseCase(client);
+
+    await uc.execute({ description: "remind john@acme.com about overdue invoice" });
+
+    const call = client.generate.mock.calls[0][0];
+    expect(call.description).not.toContain("john@acme.com");
+    expect(call.description).toContain("[email removed]");
   });
 
   it("exposes AI_TEMPLATE_SYSTEM_PROMPT constant", () => {

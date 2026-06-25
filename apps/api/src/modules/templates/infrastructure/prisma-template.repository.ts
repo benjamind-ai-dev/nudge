@@ -5,6 +5,7 @@ import type {
   CreateTemplateInput,
   TemplateCustomerVerifier,
   TemplateRepository,
+  TemplateWithUsage,
   UpdateTemplateInput,
 } from "../domain/template.repository";
 import type { Template } from "../domain/template.entity";
@@ -37,12 +38,54 @@ export class PrismaTemplateRepository implements TemplateRepository {
     @Inject(PRISMA_CLIENT) private readonly prisma: PrismaClient,
   ) {}
 
-  async list(businessId: string): Promise<Template[]> {
+  async list(businessId: string): Promise<TemplateWithUsage[]> {
     const rows = await this.prisma.template.findMany({
       where: { businessId },
       orderBy: { createdAt: "desc" },
     });
-    return rows.map(toDomain);
+
+    if (rows.length === 0) return [];
+
+    const templateIds = rows.map((r) => r.id);
+
+    // Fetch all templateIds referenced by sequence steps in this business (no N+1)
+    const stepRefs = await this.prisma.sequenceStep.findMany({
+      where: {
+        templateId: { in: templateIds },
+        sequence: { businessId },
+      },
+      select: { templateId: true },
+      distinct: ["templateId"],
+    });
+
+    // Fetch all templateIds referenced by customer links in this business (no N+1)
+    const customerRefs = await this.prisma.customerTemplate.findMany({
+      where: {
+        templateId: { in: templateIds },
+        customer: { businessId },
+      },
+      select: { templateId: true },
+      distinct: ["templateId"],
+    });
+
+    const inUseIds = new Set<string>([
+      ...stepRefs.map((r) => r.templateId as string),
+      ...customerRefs.map((r) => r.templateId),
+    ]);
+
+    return rows.map((row) => ({ ...toDomain(row), inUse: inUseIds.has(row.id) }));
+  }
+
+  async isInUse(id: string, businessId: string): Promise<boolean> {
+    const [stepCount, customerCount] = await Promise.all([
+      this.prisma.sequenceStep.count({
+        where: { templateId: id, sequence: { businessId } },
+      }),
+      this.prisma.customerTemplate.count({
+        where: { templateId: id, customer: { businessId } },
+      }),
+    ]);
+    return stepCount > 0 || customerCount > 0;
   }
 
   async findById(id: string, businessId: string): Promise<Template | null> {

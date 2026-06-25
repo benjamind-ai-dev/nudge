@@ -22,11 +22,17 @@ export interface CreateSequenceRunData {
   status: "active";
   nextSendAt: Date;
   startedAt: Date;
+  firstStepSubject: string | null;
+  firstStepBody: string | null;
+  firstStepIncludePaymentLink: boolean | null;
+  firstStepSkip: boolean | null;
 }
 
 export interface StartFollowUpRepository {
   getFollowUpContext(invoiceId: string, businessId: string): Promise<FollowUpContext | null>;
   findDefaultTierSequenceId(businessId: string): Promise<string | null>;
+  /** Last-resort fallback: the oldest active sequence for the business, or null if none. */
+  findAnyActiveSequenceId(businessId: string): Promise<string | null>;
   findSequenceFirstStep(sequenceId: string): Promise<SequenceFirstStep | null>;
   createSequenceRun(
     data: CreateSequenceRunData,

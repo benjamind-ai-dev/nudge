@@ -93,7 +93,7 @@ describe("PrismaTemplateRepository (integration)", () => {
         businessId,
         name: "First reminder",
         subject: "Hi",
-        body: "Body {{customer.company_name}}",
+        body: "Body {{company_name}}",
         signature: null,
       });
       expect(created.id).toBeDefined();
@@ -150,6 +150,39 @@ describe("PrismaTemplateRepository (integration)", () => {
       expect(ok).toBe(true);
       const gone = await repo.findById(tpl.id, businessId);
       expect(gone).toBeNull();
+    });
+  });
+
+  describe("isInUse", () => {
+    it("returns false when the template has no references", async () => {
+      const tpl = await repo.create({ businessId, name: "Unused", subject: null, body: "B", signature: null });
+      await expect(repo.isInUse(tpl.id, businessId)).resolves.toBe(false);
+    });
+
+    it("returns true when a customer links to the template", async () => {
+      const tpl = await repo.create({ businessId, name: "CustomerLinked", subject: null, body: "B", signature: null });
+      await repo.attachToCustomer(tpl.id, customerId, businessId);
+      await expect(repo.isInUse(tpl.id, businessId)).resolves.toBe(true);
+    });
+
+    it("returns false for a different business even when a customer link exists", async () => {
+      const tpl = await repo.create({ businessId, name: "CrossBiz", subject: null, body: "B", signature: null });
+      await repo.attachToCustomer(tpl.id, customerId, businessId);
+      await expect(repo.isInUse(tpl.id, otherBusinessId)).resolves.toBe(false);
+    });
+  });
+
+  describe("list inUse flag", () => {
+    it("marks a template as inUse when a customer links to it", async () => {
+      const tpl = await repo.create({ businessId, name: "InUseViaCustomer", subject: null, body: "B", signature: null });
+      const free = await repo.create({ businessId, name: "Free", subject: null, body: "B", signature: null });
+      await repo.attachToCustomer(tpl.id, customerId, businessId);
+
+      const list = await repo.list(businessId);
+      const inUseTpl = list.find((t) => t.id === tpl.id);
+      const freeTpl = list.find((t) => t.id === free.id);
+      expect(inUseTpl?.inUse).toBe(true);
+      expect(freeTpl?.inUse).toBe(false);
     });
   });
 

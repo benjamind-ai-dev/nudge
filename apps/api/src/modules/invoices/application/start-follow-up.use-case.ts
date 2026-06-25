@@ -10,6 +10,7 @@ import {
   NoActiveSequenceError,
   NoStepsError,
 } from "../domain/invoice.errors";
+import type { StartFollowUpBody } from "../dto/invoices.dto";
 
 const CHASEABLE_STATUSES = ["open", "overdue", "partial"];
 
@@ -28,7 +29,7 @@ export class StartFollowUpUseCase {
     private readonly repo: StartFollowUpRepository,
   ) {}
 
-  async execute(invoiceId: string, businessId: string): Promise<StartFollowUpResult> {
+  async execute(invoiceId: string, businessId: string, opts?: StartFollowUpBody): Promise<StartFollowUpResult> {
     const ctx = await this.repo.getFollowUpContext(invoiceId, businessId);
     if (!ctx) throw new InvoiceNotFoundError(invoiceId);
 
@@ -55,6 +56,10 @@ export class StartFollowUpUseCase {
       status: "active",
       nextSendAt,
       startedAt: new Date(),
+      firstStepSubject: opts?.subject ?? null,
+      firstStepBody: opts?.body ?? null,
+      firstStepIncludePaymentLink: opts?.includePaymentLink ?? null,
+      firstStepSkip: opts?.sendByEmail === false ? true : null,
     });
 
     if (created) {
@@ -72,8 +77,13 @@ export class StartFollowUpUseCase {
     return { runId: null, created: false, status: "already_running" };
   }
 
-  // Mirrors the worker's resolution order: active customer override → customer
-  // tier sequence (error if wired-but-inactive) → business default tier sequence.
+  // Manual "start follow-up" always falls back to a usable sequence — the user
+  // asked for one, so we never refuse with "no sequence" unless the business
+  // genuinely has zero active sequences. Order: active customer override →
+  // active customer tier sequence → business default tier sequence → ANY active
+  // business sequence. Unlike the worker (which skips an invoice when a tier
+  // sequence is paused), an inactive override/tier here falls THROUGH to the
+  // default rather than throwing.
   private async resolveSequenceId(
     invoiceId: string,
     businessId: string,
@@ -87,12 +97,18 @@ export class StartFollowUpUseCase {
     if (ctx.customerSequenceId !== null && ctx.customerSequenceIsActive === true) {
       return ctx.customerSequenceId;
     }
-    if (ctx.customerTierSequenceId !== null) {
-      if (ctx.customerTierSequenceIsActive === true) return ctx.customerTierSequenceId;
-      throw new NoActiveSequenceError(invoiceId);
+    if (
+      ctx.customerTierSequenceId !== null &&
+      ctx.customerTierSequenceIsActive === true
+    ) {
+      return ctx.customerTierSequenceId;
     }
-    const fallback = await this.repo.findDefaultTierSequenceId(businessId);
-    if (!fallback) throw new NoActiveSequenceError(invoiceId);
-    return fallback;
+    const defaultSequenceId = await this.repo.findDefaultTierSequenceId(businessId);
+    if (defaultSequenceId) return defaultSequenceId;
+
+    const anyActiveSequenceId = await this.repo.findAnyActiveSequenceId(businessId);
+    if (anyActiveSequenceId) return anyActiveSequenceId;
+
+    throw new NoActiveSequenceError(invoiceId);
   }
 }
