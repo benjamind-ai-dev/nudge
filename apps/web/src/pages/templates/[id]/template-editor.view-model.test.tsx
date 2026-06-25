@@ -68,6 +68,7 @@ describe("useTemplateEditorViewModel", () => {
       subject: "Payment due",
       body: "Hi {{contact_name}}",
       signature: null,
+      smsBody: null,
     });
     expect(navigateMock).toHaveBeenCalledWith("/templates");
   });
@@ -79,7 +80,7 @@ describe("useTemplateEditorViewModel", () => {
     await act(async () => { await result.current.handleSave(); });
     expect(updateMutateAsync).toHaveBeenCalledWith({
       id: "t-1",
-      input: { businessId: "biz-1", name: "Second notice", subject: "Overdue", body: "Body {{amount}}", signature: "Sig" },
+      input: { businessId: "biz-1", name: "Second notice", subject: "Overdue", body: "Body {{amount}}", signature: "Sig", smsBody: null },
     });
   });
 
@@ -171,5 +172,56 @@ describe("useTemplateEditorViewModel", () => {
     mockTemplate = undefined;
     const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
     expect(result.current.isDirty).toBe(true);
+  });
+
+  // --- smsBody (Task 2) ---
+
+  it("loads smsBody from the fetched template", async () => {
+    mockTemplate = { data: { id: "t-1", businessId: "biz-1", name: "Second notice", subject: "Overdue", body: "Body {{amount}}", signature: "Sig", smsBody: "Pay {{invoice_number}}", createdAt: "", updatedAt: "" } };
+    const { result } = renderHook(() => useTemplateEditorViewModel("t-1"));
+    await waitFor(() => expect(result.current.smsBody).toBe("Pay {{invoice_number}}"));
+  });
+
+  it("setSmsBody marks the editor dirty (existing template)", async () => {
+    mockTemplate = { data: { id: "t-1", businessId: "biz-1", name: "Second notice", subject: "Overdue", body: "Body {{amount}}", signature: "Sig", smsBody: "Original sms", createdAt: "", updatedAt: "" } };
+    const { result } = renderHook(() => useTemplateEditorViewModel("t-1"));
+    await waitFor(() => expect(result.current.name).toBe("Second notice"));
+    expect(result.current.isDirty).toBe(false);
+    act(() => { result.current.setSmsBody("new sms"); });
+    expect(result.current.isDirty).toBe(true);
+  });
+
+  it("includes smsBody in the create payload (trimmed → null when blank)", async () => {
+    mockTemplate = undefined;
+    const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
+    act(() => { result.current.setName("Reminder"); });
+    act(() => { result.current.setSubject("Payment due"); });
+    act(() => { result.current.setBody("Hi {{contact_name}}"); });
+    act(() => { result.current.setSmsBody("  Pay now  "); });
+    await act(async () => { await result.current.handleSave(); });
+    expect(createMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ smsBody: "Pay now" }),
+    );
+  });
+
+  it("create payload has smsBody null when blank", async () => {
+    mockTemplate = undefined;
+    createMutateAsync.mockResolvedValueOnce({ data: { id: "t-new" } });
+    const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
+    act(() => { result.current.setName("Reminder"); });
+    act(() => { result.current.setSubject("Payment due"); });
+    act(() => { result.current.setBody("Hi {{contact_name}}"); });
+    // smsBody intentionally left blank
+    await act(async () => { await result.current.handleSave(); });
+    expect(createMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ smsBody: null }),
+    );
+  });
+
+  it("exposes preview.smsText rendered with sample data", () => {
+    mockTemplate = undefined;
+    const { result } = renderHook(() => useTemplateEditorViewModel(undefined));
+    act(() => { result.current.setSmsBody("Hi {{contact_name}}"); });
+    expect(result.current.preview.smsText).toBe(`Hi ${SAMPLE_DATA.contact_name}`);
   });
 });

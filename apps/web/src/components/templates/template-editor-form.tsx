@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { HtmlVariableEditor } from "./html-variable-editor";
 
 interface TemplateEditorFormProps {
@@ -7,10 +8,12 @@ interface TemplateEditorFormProps {
   subject: string;
   body: string;
   signature: string;
+  smsBody: string;
   onNameChange: (v: string) => void;
   onSubjectChange: (v: string) => void;
   onBodyChange: (v: string) => void;
   onSignatureChange: (v: string) => void;
+  onSmsBodyChange: (v: string) => void;
   nameError?: string;
   subjectError?: string;
   bodyError?: string;
@@ -32,10 +35,12 @@ export function TemplateEditorForm({
   subject,
   body,
   signature,
+  smsBody,
   onNameChange,
   onSubjectChange,
   onBodyChange,
   onSignatureChange,
+  onSmsBodyChange,
   nameError,
   subjectError,
   bodyError,
@@ -104,6 +109,20 @@ export function TemplateEditorForm({
             placeholder={"Thanks,\nSarah · Acme Books  (HTML allowed)"}
             ariaLabel="Email signature"
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="tpl-sms">SMS text <span className="text-muted-foreground">(optional)</span></Label>
+          <Textarea
+            id="tpl-sms"
+            value={smsBody}
+            onChange={(e) => onSmsBodyChange(e.target.value)}
+            rows={3}
+            placeholder="Short text for SMS / Both steps. e.g. Invoice {{invoice_number}} for {{amount}} is due — pay: {{payment_link}}"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Plain text. Used when a sequence step sends by SMS. {"{{variables}}"} are supported. {smsBody.length} chars
+          </p>
         </div>
       </div>
     </div>

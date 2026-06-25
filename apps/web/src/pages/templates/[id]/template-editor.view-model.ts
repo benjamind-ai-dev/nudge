@@ -38,6 +38,7 @@ export interface TemplatePreviewModel {
   bodyHtml: string;
   signatureHtml: string | null;
   hasPaymentLink: boolean;
+  smsText: string;
 }
 
 export function useTemplateEditorViewModel(templateId: string | undefined) {
@@ -54,10 +55,11 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
   const [subject, setSubject] = useState("");
   const [bodyValue, setBodyValue] = useState("");
   const [signature, setSignature] = useState("");
+  const [smsBody, setSmsBodyValue] = useState("");
   const [aiDescription, setAiDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ name?: string; subject?: string; body?: string }>({});
-  const snapshotRef = useRef<{ name: string; subject: string; body: string; signature: string } | null>(null);
+  const snapshotRef = useRef<{ name: string; subject: string; body: string; signature: string; smsBody: string } | null>(null);
 
   // Hydrate from the loaded template once it arrives.
   useEffect(() => {
@@ -66,13 +68,15 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
       const subject = data.data.subject ?? "";
       const body = data.data.body;
       const signature = data.data.signature ?? "";
+      const smsBody = data.data.smsBody ?? "";
       setNameValue(name);
       setSubject(subject);
       setBodyValue(body);
       setSignature(signature);
+      setSmsBodyValue(smsBody);
       // Snapshot the original values for dirty tracking (only set once).
       if (!snapshotRef.current) {
-        snapshotRef.current = { name, subject, body, signature };
+        snapshotRef.current = { name, subject, body, signature, smsBody };
       }
     }
   }, [data]);
@@ -92,6 +96,10 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
     if (v.trim()) setErrors((e) => ({ ...e, subject: undefined }));
   }
 
+  function setSmsBody(v: string) {
+    setSmsBodyValue(v);
+  }
+
   const canSave =
     nameValue.trim().length > 0 &&
     subject.trim().length > 0 &&
@@ -105,9 +113,10 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
       nameValue !== snap.name ||
       subject !== snap.subject ||
       bodyValue !== snap.body ||
-      signature !== snap.signature
+      signature !== snap.signature ||
+      smsBody !== snap.smsBody
     );
-  }, [isNew, nameValue, subject, bodyValue, signature]);
+  }, [isNew, nameValue, subject, bodyValue, signature, smsBody]);
 
   async function handleSave() {
     const nextErrors: { name?: string; subject?: string; body?: string } = {};
@@ -126,6 +135,7 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
           subject: subject.trim(),
           body: bodyValue,
           signature: signature.trim() ? signature.trim() : null,
+          smsBody: smsBody.trim() ? smsBody.trim() : null,
         });
       } else {
         await updateMut.mutateAsync({
@@ -136,6 +146,7 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
             subject: subject.trim(),
             body: bodyValue,
             signature: signature.trim() ? signature.trim() : null,
+            smsBody: smsBody.trim() ? smsBody.trim() : null,
           },
         });
       }
@@ -175,12 +186,13 @@ export function useTemplateEditorViewModel(templateId: string | undefined) {
       bodyHtml: resolveVariables(bodyNoLink),
       signatureHtml: signature.trim() ? resolveVariables(signature) : null,
       hasPaymentLink,
+      smsText: smsBody.trim() ? resolveVariables(smsBody, SAMPLE_DATA) : "",
     };
-  }, [subject, bodyValue, signature, senderName]);
+  }, [subject, bodyValue, signature, senderName, smsBody]);
 
   return {
-    name: nameValue, subject, body: bodyValue, signature,
-    setName, setSubject: setSubjectWrapped, setBody, setSignature,
+    name: nameValue, subject, body: bodyValue, signature, smsBody,
+    setName, setSubject: setSubjectWrapped, setBody, setSignature, setSmsBody,
     isNew,
     isLoading: !isNew && isLoading,
     isSaving: createMut.isPending || updateMut.isPending,

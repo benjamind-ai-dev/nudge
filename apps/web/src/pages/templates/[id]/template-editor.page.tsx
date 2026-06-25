@@ -53,10 +53,12 @@ export function TemplateEditorPage() {
           subject={vm.subject}
           body={vm.body}
           signature={vm.signature}
+          smsBody={vm.smsBody}
           onNameChange={vm.setName}
           onSubjectChange={vm.setSubject}
           onBodyChange={vm.setBody}
           onSignatureChange={vm.setSignature}
+          onSmsBodyChange={vm.setSmsBody}
           nameError={vm.errors.name}
           subjectError={vm.errors.subject}
           bodyError={vm.errors.body}

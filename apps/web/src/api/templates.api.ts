@@ -6,6 +6,7 @@ export interface Template {
   name: string;
   subject: string | null;
   body: string;
+  smsBody?: string | null;
   signature: string | null;
   createdAt: string;
   updatedAt: string;
@@ -23,6 +24,7 @@ export interface CreateTemplateInput {
   name: string;
   subject?: string | null;
   body: string;
+  smsBody?: string | null;
   signature?: string | null;
 }
 
@@ -31,6 +33,7 @@ export type UpdateTemplateInput = {
   name?: string;
   subject?: string | null;
   body?: string;
+  smsBody?: string | null;
   signature?: string | null;
 };
 
