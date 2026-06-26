@@ -38,6 +38,7 @@ export interface InvoicePagination {
 
 export interface ListInvoicesParams {
   businessId: string;
+  customerId?: string;
   limit?: number;
   cursor?: string;
   status?: InvoiceStatus;
@@ -55,6 +56,7 @@ export function listInvoices(
   params: ListInvoicesParams,
 ): Promise<{ data: InvoiceListItem[]; pagination: InvoicePagination }> {
   const qs = new URLSearchParams({ businessId: params.businessId });
+  if (params.customerId) qs.set("customerId", params.customerId);
   if (params.limit !== undefined) qs.set("limit", String(params.limit));
   if (params.cursor) qs.set("cursor", params.cursor);
   if (params.status) qs.set("status", params.status);

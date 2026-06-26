@@ -53,3 +53,38 @@ export interface SequenceWithSteps extends SequenceSummary {
 export function createSequence(input: CreateSequenceInput): Promise<{ data: SequenceWithSteps }> {
   return apiClient(`/v1/sequences`, { method: "POST", body: JSON.stringify(input) });
 }
+
+export interface EnrollResult {
+  enrolled: number;
+  moved: number;
+  skipped: number;
+  items: { invoiceId: string; outcome: string; runId: string | null }[];
+}
+
+export interface AttachCustomerResult {
+  customerId: string;
+  overrideSet: boolean;
+  enrollment: EnrollResult;
+}
+
+export function enrollInvoices(
+  sequenceId: string,
+  businessId: string,
+  invoiceIds: string[],
+): Promise<{ data: EnrollResult }> {
+  return apiClient(`/v1/sequences/${sequenceId}/enroll?businessId=${businessId}`, {
+    method: "POST",
+    body: JSON.stringify({ invoiceIds }),
+  });
+}
+
+export function attachCustomer(
+  sequenceId: string,
+  businessId: string,
+  customerId: string,
+): Promise<{ data: AttachCustomerResult }> {
+  return apiClient(`/v1/sequences/${sequenceId}/attach-customer?businessId=${businessId}`, {
+    method: "POST",
+    body: JSON.stringify({ customerId }),
+  });
+}

@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { listInvoices } from "../api/invoices.api";
 
 const PAGE_LIMIT = 100;
@@ -23,6 +23,15 @@ export function useInvoicesInfinite(businessId: string) {
     getNextPageParam: (lastPage, allPages) =>
       allPages.length >= MAX_PAGES ? undefined : lastPage.pagination.nextCursor,
     enabled: Boolean(businessId),
+    staleTime: 30_000,
+  });
+}
+
+export function useCustomerOverdueInvoices(businessId: string, customerId: string) {
+  return useQuery({
+    queryKey: ["invoices", "overdue", businessId, customerId],
+    queryFn: () => listInvoices({ businessId, customerId, status: "overdue", limit: 100 }),
+    enabled: Boolean(businessId && customerId),
     staleTime: 30_000,
   });
 }
