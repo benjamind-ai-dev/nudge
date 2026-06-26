@@ -23,6 +23,8 @@ export interface StepRow {
   key: string;
   /** Cumulative day number (sum of all delayDays up to and including this step). */
   displayDay: number;
+  /** Raw template id for name resolution; null if not set. */
+  templateId: string | null;
   /** Human-readable template label derived from templateId, or "—". */
   templateName: string;
   channel: "email" | "sms" | "email_and_sms";
@@ -72,8 +74,10 @@ export function useSequenceDetailViewModel(id: string) {
       return {
         key: step.id,
         displayDay: cumulative,
+        templateId: step.templateId ?? null,
         // SequenceStepDetail only carries templateId — no templateName on the type.
-        // We derive a short label from it so the UI isn't blank.
+        // We derive a short label from it so the UI isn't blank; the page can
+        // resolve the real name via useTemplates + templateId.
         templateName: step.templateId ? `Template · ${step.templateId}` : "—",
         channel: step.channel,
         delayDays: step.delayDays,
@@ -147,6 +151,7 @@ export function useSequenceDetailViewModel(id: string) {
     name,
     isActive,
     canEditSteps,
+    businessId,
     // rows
     stepRows,
     runRows,
