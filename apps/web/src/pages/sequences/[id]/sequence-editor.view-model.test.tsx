@@ -10,7 +10,13 @@ vi.mock("@/lib/hooks/use-active-business-id", () => ({
   useActiveBusinessId: () => ({ businessId: "biz-1", isLoading: false, hasMultiple: false }),
 }));
 const mockCreate = vi.fn();
-vi.mock("@/queries/use-sequences", () => ({ useCreateSequence: () => ({ mutateAsync: mockCreate, isPending: false }) }));
+const mockAttach = vi.fn();
+const mockEnroll = vi.fn();
+vi.mock("@/queries/use-sequences", () => ({
+  useCreateSequence: () => ({ mutateAsync: mockCreate, isPending: false }),
+  useAttachCustomer: () => ({ mutateAsync: mockAttach, isPending: false }),
+  useEnrollInvoices: () => ({ mutateAsync: mockEnroll, isPending: false }),
+}));
 const tmpl = (id: string, name: string) => ({ id, businessId: "biz-1", name, subject: `${name} subj`, body: `${name} body`, signature: null, createdAt: "", updatedAt: "", inUse: false });
 const mockTemplates = vi.fn();
 vi.mock("@/queries/use-templates", () => ({ useTemplates: () => mockTemplates() }));
@@ -18,7 +24,13 @@ vi.mock("@/queries/use-templates", () => ({ useTemplates: () => mockTemplates() 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={new QueryClient()}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>
 );
-beforeEach(() => { navigate.mockReset(); mockCreate.mockReset(); mockTemplates.mockReturnValue({ data: { data: [tmpl("t1","Reminder"), tmpl("t2","Past due")] }, isLoading: false }); });
+beforeEach(() => {
+  navigate.mockReset();
+  mockCreate.mockReset();
+  mockAttach.mockReset();
+  mockEnroll.mockReset();
+  mockTemplates.mockReturnValue({ data: { data: [tmpl("t1","Reminder"), tmpl("t2","Past due")] }, isLoading: false });
+});
 
 describe("useSequenceEditorViewModel", () => {
   it("starts empty and cannot save without a name and a step", () => {
@@ -118,5 +130,72 @@ describe("useSequenceEditorViewModel", () => {
     expect(result.current.rows[0].isComplete).toBe(false);
     act(() => result.current.setStepTemplate(result.current.rows[0].step.key, "t1"));
     expect(result.current.rows[0].isComplete).toBe(true);
+  });
+
+  // ---- audience attach/enroll tests ----
+
+  it("save with NO audience → only createMut called, navigate('/sequences')", async () => {
+    mockCreate.mockResolvedValue({ data: { id: "seq-1" } });
+    const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
+    act(() => result.current.setName("Standard"));
+    act(() => result.current.setStepTemplate(result.current.steps[0].key, "t1"));
+    await act(async () => { await result.current.save(); });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockAttach).not.toHaveBeenCalled();
+    expect(mockEnroll).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith("/sequences");
+  });
+
+  it("save with customer-mode audience (2 ids) → create then attachMut×2 with seqId+each id, then navigate", async () => {
+    mockCreate.mockResolvedValue({ data: { id: "seq-2" } });
+    mockAttach.mockResolvedValue({});
+    const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
+    act(() => result.current.setName("Standard"));
+    act(() => result.current.setStepTemplate(result.current.steps[0].key, "t1"));
+    act(() => result.current.setAudience({ mode: "customer", customerIds: ["cust-1", "cust-2"] }));
+    await act(async () => { await result.current.save(); });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockAttach).toHaveBeenCalledTimes(2);
+    expect(mockAttach).toHaveBeenCalledWith({ sequenceId: "seq-2", businessId: "biz-1", customerId: "cust-1" });
+    expect(mockAttach).toHaveBeenCalledWith({ sequenceId: "seq-2", businessId: "biz-1", customerId: "cust-2" });
+    expect(mockEnroll).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith("/sequences");
+  });
+
+  it("save with invoices-mode audience → create then enrollMut with invoiceIds + seqId, then navigate", async () => {
+    mockCreate.mockResolvedValue({ data: { id: "seq-3" } });
+    mockEnroll.mockResolvedValue({});
+    const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
+    act(() => result.current.setName("Standard"));
+    act(() => result.current.setStepTemplate(result.current.steps[0].key, "t1"));
+    act(() => result.current.setAudience({ mode: "invoices", invoiceIds: ["inv-1", "inv-2"] }));
+    await act(async () => { await result.current.save(); });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockEnroll).toHaveBeenCalledTimes(1);
+    expect(mockEnroll).toHaveBeenCalledWith({ sequenceId: "seq-3", businessId: "biz-1", invoiceIds: ["inv-1", "inv-2"] });
+    expect(mockAttach).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith("/sequences");
+  });
+
+  it("create-ok-but-attach-throws → error mentions 'attaching', createdSequenceId set, NOT navigated; second save() does NOT call create again", async () => {
+    mockCreate.mockResolvedValue({ data: { id: "seq-4" } });
+    mockAttach.mockRejectedValue(new Error("attach failed"));
+    const { result } = renderHook(useSequenceEditorViewModel, { wrapper });
+    act(() => result.current.setName("Standard"));
+    act(() => result.current.setStepTemplate(result.current.steps[0].key, "t1"));
+    act(() => result.current.setAudience({ mode: "customer", customerIds: ["cust-1"] }));
+
+    // First save: create succeeds, attach fails
+    await act(async () => { await result.current.save(); });
+    await waitFor(() => expect(result.current.error).toMatch(/attaching/i));
+    expect(result.current.createdSequenceId).toBe("seq-4");
+    expect(navigate).not.toHaveBeenCalled();
+
+    // Second save: should NOT call create again, only retries attach
+    mockCreate.mockClear();
+    mockAttach.mockResolvedValue({});
+    await act(async () => { await result.current.save(); });
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith("/sequences");
   });
 });

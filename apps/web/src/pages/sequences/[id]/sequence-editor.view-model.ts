@@ -1,10 +1,11 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useActiveBusinessId } from "@/lib/hooks/use-active-business-id";
-import { useCreateSequence } from "@/queries/use-sequences";
+import { useCreateSequence, useEnrollInvoices, useAttachCustomer } from "@/queries/use-sequences";
 import { useTemplates } from "@/queries/use-templates";
 import type { TemplateListItem } from "@/api/templates.api";
 import type { CreateSequenceStep } from "@/api/sequences.api";
+import type { AudienceSelection } from "@/components/sequences/use-audience-picker";
 
 export interface DraftStep {
   key: string; templateId: string | null; templateName: string;
@@ -26,11 +27,22 @@ export interface StepRow {
   isComplete: boolean;
 }
 
+function audienceHasSelection(sel: AudienceSelection): boolean {
+  if (sel.mode === "customer") return sel.customerIds.length > 0;
+  return sel.invoiceIds.length > 0;
+}
+
+function msg(err: unknown): string {
+  return err instanceof Error ? err.message : "Something went wrong.";
+}
+
 export function useSequenceEditorViewModel() {
   const navigate = useNavigate();
   const { businessId } = useActiveBusinessId();
   const { data: tmplData, isLoading: templatesLoading } = useTemplates(businessId);
   const createMut = useCreateSequence();
+  const attachMut = useAttachCustomer();
+  const enrollMut = useEnrollInvoices();
 
   const [name, setName] = useState("");
   // Seed once via a ref so both useState calls derive from the same newStep() call,
@@ -41,6 +53,12 @@ export function useSequenceEditorViewModel() {
   const [activeStepKey, setActiveStepKey] = useState<string | null>(seededRef.current[0].key);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ name?: string; steps?: string }>({});
+  const [audience, setAudienceState] = useState<AudienceSelection | null>(null);
+  const [createdSequenceId, setCreatedSequenceId] = useState<string | null>(null);
+
+  const setAudience = useCallback((sel: AudienceSelection | null) => {
+    setAudienceState(sel);
+  }, []);
 
   const templates: TemplateListItem[] = tmplData?.data ?? [];
   const hasNoTemplates = !templatesLoading && templates.length === 0;
@@ -125,13 +143,41 @@ export function useSequenceEditorViewModel() {
         includePaymentLink: s.includePaymentLink,
       };
     });
+    // localSeqId tracks whether a sequence id is known in this execution (either
+    // previously stored in state or freshly created). The catch block uses it
+    // synchronously since React state from setCreatedSequenceId won't be visible
+    // until the next render.
+    let localSeqId: string | null = createdSequenceId;
     try {
-      await createMut.mutateAsync({ businessId, name: name.trim(), steps: payload });
+      if (!localSeqId) {
+        const res = await createMut.mutateAsync({ businessId, name: name.trim(), steps: payload });
+        localSeqId = res.data.id;
+        setCreatedSequenceId(localSeqId);
+      }
+      if (audience && audienceHasSelection(audience)) {
+        if (audience.mode === "customer") {
+          for (const customerId of audience.customerIds) {
+            await attachMut.mutateAsync({ sequenceId: localSeqId, businessId, customerId });
+          }
+        } else {
+          if (audience.invoiceIds.length > 0) {
+            await enrollMut.mutateAsync({ sequenceId: localSeqId, businessId, invoiceIds: audience.invoiceIds });
+          }
+        }
+      }
       navigate("/sequences");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create the sequence.");
+      // If localSeqId is set, the sequence already exists — attach step threw.
+      // Report accordingly so the user can retry the attach without re-creating.
+      setError(
+        localSeqId
+          ? `Sequence created, but attaching the audience failed: ${msg(err)}. Retry, or skip to the list.`
+          : msg(err),
+      );
     }
   }
+
+  function skipAudience() { navigate("/sequences"); }
 
   function cancel() { navigate("/sequences"); }
 
@@ -140,6 +186,10 @@ export function useSequenceEditorViewModel() {
     addStep, removeStep, moveStep, editStep, doneStep, isStepComplete,
     setStepTemplate, setStepChannel, setStepDelay, toggleOwnerAlert, togglePaymentLink,
     templates, templatesLoading, hasNoTemplates,
-    canSave, isSaving: createMut.isPending, error, errors, save, cancel,
+    canSave,
+    isSaving: createMut.isPending || attachMut.isPending || enrollMut.isPending,
+    error, errors, save, cancel,
+    audience, setAudience, createdSequenceId, skipAudience,
+    businessId,
   };
 }
