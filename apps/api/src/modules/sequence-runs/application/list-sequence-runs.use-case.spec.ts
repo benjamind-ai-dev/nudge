@@ -14,7 +14,7 @@ const mkItem = (over: Partial<SequenceRunListItem> = {}): SequenceRunListItem =>
   nextSendAt: new Date("2026-05-21T13:00:00Z"),
   startedAt: new Date("2026-05-15T09:00:00Z"),
   completedAt: null,
-  invoice: { id: "inv-1", invoiceNumber: "INV-001", amountCents: 10_000, balanceDueCents: 10_000 },
+  invoice: { id: "inv-1", invoiceNumber: "INV-001", amountCents: 10_000, balanceDueCents: 10_000, status: "sent" },
   customer: { id: "cust-1", companyName: "Acme Corp" },
   currentStep: { stepOrder: 2, channel: "email" },
   ...over,
@@ -57,6 +57,21 @@ describe("ListSequenceRunsUseCase", () => {
       status: "paused",
       customerId: "cust-1",
       invoiceId: "inv-1",
+    };
+    await useCase.execute(filter);
+
+    expect(repo.findManyByFilter).toHaveBeenCalledWith(filter);
+  });
+
+  it("forwards sequenceId filter to the repository", async () => {
+    const repo = createMockRepo();
+    const useCase = new ListSequenceRunsUseCase(repo);
+
+    const filter: SequenceRunListFilter = {
+      businessId: "biz-1",
+      page: 1,
+      limit: 25,
+      sequenceId: "seq-00000000-0000-0000-0000-000000000001",
     };
     await useCase.execute(filter);
 

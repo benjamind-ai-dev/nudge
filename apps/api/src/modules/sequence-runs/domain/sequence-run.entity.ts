@@ -15,6 +15,7 @@ export interface SequenceRunListItem {
     invoiceNumber: string | null;
     amountCents: number;
     balanceDueCents: number;
+    status: string;
   };
   customer: {
     id: string;

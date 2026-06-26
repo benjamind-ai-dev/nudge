@@ -32,6 +32,7 @@ const LIST_SELECT = {
       invoiceNumber: true,
       amountCents: true,
       balanceDueCents: true,
+      status: true,
       businessId: true,
     },
   },
@@ -221,6 +222,12 @@ export class PrismaSequenceRunRepository implements SequenceRunRepository {
 
     if (filter.status) where.status = filter.status;
     if (filter.invoiceId) where.invoiceId = filter.invoiceId;
+    if (filter.sequenceId) {
+      // Scope through sequence.businessId in addition to the invoice.businessId
+      // already in the base where clause, so a caller cannot enumerate runs for
+      // a sequence they don't own.
+      where.sequence = { id: filter.sequenceId, businessId: filter.businessId };
+    }
     if (filter.customerId) {
       where.invoice = { businessId: filter.businessId, customerId: filter.customerId };
     }
@@ -258,6 +265,7 @@ export class PrismaSequenceRunRepository implements SequenceRunRepository {
         invoiceNumber: row.invoice.invoiceNumber,
         amountCents: row.invoice.amountCents,
         balanceDueCents: row.invoice.balanceDueCents,
+        status: row.invoice.status,
       },
       customer: customer ?? { id: "", companyName: "" },
       currentStep: row.currentStep
