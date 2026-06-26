@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaClient } from "@nudge/database";
-import { SEQUENCE_RUN_STATUSES } from "@nudge/shared";
+import { SEQUENCE_RUN_STATUSES, PAUSED_REASONS, STOPPED_REASONS } from "@nudge/shared";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   SequenceRepository,
@@ -351,5 +351,62 @@ export class PrismaSequenceRepository implements SequenceRepository {
         }),
       ),
     );
+  }
+
+  async pauseActiveRuns(sequenceId: string, businessId: string): Promise<number> {
+    const result = await this.prisma.sequenceRun.updateMany({
+      where: {
+        sequenceId,
+        status: SEQUENCE_RUN_STATUSES.ACTIVE,
+        sequence: { businessId },
+      },
+      data: {
+        status: SEQUENCE_RUN_STATUSES.PAUSED,
+        pausedReason: PAUSED_REASONS.SEQUENCE_PAUSED,
+      },
+    });
+    return result.count;
+  }
+
+  async resumeSequencePausedRuns(sequenceId: string, businessId: string): Promise<number> {
+    const result = await this.prisma.sequenceRun.updateMany({
+      where: {
+        sequenceId,
+        status: SEQUENCE_RUN_STATUSES.PAUSED,
+        pausedReason: PAUSED_REASONS.SEQUENCE_PAUSED,
+        sequence: { businessId },
+      },
+      data: {
+        status: SEQUENCE_RUN_STATUSES.ACTIVE,
+        pausedReason: null,
+      },
+    });
+    return result.count;
+  }
+
+  async stopRunsForCustomerOnSequence(sequenceId: string, businessId: string, customerId: string): Promise<number> {
+    // SequenceRun has no direct customerId — customer is reached via invoice.customerId
+    const result = await this.prisma.sequenceRun.updateMany({
+      where: {
+        sequenceId,
+        status: { in: [SEQUENCE_RUN_STATUSES.ACTIVE, SEQUENCE_RUN_STATUSES.PAUSED] },
+        sequence: { businessId },
+        invoice: { customerId },
+      },
+      data: {
+        status: SEQUENCE_RUN_STATUSES.STOPPED,
+        stoppedReason: STOPPED_REASONS.MANUALLY_STOPPED,
+        completedAt: new Date(),
+      },
+    });
+    return result.count;
+  }
+
+  async clearCustomerOverrideIfPointsHere(sequenceId: string, businessId: string, customerId: string): Promise<boolean> {
+    const result = await this.prisma.customer.updateMany({
+      where: { id: customerId, businessId, sequenceId },
+      data: { sequenceId: null },
+    });
+    return result.count > 0;
   }
 }
