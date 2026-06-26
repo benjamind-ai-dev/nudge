@@ -1,6 +1,5 @@
 import { Trash2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -15,6 +14,7 @@ import {
   ListSkeletonCard,
 } from "@/components/common/list-card";
 import { cn } from "@/lib/utils";
+import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
 import type { SequenceRow } from "@/pages/sequences/sequences.view-model";
 
 interface SequenceListProps {
@@ -22,21 +22,7 @@ interface SequenceListProps {
   isLoading: boolean;
   error: string | null;
   onRequestDelete: (r: SequenceRow) => void;
-}
-
-function StatusBadge({ isActive }: { isActive: boolean }) {
-  return isActive ? (
-    <Badge
-      variant="outline"
-      className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600"
-    >
-      Active
-    </Badge>
-  ) : (
-    <Badge variant="outline" className="text-muted-foreground">
-      Paused
-    </Badge>
-  );
+  onOpen?: (id: string) => void;
 }
 
 export function SequenceList({
@@ -44,6 +30,7 @@ export function SequenceList({
   isLoading,
   error,
   onRequestDelete,
+  onOpen,
 }: SequenceListProps) {
   if (error) {
     return (
@@ -81,12 +68,13 @@ export function SequenceList({
         {rows.map((row) => (
           <ListRow
             key={row.id}
+            onClick={() => onOpen?.(row.id)}
             icon={<Workflow className="h-4 w-4" />}
             title={row.name}
             subtitle={`${row.tierName} · ${row.stepCountLabel}`}
             right={
               <>
-                <StatusBadge isActive={row.isActive} />
+                <SequenceStatusBadge isActive={row.isActive} />
                 <span
                   className={cn(
                     "w-24 shrink-0 text-right text-[12.5px] text-muted-foreground group-hover:hidden",

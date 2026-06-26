@@ -88,3 +88,29 @@ export function attachCustomer(
     body: JSON.stringify({ customerId }),
   });
 }
+
+export function getSequence(id: string, businessId: string): Promise<{ data: SequenceWithSteps }> {
+  return apiClient(`/v1/sequences/${id}?businessId=${businessId}`);
+}
+
+export function pauseSequence(id: string, businessId: string): Promise<{ data: SequenceSummary }> {
+  return apiClient(`/v1/sequences/${id}/pause?businessId=${businessId}`, { method: "POST" });
+}
+
+export function activateSequence(
+  id: string,
+  businessId: string,
+): Promise<{ data: SequenceSummary }> {
+  return apiClient(`/v1/sequences/${id}/activate?businessId=${businessId}`, { method: "POST" });
+}
+
+export function detachCustomer(
+  id: string,
+  businessId: string,
+  customerId: string,
+): Promise<{ data: { detached: boolean; stoppedRuns: number } }> {
+  return apiClient(`/v1/sequences/${id}/detach-customer?businessId=${businessId}`, {
+    method: "POST",
+    body: JSON.stringify({ customerId }),
+  });
+}
