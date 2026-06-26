@@ -114,3 +114,14 @@ export function detachCustomer(
     body: JSON.stringify({ customerId }),
   });
 }
+
+export function replaceSequence(
+  id: string,
+  businessId: string,
+  input: { name: string; steps: CreateSequenceStep[] },
+): Promise<{ data: SequenceWithSteps }> {
+  return apiClient(`/v1/sequences/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ businessId, name: input.name, steps: input.steps }),
+  });
+}

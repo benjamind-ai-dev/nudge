@@ -9,8 +9,10 @@ import {
   pauseSequence,
   activateSequence,
   detachCustomer,
+  replaceSequence,
   type SequenceSummary,
   type CreateSequenceInput,
+  type CreateSequenceStep,
 } from "@/api/sequences.api";
 
 export function useSequences(businessId: string) {
@@ -136,6 +138,28 @@ export function useAttachCustomer() {
       void qc.invalidateQueries({ queryKey: ["sequences", businessId] });
       void qc.invalidateQueries({ queryKey: ["customers", businessId] });
       void qc.invalidateQueries({ queryKey: ["invoices"] });
+      void qc.invalidateQueries({ queryKey: ["sequence-runs"] });
+    },
+  });
+}
+
+export function useReplaceSequence() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      businessId,
+      name,
+      steps,
+    }: {
+      id: string;
+      businessId: string;
+      name: string;
+      steps: CreateSequenceStep[];
+    }) => replaceSequence(id, businessId, { name, steps }),
+    onSuccess: (_res, { id, businessId }) => {
+      void qc.invalidateQueries({ queryKey: ["sequences", businessId] });
+      void qc.invalidateQueries({ queryKey: ["sequences", businessId, id] });
       void qc.invalidateQueries({ queryKey: ["sequence-runs"] });
     },
   });
