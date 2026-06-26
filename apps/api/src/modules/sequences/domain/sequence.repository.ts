@@ -62,4 +62,8 @@ export interface SequenceRepository {
   deleteStep(stepId: string, sequenceId: string, businessId: string): Promise<void>;
   reorderSteps(sequenceId: string, businessId: string, stepOrders: Array<{ stepId: string; stepOrder: number }>): Promise<void>;
   findSenderName(businessId: string): Promise<string | null>;
+  pauseActiveRuns(sequenceId: string, businessId: string): Promise<number>;
+  resumeSequencePausedRuns(sequenceId: string, businessId: string): Promise<number>;
+  stopRunsForCustomerOnSequence(sequenceId: string, businessId: string, customerId: string): Promise<number>;
+  clearCustomerOverrideIfPointsHere(sequenceId: string, businessId: string, customerId: string): Promise<boolean>;
 }

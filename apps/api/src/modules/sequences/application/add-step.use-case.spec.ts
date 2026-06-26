@@ -70,6 +70,10 @@ const createMockRepo = (overrides: Partial<SequenceRepository> = {}): SequenceRe
   replaceSteps: jest.fn(),
   findSenderName: jest.fn().mockResolvedValue("Sender"),
   createWithSteps: jest.fn(),
+  pauseActiveRuns: jest.fn().mockResolvedValue(0),
+  resumeSequencePausedRuns: jest.fn().mockResolvedValue(0),
+  stopRunsForCustomerOnSequence: jest.fn().mockResolvedValue(0),
+  clearCustomerOverrideIfPointsHere: jest.fn().mockResolvedValue(false),
   ...overrides,
 });
 

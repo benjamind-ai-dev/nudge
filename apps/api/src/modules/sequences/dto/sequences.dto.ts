@@ -81,3 +81,8 @@ export const attachCustomerSchema = z.object({
   customerId: z.string().uuid(),
 });
 export type AttachCustomerDto = z.infer<typeof attachCustomerSchema>;
+
+export const detachCustomerSchema = z.object({
+  customerId: z.string().uuid(),
+});
+export type DetachCustomerDto = z.infer<typeof detachCustomerSchema>;

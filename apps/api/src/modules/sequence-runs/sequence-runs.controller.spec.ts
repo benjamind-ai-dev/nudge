@@ -31,7 +31,7 @@ const listItem: SequenceRunListItem = {
   nextSendAt: new Date("2026-05-21T13:00:00Z"),
   startedAt: new Date("2026-05-15T09:00:00Z"),
   completedAt: null,
-  invoice: { id: "inv-1", invoiceNumber: "INV-001", amountCents: 10_000, balanceDueCents: 10_000 },
+  invoice: { id: "inv-1", invoiceNumber: "INV-001", amountCents: 10_000, balanceDueCents: 10_000, status: "sent" },
   customer: { id: "cust-1", companyName: "Acme" },
   currentStep: { stepOrder: 2, channel: "email" },
 };

@@ -13,6 +13,7 @@ export interface SequenceRunListFilter {
   status?: SequenceRunStatus;
   customerId?: string;
   invoiceId?: string;
+  sequenceId?: string;
 }
 
 export interface SequenceRunListResult {
