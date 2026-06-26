@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { StepTemplatePicker } from "@/components/sequences/step-template-picker";
-import type { DraftStep } from "@/pages/sequences/[id]/sequence-editor.view-model";
+import type { DraftStep } from "@/pages/sequences/[id]/use-step-draft";
 import type { TemplateListItem } from "@/api/templates.api";
 
 const MAX_STEPS = 10;
