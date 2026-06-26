@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   STOPPED_REASONS,
+  PAUSED_REASONS,
   SEQUENCE_RUN_STATUSES,
   type StoppedReason,
   type SequenceRunStatus,
@@ -34,6 +35,12 @@ describe("STOPPED_REASONS", () => {
       "reassigned",
     ];
     expect(values).toHaveLength(7);
+  });
+});
+
+describe("PAUSED_REASONS", () => {
+  it("SEQUENCE_PAUSED equals sequence_paused", () => {
+    expect(PAUSED_REASONS.SEQUENCE_PAUSED).toBe("sequence_paused");
   });
 });
 
