@@ -26,6 +26,8 @@ import { ReplaceSequenceUseCase } from "./application/replace-sequence.use-case"
 import { PreviewStepUseCase } from "./application/preview-step.use-case";
 import { EnrollInvoicesUseCase } from "./application/enroll-invoices.use-case";
 import { AttachCustomerUseCase } from "./application/attach-customer.use-case";
+import { PauseSequenceUseCase } from "./application/pause-sequence.use-case";
+import { ActivateSequenceUseCase } from "./application/activate-sequence.use-case";
 import {
   addStepSchema,
   attachCustomerSchema,
@@ -62,6 +64,8 @@ export class SequencesController {
     private readonly previewStep: PreviewStepUseCase,
     private readonly enrollInvoices: EnrollInvoicesUseCase,
     private readonly attachCustomerUseCase: AttachCustomerUseCase,
+    private readonly pauseSequenceUseCase: PauseSequenceUseCase,
+    private readonly activateSequenceUseCase: ActivateSequenceUseCase,
     private readonly businessAuth: BusinessAuthorizationService,
   ) {}
 
@@ -224,6 +228,30 @@ export class SequencesController {
   ) {
     await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
     const data = await this.attachCustomerUseCase.execute(id, businessId, dto.customerId);
+    return { data };
+  }
+
+  @Post(":id/pause")
+  @HttpCode(200)
+  async pause(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
+  ) {
+    await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+    const data = await this.pauseSequenceUseCase.execute(id, businessId);
+    return { data };
+  }
+
+  @Post(":id/activate")
+  @HttpCode(200)
+  async activate(
+    @AccountId() clerkUserId: string,
+    @Param("id") id: string,
+    @Query("businessId", new ZodValidationPipe(businessIdQuerySchema)) businessId: string,
+  ) {
+    await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, businessId);
+    const data = await this.activateSequenceUseCase.execute(id, businessId);
     return { data };
   }
 }
