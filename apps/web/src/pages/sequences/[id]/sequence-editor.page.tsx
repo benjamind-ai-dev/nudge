@@ -1,5 +1,6 @@
 import { useSequenceEditorViewModel } from "./sequence-editor.view-model";
 import { StepSpineEditor } from "@/components/sequences/step-spine-editor";
+import { AudiencePicker } from "@/components/sequences/audience-picker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -35,7 +36,24 @@ export function SequenceEditorPage() {
         />
       </div>
 
-      {vm.error && <p className="text-sm font-medium text-destructive">{vm.error}</p>}
+      <div className="space-y-2">
+        <Label>Who runs this? <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <AudiencePicker
+          businessId={vm.businessId}
+          onSelectionChange={(selection) => vm.setAudience(selection)}
+        />
+      </div>
+
+      {vm.error && (
+        <div className="flex items-center gap-3">
+          <p className="text-sm font-medium text-destructive">{vm.error}</p>
+          {vm.createdSequenceId && (
+            <Button variant="ghost" size="sm" onClick={vm.skipAudience}>
+              Skip to sequences
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
