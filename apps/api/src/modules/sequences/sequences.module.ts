@@ -16,6 +16,7 @@ import { DeleteStepUseCase } from "./application/delete-step.use-case";
 import { ReorderStepsUseCase } from "./application/reorder-steps.use-case";
 import { PreviewStepUseCase } from "./application/preview-step.use-case";
 import { AttachCustomerUseCase } from "./application/attach-customer.use-case";
+import { DetachCustomerUseCase } from "./application/detach-customer.use-case";
 import { PauseSequenceUseCase } from "./application/pause-sequence.use-case";
 import { ActivateSequenceUseCase } from "./application/activate-sequence.use-case";
 import { SequencesController } from "./sequences.controller";
@@ -42,6 +43,7 @@ import { HandlebarsTemplateService } from "../../common/template/handlebars-temp
     PreviewStepUseCase,
     EnrollInvoicesUseCase,
     AttachCustomerUseCase,
+    DetachCustomerUseCase,
     PauseSequenceUseCase,
     ActivateSequenceUseCase,
     { provide: SEQUENCE_REPOSITORY, useClass: PrismaSequenceRepository },

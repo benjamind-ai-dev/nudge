@@ -16,6 +16,7 @@ import { ReplaceSequenceUseCase } from "./application/replace-sequence.use-case"
 import { PreviewStepUseCase } from "./application/preview-step.use-case";
 import { EnrollInvoicesUseCase } from "./application/enroll-invoices.use-case";
 import { AttachCustomerUseCase } from "./application/attach-customer.use-case";
+import { DetachCustomerUseCase } from "./application/detach-customer.use-case";
 import { PauseSequenceUseCase } from "./application/pause-sequence.use-case";
 import { ActivateSequenceUseCase } from "./application/activate-sequence.use-case";
 import { SequenceNotFoundError } from "./domain/sequence.errors";
@@ -77,6 +78,7 @@ describe("SequencesController", () => {
   let previewStepUseCase: { execute: jest.Mock };
   let enrollInvoices: { execute: jest.Mock };
   let attachCustomer: { execute: jest.Mock };
+  let detachCustomer: { execute: jest.Mock };
   let pauseSequence: { execute: jest.Mock };
   let activateSequence: { execute: jest.Mock };
   let businessAuth: { assertCallerOwnsBusiness: jest.Mock };
@@ -95,6 +97,7 @@ describe("SequencesController", () => {
     previewStepUseCase = { execute: jest.fn() };
     enrollInvoices = { execute: jest.fn() };
     attachCustomer = { execute: jest.fn() };
+    detachCustomer = { execute: jest.fn() };
     pauseSequence = { execute: jest.fn() };
     activateSequence = { execute: jest.fn() };
     businessAuth = { assertCallerOwnsBusiness: jest.fn().mockResolvedValue(undefined) };
@@ -115,6 +118,7 @@ describe("SequencesController", () => {
         { provide: PreviewStepUseCase, useValue: previewStepUseCase },
         { provide: EnrollInvoicesUseCase, useValue: enrollInvoices },
         { provide: AttachCustomerUseCase, useValue: attachCustomer },
+        { provide: DetachCustomerUseCase, useValue: detachCustomer },
         { provide: PauseSequenceUseCase, useValue: pauseSequence },
         { provide: ActivateSequenceUseCase, useValue: activateSequence },
         { provide: BusinessAuthorizationService, useValue: businessAuth },
@@ -204,6 +208,27 @@ describe("SequencesController", () => {
         .send({ customerId: "33333333-3333-3333-3333-333333333333" })
         .expect(200);
       expect(businessAuth.assertCallerOwnsBusiness).toHaveBeenCalled();
+    });
+  });
+
+  describe("POST /v1/sequences/:id/detach-customer", () => {
+    it("returns 200 with detach result", async () => {
+      detachCustomer.execute.mockResolvedValue({ detached: true, stoppedRuns: 2 });
+      const res = await request(app.getHttpServer())
+        .post("/v1/sequences/seq-1/detach-customer?businessId=11111111-1111-1111-1111-111111111111")
+        .send({ customerId: "33333333-3333-3333-3333-333333333333" })
+        .expect(200);
+      expect(res.body.data).toMatchObject({ detached: true, stoppedRuns: 2 });
+      expect(businessAuth.assertCallerOwnsBusiness).toHaveBeenCalled();
+    });
+
+    it("returns 200 with detached:false when override not found", async () => {
+      detachCustomer.execute.mockResolvedValue({ detached: false, stoppedRuns: 0 });
+      const res = await request(app.getHttpServer())
+        .post("/v1/sequences/seq-1/detach-customer?businessId=11111111-1111-1111-1111-111111111111")
+        .send({ customerId: "33333333-3333-3333-3333-333333333333" })
+        .expect(200);
+      expect(res.body.data).toMatchObject({ detached: false, stoppedRuns: 0 });
     });
   });
 
