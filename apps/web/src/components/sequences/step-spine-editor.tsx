@@ -67,12 +67,12 @@ export function StepSpineEditor({
 
   return (
     <div className="relative pl-[46px]">
-      {/* Gradient rail */}
+      {/* Spine rail — soft, muted (toned down from the bright gradient/glow) */}
       <div
-        className="absolute left-[17px] top-2 bottom-[34px] w-[3px] rounded-full"
+        className="absolute left-[17px] top-2 bottom-[34px] w-[2px] rounded-full"
         style={{
-          background: "linear-gradient(180deg,#6366f1,#8b5cf6 70%,#a06bd6)",
-          boxShadow: "0 0 14px rgba(99,102,241,.4)",
+          background:
+            "linear-gradient(180deg, rgba(99,102,241,0.45), rgba(99,102,241,0.15))",
         }}
       />
 
@@ -123,9 +123,9 @@ export function StepSpineEditor({
               {/* Active expanded card */}
               {row.isActive && (
                 <div
-                  className="overflow-hidden rounded-[10px] border border-indigo-500 bg-card"
+                  className="overflow-hidden rounded-[10px] border border-indigo-500/50 bg-card"
                   style={{
-                    boxShadow: "0 0 0 1px rgba(99,102,241,.25),0 14px 34px -16px rgba(99,102,241,.5)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,.18)",
                   }}
                 >
                   {/* Header */}
@@ -255,7 +255,7 @@ export function StepSpineEditor({
                         type="button"
                         disabled={!row.isComplete}
                         onClick={onDone}
-                        className="btn-glow text-xs"
+                        className="text-xs"
                         size="sm"
                       >
                         Done — add next ↓
