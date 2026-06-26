@@ -65,5 +65,6 @@ export function useSequencesViewModel() {
     deleteTarget, requestDelete, cancelDelete, confirmDelete,
     isDeleting: deleteMut.isPending, deleteError,
     goToNew: () => navigate("/sequences/new"),
+    goToDetail: (id: string) => navigate(`/sequences/${id}`),
   };
 }

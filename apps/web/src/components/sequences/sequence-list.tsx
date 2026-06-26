@@ -22,6 +22,7 @@ interface SequenceListProps {
   isLoading: boolean;
   error: string | null;
   onRequestDelete: (r: SequenceRow) => void;
+  onOpen?: (id: string) => void;
 }
 
 function StatusBadge({ isActive }: { isActive: boolean }) {
@@ -44,6 +45,7 @@ export function SequenceList({
   isLoading,
   error,
   onRequestDelete,
+  onOpen,
 }: SequenceListProps) {
   if (error) {
     return (
@@ -81,6 +83,7 @@ export function SequenceList({
         {rows.map((row) => (
           <ListRow
             key={row.id}
+            onClick={() => onOpen?.(row.id)}
             icon={<Workflow className="h-4 w-4" />}
             title={row.name}
             subtitle={`${row.tierName} · ${row.stepCountLabel}`}

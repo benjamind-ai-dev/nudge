@@ -47,6 +47,7 @@ export function SequencesPage() {
         isLoading={vm.isLoading}
         error={vm.error}
         onRequestDelete={vm.requestDelete}
+        onOpen={vm.goToDetail}
       />
 
       <DeleteSequenceDialog
