@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { ChevronRight, Users, FileText } from "lucide-react";
 import { formatCents } from "@/lib/format";
 import {
@@ -195,9 +195,11 @@ export function AudiencePicker({ businessId, onSelectionChange }: AudiencePicker
   const hook = useAudiencePicker(businessId);
 
   // Notify parent whenever selection or summary changes
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  useLayoutEffect(() => { onSelectionChangeRef.current = onSelectionChange; });
   useEffect(() => {
-    onSelectionChange?.(hook.selection, hook.summary);
-  }, [hook.selection, hook.summary, onSelectionChange]);
+    onSelectionChangeRef.current?.(hook.selection, hook.summary);
+  }, [hook.selection, hook.summary]);
 
   return (
     <div className="flex flex-col gap-4">
