@@ -73,6 +73,8 @@ export interface UseStepDraftResult {
   hasNoTemplates: boolean;
   allStepsComplete: boolean;
   buildPayload: () => CreateSequenceStep[];
+  /** Re-seed the draft with new steps (used for edit mode when data loads asynchronously). */
+  seed: (steps: DraftStep[]) => void;
 }
 
 export function useStepDraft(
@@ -178,6 +180,11 @@ export function useStepDraft(
 
   const allStepsComplete = steps.length > 0 && steps.every((s) => !!s.templateId);
 
+  function seed(newSteps: DraftStep[]) {
+    setSteps(newSteps);
+    setActiveStepKey(null);
+  }
+
   function buildPayload(): CreateSequenceStep[] {
     return steps.map((s, i) => {
       const t = templates.find((x) => x.id === s.templateId);
@@ -215,5 +222,6 @@ export function useStepDraft(
     hasNoTemplates,
     allStepsComplete,
     buildPayload,
+    seed,
   };
 }

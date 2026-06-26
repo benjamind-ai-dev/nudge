@@ -1,13 +1,15 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useActiveBusinessId } from "@/lib/hooks/use-active-business-id";
 import {
   useSequence,
   usePauseSequence,
   useActivateSequence,
   useDetachCustomer,
+  useReplaceSequence,
 } from "@/queries/use-sequences";
 import { useSequenceRuns, useStopSequenceRun } from "@/queries/use-sequence-runs";
 import { formatCents } from "@/lib/format";
+import { useStepDraft, draftStepFromDetail } from "./use-step-draft";
 
 // ── Row shapes ────────────────────────────────────────────────────────────────
 
@@ -62,6 +64,40 @@ export function useSequenceDetailViewModel(id: string) {
   const name = sequence?.name ?? "";
   const isActive = sequence?.isActive ?? false;
   const canEditSteps = (sequence?.activeRuns ?? 0) === 0;
+
+  // ── editable step draft (only meaningful when canEditSteps) ───────────────
+  const stepDraft = useStepDraft(businessId);
+  const replaceMut = useReplaceSequence();
+
+  // Seed the draft once when sequence loads (for edit mode)
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (sequence && stepDraft.templates.length > 0 && !seededRef.current) {
+      const sorted = [...sequence.steps].sort((a, b) => a.stepOrder - b.stepOrder);
+      const seeded = sorted.map((s) => draftStepFromDetail(s, stepDraft.templates));
+      if (seeded.length > 0) {
+        stepDraft.seed(seeded);
+        seededRef.current = true;
+      }
+    }
+  }, [sequence, stepDraft.templates]);
+
+  const saveSteps = useCallback(async () => {
+    if (!sequence) return;
+    setError(null);
+    try {
+      await replaceMut.mutateAsync({
+        id: sequence.id,
+        businessId,
+        name: sequence.name,
+        steps: stepDraft.buildPayload(),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save steps.");
+    }
+  }, [replaceMut, sequence, businessId, stepDraft]);
+
+  const savingSteps = replaceMut.isPending;
 
   // ── step rows (cumulative day) ────────────────────────────────────────────
   const stepRows = useMemo<StepRow[]>(() => {
@@ -152,7 +188,7 @@ export function useSequenceDetailViewModel(id: string) {
     isActive,
     canEditSteps,
     businessId,
-    // rows
+    // rows (read-only view)
     stepRows,
     runRows,
     // tab
@@ -169,5 +205,22 @@ export function useSequenceDetailViewModel(id: string) {
     // loading / error
     isLoading: sequenceQuery.isLoading,
     error,
+    // ── editable step draft (only meaningful when canEditSteps) ─────────────
+    draftRows: stepDraft.rows,
+    templates: stepDraft.templates,
+    templatesLoading: stepDraft.templatesLoading,
+    hasNoTemplates: stepDraft.hasNoTemplates,
+    allStepsComplete: stepDraft.allStepsComplete,
+    addStep: stepDraft.addStep,
+    removeStep: stepDraft.removeStep,
+    editStep: stepDraft.editStep,
+    doneStep: stepDraft.doneStep,
+    setStepTemplate: stepDraft.setStepTemplate,
+    setStepChannel: stepDraft.setStepChannel,
+    setStepDelay: stepDraft.setStepDelay,
+    toggleOwnerAlert: stepDraft.toggleOwnerAlert,
+    togglePaymentLink: stepDraft.togglePaymentLink,
+    saveSteps,
+    savingSteps,
   };
 }

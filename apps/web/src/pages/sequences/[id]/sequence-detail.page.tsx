@@ -6,6 +6,7 @@ import { useTemplates } from "@/queries/use-templates";
 import { useEnrollInvoices, useAttachCustomer } from "@/queries/use-sequences";
 import { AudiencePicker } from "@/components/sequences/audience-picker";
 import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
+import { StepSpineEditor } from "@/components/sequences/step-spine-editor";
 import {
   ListCard,
   ListCardHeader,
@@ -304,33 +305,62 @@ export function SequenceDetailPage() {
 
         {/* ── Flow tab ── */}
         <TabsContent value="flow" className="space-y-4">
-          {!vm.canEditSteps && (
-            <div className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
-              Pause the sequence to edit steps.
-            </div>
-          )}
-
-          {vm.stepRows.length === 0 ? (
-            <ListMessageCard>
-              <p className="text-center text-sm text-muted-foreground">No steps defined yet.</p>
-            </ListMessageCard>
+          {vm.canEditSteps ? (
+            /* Editable mode — StepSpineEditor + Save button */
+            <>
+              <StepSpineEditor
+                rows={vm.draftRows}
+                templates={vm.templates}
+                hasNoTemplates={vm.hasNoTemplates}
+                onAdd={vm.addStep}
+                onEdit={vm.editStep}
+                onDone={vm.doneStep}
+                onRemove={vm.removeStep}
+                onTemplate={vm.setStepTemplate}
+                onChannel={vm.setStepChannel}
+                onDelay={vm.setStepDelay}
+                onToggleOwnerAlert={vm.toggleOwnerAlert}
+                onTogglePaymentLink={vm.togglePaymentLink}
+              />
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => void vm.saveSteps()}
+                  disabled={!vm.allStepsComplete || vm.savingSteps}
+                >
+                  {vm.savingSteps ? "Saving…" : "Save steps"}
+                </Button>
+              </div>
+            </>
           ) : (
-            <ListCard>
-              <ListCardHeader label="Steps" count={vm.stepRows.length} noun="step" />
-              {vm.stepRows.map((step) => {
-                const resolvedName = step.templateId
-                  ? (templateMap.get(step.templateId) ?? `Template · ${step.templateId}`)
-                  : step.templateName;
-                return (
-                  <ListRow
-                    key={step.key}
-                    icon={<ChannelIcon channel={step.channel} />}
-                    title={`Day ${step.displayDay} · ${channelLabel(step.channel)}`}
-                    subtitle={resolvedName}
-                  />
-                );
-              })}
-            </ListCard>
+            /* Read-only mode — summary list + hint to pause */
+            <>
+              <div className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
+                Pause the sequence to edit steps.
+              </div>
+
+              {vm.stepRows.length === 0 ? (
+                <ListMessageCard>
+                  <p className="text-center text-sm text-muted-foreground">No steps defined yet.</p>
+                </ListMessageCard>
+              ) : (
+                <ListCard>
+                  <ListCardHeader label="Steps" count={vm.stepRows.length} noun="step" />
+                  {vm.stepRows.map((step) => {
+                    const resolvedName = step.templateId
+                      ? (templateMap.get(step.templateId) ?? `Template · ${step.templateId}`)
+                      : step.templateName;
+                    return (
+                      <ListRow
+                        key={step.key}
+                        icon={<ChannelIcon channel={step.channel} />}
+                        title={`Day ${step.displayDay} · ${channelLabel(step.channel)}`}
+                        subtitle={resolvedName}
+                      />
+                    );
+                  })}
+                </ListCard>
+              )}
+            </>
           )}
         </TabsContent>
 
