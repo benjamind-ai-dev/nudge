@@ -403,10 +403,17 @@ export class PrismaSequenceRepository implements SequenceRepository {
   }
 
   async clearCustomerOverrideIfPointsHere(sequenceId: string, businessId: string, customerId: string): Promise<boolean> {
-    const result = await this.prisma.customer.updateMany({
+    // Explicitly verify the customer belongs to this business AND its override
+    // points at this sequence before mutating — no cross-tenant write.
+    const owned = await this.prisma.customer.findFirst({
       where: { id: customerId, businessId, sequenceId },
+      select: { id: true },
+    });
+    if (!owned) return false;
+    await this.prisma.customer.update({
+      where: { id: owned.id },
       data: { sequenceId: null },
     });
-    return result.count > 0;
+    return true;
   }
 }
