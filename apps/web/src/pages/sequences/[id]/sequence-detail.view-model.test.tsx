@@ -13,12 +13,40 @@ const mockPauseMutate = vi.fn();
 const mockActivateMutate = vi.fn();
 const mockStopRunMutate = vi.fn();
 const mockDetachMutate = vi.fn();
+const mockReplaceMutate = vi.fn();
 
 vi.mock("@/queries/use-sequences", () => ({
   useSequence: vi.fn(),
   usePauseSequence: () => ({ mutateAsync: mockPauseMutate, isPending: false }),
   useActivateSequence: () => ({ mutateAsync: mockActivateMutate, isPending: false }),
   useDetachCustomer: () => ({ mutateAsync: mockDetachMutate, isPending: false }),
+  useReplaceSequence: () => ({ mutateAsync: mockReplaceMutate, isPending: false }),
+}));
+
+vi.mock("./use-step-draft", () => ({
+  useStepDraft: () => ({
+    steps: [],
+    rows: [],
+    activeStepKey: null,
+    addStep: vi.fn(),
+    removeStep: vi.fn(),
+    moveStep: vi.fn(),
+    editStep: vi.fn(),
+    doneStep: vi.fn(),
+    isStepComplete: vi.fn(),
+    setStepTemplate: vi.fn(),
+    setStepChannel: vi.fn(),
+    setStepDelay: vi.fn(),
+    toggleOwnerAlert: vi.fn(),
+    togglePaymentLink: vi.fn(),
+    templates: [],
+    templatesLoading: false,
+    hasNoTemplates: true,
+    allStepsComplete: false,
+    buildPayload: () => [],
+    seed: vi.fn(),
+  }),
+  draftStepFromDetail: vi.fn(),
 }));
 
 vi.mock("@/queries/use-sequence-runs", () => ({
@@ -122,6 +150,7 @@ beforeEach(() => {
   mockActivateMutate.mockReset();
   mockStopRunMutate.mockReset();
   mockDetachMutate.mockReset();
+  mockReplaceMutate.mockReset();
 
   // Default: empty/loading state
   mockUseSequence.mockReturnValue({
