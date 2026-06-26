@@ -163,6 +163,9 @@ export function useSequenceDetailViewModel(id: string) {
     activate,
     removeInvoice,
     removeCustomer,
+    // mutation pending states
+    isPausing: pauseMut.isPending,
+    isActivating: activateMut.isPending,
     // loading / error
     isLoading: sequenceQuery.isLoading,
     error,

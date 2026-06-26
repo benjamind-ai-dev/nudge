@@ -115,6 +115,7 @@ export function useEnrollInvoices() {
     onSuccess: (_r, { businessId }) => {
       void qc.invalidateQueries({ queryKey: ["sequences", businessId] });
       void qc.invalidateQueries({ queryKey: ["invoices"] });
+      void qc.invalidateQueries({ queryKey: ["sequence-runs"] });
     },
   });
 }
@@ -135,6 +136,7 @@ export function useAttachCustomer() {
       void qc.invalidateQueries({ queryKey: ["sequences", businessId] });
       void qc.invalidateQueries({ queryKey: ["customers", businessId] });
       void qc.invalidateQueries({ queryKey: ["invoices"] });
+      void qc.invalidateQueries({ queryKey: ["sequence-runs"] });
     },
   });
 }

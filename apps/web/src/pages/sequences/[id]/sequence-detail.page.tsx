@@ -5,6 +5,7 @@ import { useSequenceDetailViewModel } from "./sequence-detail.view-model";
 import { useTemplates } from "@/queries/use-templates";
 import { useEnrollInvoices, useAttachCustomer } from "@/queries/use-sequences";
 import { AudiencePicker } from "@/components/sequences/audience-picker";
+import { SequenceStatusBadge } from "@/components/sequences/sequence-status-badge";
 import {
   ListCard,
   ListCardHeader,
@@ -28,18 +29,6 @@ import type { AudienceSelection, AudienceSummary } from "@/components/sequences/
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function StatusBadge({ isActive }: { isActive: boolean }) {
-  return isActive ? (
-    <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600">
-      Active
-    </Badge>
-  ) : (
-    <Badge variant="outline" className="text-muted-foreground">
-      Paused
-    </Badge>
-  );
-}
-
 function ChannelIcon({ channel }: { channel: "email" | "sms" | "email_and_sms" }) {
   if (channel === "email") return <Mail className="h-4 w-4" />;
   if (channel === "sms") return <Smartphone className="h-4 w-4" />;
@@ -54,21 +43,14 @@ function channelLabel(channel: "email" | "sms" | "email_and_sms"): string {
 
 function RunStatusBadge({ status }: { status: string }) {
   const label = status.replace(/_/g, " ").toLowerCase();
-  if (status === "active" || status === "ACTIVE") {
+  if (status === "active") {
     return (
       <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 text-[11px]">
         {label}
       </Badge>
     );
   }
-  if (status === "paused" || status === "PAUSED") {
-    return (
-      <Badge variant="outline" className="text-muted-foreground text-[11px]">
-        {label}
-      </Badge>
-    );
-  }
-  if (status === "stopped" || status === "STOPPED" || status === "completed" || status === "COMPLETED") {
+  if (status === "paused" || status === "stopped" || status === "completed") {
     return (
       <Badge variant="outline" className="text-muted-foreground text-[11px]">
         {label}
@@ -124,6 +106,47 @@ function DetachCustomerDialog({
 }
 
 // ---------------------------------------------------------------------------
+// Confirm stop run dialog
+// ---------------------------------------------------------------------------
+
+interface StopRunDialogProps {
+  invoiceNumber: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+  isStopping: boolean;
+}
+
+function StopRunDialog({
+  invoiceNumber,
+  onCancel,
+  onConfirm,
+  isStopping,
+}: StopRunDialogProps) {
+  return (
+    <Dialog open={invoiceNumber !== null} onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Stop this follow-up?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Invoice{" "}
+          <span className="font-semibold text-foreground">{invoiceNumber}</span> will stop
+          receiving reminders.
+        </p>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel} disabled={isStopping}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={isStopping}>
+            {isStopping ? "Stopping…" : "Stop"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -158,6 +181,13 @@ export function SequenceDetailPage() {
     customerName: string;
   } | null>(null);
   const [isDetaching, setIsDetaching] = useState(false);
+
+  // Stop run (remove invoice) confirm dialog
+  const [confirmStopRun, setConfirmStopRun] = useState<{
+    runId: string;
+    invoiceNumber: string;
+  } | null>(null);
+  const [isStopping, setIsStopping] = useState(false);
 
   function handleSelectionChange(sel: AudienceSelection, summary: AudienceSummary) {
     setAudienceSelection(sel);
@@ -231,7 +261,7 @@ export function SequenceDetailPage() {
           </div>
           <div className="mt-1 flex items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">{vm.name}</h1>
-            <StatusBadge isActive={vm.isActive} />
+            <SequenceStatusBadge isActive={vm.isActive} />
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -239,14 +269,14 @@ export function SequenceDetailPage() {
             <Button
               variant="outline"
               onClick={vm.pause}
-              disabled={enrollMut.isPending || attachMut.isPending}
+              disabled={vm.isPausing || vm.isActivating}
             >
               Pause
             </Button>
           ) : (
             <Button
               onClick={vm.activate}
-              disabled={enrollMut.isPending || attachMut.isPending}
+              disabled={vm.isPausing || vm.isActivating}
             >
               Activate
             </Button>
@@ -357,7 +387,12 @@ export function SequenceDetailPage() {
                           variant="ghost"
                           size="icon-sm"
                           aria-label={`Stop run for invoice ${run.invoiceNumber}`}
-                          onClick={() => void vm.removeInvoice(run.runId)}
+                          onClick={() =>
+                            setConfirmStopRun({
+                              runId: run.runId,
+                              invoiceNumber: run.invoiceNumber,
+                            })
+                          }
                         >
                           <X className="h-3.5 w-3.5" />
                         </Button>
@@ -407,6 +442,20 @@ export function SequenceDetailPage() {
           await vm.removeCustomer(confirmDetachCustomer.customerId);
           setIsDetaching(false);
           setConfirmDetachCustomer(null);
+        }}
+      />
+
+      {/* Stop run (remove invoice) confirm dialog */}
+      <StopRunDialog
+        invoiceNumber={confirmStopRun?.invoiceNumber ?? null}
+        onCancel={() => setConfirmStopRun(null)}
+        isStopping={isStopping}
+        onConfirm={async () => {
+          if (!confirmStopRun) return;
+          setIsStopping(true);
+          await vm.removeInvoice(confirmStopRun.runId);
+          setIsStopping(false);
+          setConfirmStopRun(null);
         }}
       />
     </div>
