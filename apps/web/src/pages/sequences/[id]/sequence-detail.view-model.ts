@@ -121,9 +121,17 @@ export function useSequenceDetailViewModel(id: string) {
     });
   }, [sequence]);
 
-  // ── run rows ──────────────────────────────────────────────────────────────
+  // ── live runs (active/paused) ───────────────────────────────────────────────
+  // The "Running now" list is for runs you can still act on. Terminal runs
+  // (stopped/completed) are excluded so the UI never offers a Stop action that
+  // the backend rejects ("Cannot stop sequence run … from status stopped").
+  const liveRuns = useMemo(
+    () => runs.filter((run) => run.status === "active" || run.status === "paused"),
+    [runs],
+  );
+
   const runRows = useMemo<RunRow[]>(() => {
-    return runs.map((run) => ({
+    return liveRuns.map((run) => ({
       runId: run.id,
       customerId: run.customer.id,
       customerName: run.customer.companyName,
@@ -132,7 +140,18 @@ export function useSequenceDetailViewModel(id: string) {
       invoiceStatus: run.invoice.status,
       runStatus: run.status,
     }));
-  }, [runs]);
+  }, [liveRuns]);
+
+  // Customers/invoices already live on this sequence — used to disable them in
+  // the audience picker so they can't be re-added (silent backend no-op).
+  const enrolledCustomerIds = useMemo(
+    () => new Set(liveRuns.map((run) => run.customer.id)),
+    [liveRuns],
+  );
+  const enrolledInvoiceIds = useMemo(
+    () => new Set(liveRuns.map((run) => run.invoice.id)),
+    [liveRuns],
+  );
 
   // ── mutations ─────────────────────────────────────────────────────────────
   const pauseMut = usePauseSequence();
@@ -191,6 +210,8 @@ export function useSequenceDetailViewModel(id: string) {
     // rows (read-only view)
     stepRows,
     runRows,
+    enrolledCustomerIds,
+    enrolledInvoiceIds,
     // tab
     tab,
     setTab,

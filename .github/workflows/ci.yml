@@ -86,6 +86,7 @@ jobs:
       RESEND_WEBHOOK_SECRET: dummy_resend
       RESEND_INBOUND_ADDRESS: reply@reply.nudge.test
       NOTIFICATIONS_EMAIL: notifications@nudge.test
+      CLERK_PUBLISHABLE_KEY: pk_test_dummy
       CLERK_SECRET_KEY: sk_test_dummy
       CLERK_WEBHOOK_SECRET: svix_dummy
       TWILIO_WEBHOOK_SECRET: dummy_twilio

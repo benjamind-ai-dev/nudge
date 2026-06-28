@@ -15,7 +15,12 @@ export interface InvoiceEnrollContext {
   activeRunId: string | null;   // an existing active/paused run, if any
 }
 
-export type EnrollOutcome = "enrolled" | "moved" | "skipped_not_chaseable" | "skipped_not_found";
+export type EnrollOutcome =
+  | "enrolled"
+  | "moved"
+  | "skipped_already_enrolled"
+  | "skipped_not_chaseable"
+  | "skipped_not_found";
 
 export interface EnrollmentRepository {
   /** Sequence's first step + active flag, scoped to business. null if sequence not in business. */
@@ -24,14 +29,21 @@ export interface EnrollmentRepository {
   getInvoiceContext(invoiceId: string, businessId: string): Promise<InvoiceEnrollContext | null>;
   /** Chaseable invoice ids for a customer (open|overdue|partial), business-scoped. */
   findChaseableInvoiceIdsForCustomer(customerId: string, businessId: string): Promise<string[]>;
-  /** TX: stop the invoice's active/paused run (if any) as 'reassigned', then create a fresh run on `sequenceId`. Returns whether an old run was moved. */
+  /**
+   * TX: enroll the invoice onto `sequenceId`.
+   * - If the invoice already has an active/paused run on THIS sequence → no-op
+   *   ("already_enrolled"), preserving the existing run + its progress.
+   * - If it has an active/paused run on a DIFFERENT sequence → stop it as
+   *   'reassigned' and create a fresh run here ("moved").
+   * - Otherwise create a fresh run ("enrolled").
+   */
   moveAndCreateRun(args: {
     invoiceId: string;
     businessId: string;
     sequenceId: string;
     currentStepId: string;
     nextSendAt: Date;
-  }): Promise<{ moved: boolean; runId: string }>;
+  }): Promise<{ outcome: "enrolled" | "moved" | "already_enrolled"; runId: string }>;
   /** Set the customer's sequence override (business-scoped). Returns false if customer not in business. */
   setCustomerSequenceOverride(customerId: string, businessId: string, sequenceId: string): Promise<boolean>;
 }

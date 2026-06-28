@@ -1,5 +1,11 @@
 export interface InvoiceSyncJobData {
   connectionId: string;
+  /**
+   * When true, ignore the stored sync cursor for this run and re-pull the full
+   * invoice history (used by the Settings "resync all invoices" action). The
+   * cursor still advances normally afterwards, so later runs stay incremental.
+   */
+  full?: boolean;
 }
 
 export type SequenceTriggerJobData = Record<string, never>;

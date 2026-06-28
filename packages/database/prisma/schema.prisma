@@ -150,6 +150,8 @@ model Invoice {
   externalId      String    @map("external_id") @db.VarChar(255)
   provider        String    @db.VarChar(50)
   invoiceNumber   String?   @map("invoice_number") @db.VarChar(100)
+  reference       String?   @db.VarChar(255)
+  description     String?   @db.Text
   amountCents     Int       @map("amount_cents")
   amountPaidCents Int       @default(0) @map("amount_paid_cents")
   balanceDueCents Int       @map("balance_due_cents")

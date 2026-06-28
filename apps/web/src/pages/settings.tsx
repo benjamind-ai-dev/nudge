@@ -5,8 +5,10 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { SyncDataCard } from "../components/settings/sync-data-card";
 import { cn } from "../lib/utils";
 import { useThemeStore, type ThemeMode } from "../stores/theme.store";
+import { useSettingsViewModel } from "./settings.view-model";
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: "light", label: "Light", icon: Sun },
@@ -17,10 +19,11 @@ const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
 export function SettingsPage() {
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const vm = useSettingsViewModel();
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-6 lg:px-10">
-      <div className="mb-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-6 lg:px-10">
+      <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Settings
         </h1>
@@ -71,6 +74,14 @@ export function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <SyncDataCard
+        canResync={vm.canResync}
+        isResyncing={vm.isResyncing}
+        message={vm.resyncMessage}
+        error={vm.resyncError}
+        onResync={vm.resyncAllInvoices}
+      />
     </div>
   );
 }

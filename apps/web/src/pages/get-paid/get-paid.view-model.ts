@@ -100,6 +100,8 @@ function formatShortDate(iso: string): string {
 export interface OverdueRow {
   id: string;
   invoiceNumber: string;
+  reference: string | null;   // provider's free-text label (Xero Reference / QB memo)
+  description: string | null; // joined line-item descriptions
   customerName: string;
   issuedDate: string | null; // formatted (year+month+day)
   dueDate: string;           // formatted (year+month+day)
@@ -120,6 +122,8 @@ function toRow(item: InvoiceListItem): OverdueRow {
   return {
     id: item.id,
     invoiceNumber: item.invoiceNumber ? `#${item.invoiceNumber}` : "—",
+    reference: item.reference,
+    description: item.description,
     customerName: item.customer.companyName,
     issuedDate: item.issuedDate ? formatShortDate(item.issuedDate) : null,
     dueDate: formatShortDate(item.dueDate),
@@ -273,7 +277,8 @@ export function useGetPaidViewModel(): GetPaidViewModel {
       if (q) {
         const num = (item.invoiceNumber ?? "").toLowerCase();
         const name = item.customer.companyName.toLowerCase();
-        if (!num.includes(q) && !name.includes(q)) return false;
+        const ref = (item.reference ?? "").toLowerCase();
+        if (!num.includes(q) && !name.includes(q) && !ref.includes(q)) return false;
       }
 
       return true;

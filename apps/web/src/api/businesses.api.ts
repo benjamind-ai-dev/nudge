@@ -56,9 +56,10 @@ export interface ManualSyncResult {
 
 export function triggerManualSync(
   businessId: string,
+  opts: { full?: boolean } = {},
 ): Promise<{ data: ManualSyncResult }> {
   return apiClient<{ data: ManualSyncResult }>(`/v1/businesses/${businessId}/sync`, {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify(opts.full ? { full: true } : {}),
   });
 }

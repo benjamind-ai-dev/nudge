@@ -25,6 +25,10 @@ export interface CanonicalCustomer {
 export interface CanonicalInvoice {
   externalId: string;
   invoiceNumber: string | null;
+  /** Provider's free-text label: Xero `Reference`, QuickBooks `CustomerMemo`. */
+  reference: string | null;
+  /** What the invoice is for: joined line-item descriptions. */
+  description: string | null;
   customerExternalId: string;
   amountCents: number;
   amountPaidCents: number;

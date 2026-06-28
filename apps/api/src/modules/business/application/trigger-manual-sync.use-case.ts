@@ -39,7 +39,10 @@ export class TriggerManualSyncUseCase {
     private readonly invoiceSync: Queue<InvoiceSyncJobData>,
   ) {}
 
-  async execute(businessId: string): Promise<TriggerManualSyncOutput> {
+  async execute(
+    businessId: string,
+    opts: { full?: boolean } = {},
+  ): Promise<TriggerManualSyncOutput> {
     const business = await this.businesses.findById(businessId);
     if (!business) {
       throw new BusinessNotFoundError(businessId);
@@ -60,13 +63,19 @@ export class TriggerManualSyncUseCase {
 
     const job = await this.invoiceSync.add(
       QUEUE_NAMES.INVOICE_SYNC,
-      { connectionId: connection.id },
+      {
+        connectionId: connection.id,
+        ...(opts.full ? { full: true } : {}),
+      },
       { priority: PRIORITY_HIGH },
     );
     if (!job.id) {
       throw new Error("BullMQ returned a job without an id");
     }
 
-    return { message: "Sync queued", jobId: job.id };
+    return {
+      message: opts.full ? "Full resync queued" : "Sync queued",
+      jobId: job.id,
+    };
   }
 }

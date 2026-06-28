@@ -15,6 +15,7 @@ import {
   RateLimitError,
   SyncFailedError,
 } from "../domain/invoice-sync.provider";
+import { joinDescriptions } from "../domain/provider-mapping";
 
 const PROD_BASE = "https://quickbooks.api.intuit.com";
 const SANDBOX_BASE = "https://sandbox-quickbooks.api.intuit.com";
@@ -32,6 +33,8 @@ type QBInvoice = {
   CustomerRef: { value: string };
   MetaData?: { LastUpdatedTime?: string };
   TxnStatus?: string;
+  CustomerMemo?: { value?: string };
+  Line?: { Description?: string }[];
 };
 
 type QBCustomer = {
@@ -205,6 +208,8 @@ export class QuickbooksInvoiceSyncProvider implements InvoiceSyncProvider {
     return {
       externalId: r.Id,
       invoiceNumber: r.DocNumber ?? null,
+      reference: r.CustomerMemo?.value?.trim() || null,
+      description: joinDescriptions(r.Line?.map((l) => l.Description)),
       customerExternalId: r.CustomerRef.value,
       amountCents,
       amountPaidCents,

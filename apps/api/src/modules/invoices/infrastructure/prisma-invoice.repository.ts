@@ -23,6 +23,8 @@ const MESSAGES_LIMIT = 50;
 const LIST_SELECT = {
   id: true,
   invoiceNumber: true,
+  reference: true,
+  description: true,
   status: true,
   amountCents: true,
   amountPaidCents: true,
@@ -58,6 +60,8 @@ const LIST_SELECT = {
 const DETAIL_SELECT = {
   id: true,
   invoiceNumber: true,
+  reference: true,
+  description: true,
   status: true,
   amountCents: true,
   amountPaidCents: true,
@@ -290,6 +294,8 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     return {
       id: row.id,
       invoiceNumber: row.invoiceNumber,
+      reference: row.reference,
+      description: row.description,
       status: row.status as InvoiceStatus,
       amountCents: row.amountCents,
       amountPaidCents: row.amountPaidCents,
@@ -351,6 +357,8 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     return {
       id: row.id,
       invoiceNumber: row.invoiceNumber,
+      reference: row.reference,
+      description: row.description,
       status: row.status as InvoiceStatus,
       amountCents: row.amountCents,
       amountPaidCents: row.amountPaidCents,

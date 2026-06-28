@@ -259,7 +259,9 @@ describe("BusinessController", () => {
       .post(`/v1/businesses/${BIZ_ID}/sync`)
       .send({})
       .expect(202, { data: { message: "Sync queued", jobId: "job-abc" } });
-    expect(triggerSyncUseCase.execute).toHaveBeenCalledWith(BIZ_ID);
+    expect(triggerSyncUseCase.execute).toHaveBeenCalledWith(BIZ_ID, {
+      full: undefined,
+    });
   });
 
   it("POST /v1/businesses/:id/sync returns 404 when business not found", async () => {

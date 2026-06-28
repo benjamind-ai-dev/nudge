@@ -52,6 +52,8 @@ const CUSTOMER_B: CustomerListItem = {
 const INVOICE_1: InvoiceListItem = {
   id: "inv-1",
   invoiceNumber: "INV-001",
+  reference: null,
+  description: null,
   status: "overdue",
   amountCents: 10000,
   amountPaidCents: 0,

@@ -45,7 +45,10 @@ export class SyncBusinessInvoicesUseCase {
     private readonly refreshTokens: RefreshTokenUseCase,
   ) {}
 
-  async execute(connectionId: string): Promise<void> {
+  async execute(
+    connectionId: string,
+    opts: { full?: boolean } = {},
+  ): Promise<void> {
     const initial = await this.reader.findById(connectionId);
     if (!initial || initial.status !== "connected") {
       this.logger.warn({
@@ -71,7 +74,9 @@ export class SyncBusinessInvoicesUseCase {
     }
 
     const now = new Date();
-    const cursor = this.resolveCursor(connection, now);
+    // A full resync ignores the stored cursor and re-pulls everything (epoch),
+    // so previously-synced invoices are refreshed (e.g. to backfill new fields).
+    const cursor = opts.full ? new Date(0) : this.resolveCursor(connection, now);
     let offset = 0;
     let lastSeenUpdatedAt = cursor;
     const touchedCustomerExtIds = new Set<string>();
@@ -84,6 +89,7 @@ export class SyncBusinessInvoicesUseCase {
       connectionId: connection.id,
       provider: connection.provider,
       cursor: cursor.toISOString(),
+      full: opts.full ?? false,
     });
 
     try {

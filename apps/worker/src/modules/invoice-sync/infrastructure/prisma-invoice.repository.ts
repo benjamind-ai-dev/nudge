@@ -128,6 +128,8 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       customerId,
       externalId: change.externalId,
       invoiceNumber: inv.invoiceNumber,
+      reference: inv.reference,
+      description: inv.description,
       amountCents: inv.amountCents,
       amountPaidCents: inv.amountPaidCents,
       balanceDueCents: inv.balanceDueCents,
@@ -158,6 +160,12 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     // paid_at is only stamped on the fully_paid transition; omitting it from
     // updates prevents re-syncs from clobbering the original transition date.
     if (setPaidAt) updateData.paidAt = change.lastSyncedAt;
+
+    // reference/description are enrichment fields: only overwrite when the
+    // provider gave us a value, so synthetic void/delete reconstructions (which
+    // can't repopulate them) don't wipe previously-synced text.
+    if (inv.reference !== null) updateData.reference = inv.reference;
+    if (inv.description !== null) updateData.description = inv.description;
 
     return tx.invoice.upsert({
       where: {

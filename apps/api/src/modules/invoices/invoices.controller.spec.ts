@@ -27,6 +27,8 @@ const FOREIGN_BIZ_ID = "550e8400-e29b-41d4-a716-446655449999";
 const listItem: InvoiceListItem = {
   id: INV_ID,
   invoiceNumber: "INV-001",
+  reference: null,
+  description: null,
   status: "overdue",
   amountCents: 10_000,
   amountPaidCents: 0,
@@ -45,6 +47,8 @@ const listItem: InvoiceListItem = {
 const detail: InvoiceDetail = {
   id: INV_ID,
   invoiceNumber: "INV-001",
+  reference: null,
+  description: null,
   status: "overdue",
   amountCents: 10_000,
   amountPaidCents: 0,

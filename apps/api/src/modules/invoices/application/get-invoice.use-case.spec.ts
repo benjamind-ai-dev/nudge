@@ -6,6 +6,8 @@ import { InvoiceNotFoundError } from "../domain/invoice.errors";
 const mkDetail = (over: Partial<InvoiceDetail> = {}): InvoiceDetail => ({
   id: "inv-1",
   invoiceNumber: "INV-001",
+  reference: null,
+  description: null,
   status: "overdue",
   amountCents: 10_000,
   amountPaidCents: 0,

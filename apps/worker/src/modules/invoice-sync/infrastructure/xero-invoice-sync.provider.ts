@@ -17,6 +17,7 @@ import {
   centsFromDecimal,
   DEFAULT_CURRENCY,
   joinContactName,
+  joinDescriptions,
   parseProviderDate,
 } from "../domain/provider-mapping";
 
@@ -27,6 +28,7 @@ import {
 type XeroInvoice = {
   InvoiceID: string;
   InvoiceNumber?: string;
+  Reference?: string; // free-text label shown on the invoice
   Type?: string; // "ACCREC" | "ACCPAY" — we filter server-side
   Status?: string; // DRAFT|SUBMITTED|AUTHORISED|PAID|VOIDED|DELETED
   Total?: number | string; // Xero sends decimals; tolerate string too
@@ -37,6 +39,7 @@ type XeroInvoice = {
   UpdatedDateUTC?: string; // /Date(...)/ format, for cursor
   Contact: { ContactID: string; Name?: string };
   CurrencyCode?: string;
+  LineItems?: { Description?: string }[];
 };
 
 type XeroPhone = {
@@ -85,6 +88,8 @@ export function mapXeroInvoice(raw: XeroInvoice): CanonicalInvoice {
   return {
     externalId: raw.InvoiceID,
     invoiceNumber: raw.InvoiceNumber ?? null,
+    reference: raw.Reference?.trim() || null,
+    description: joinDescriptions(raw.LineItems?.map((li) => li.Description)),
     customerExternalId: raw.Contact.ContactID,
     amountCents,
     amountPaidCents,

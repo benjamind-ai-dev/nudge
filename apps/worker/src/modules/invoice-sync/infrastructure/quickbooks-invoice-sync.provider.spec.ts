@@ -102,6 +102,8 @@ describe("QuickbooksInvoiceSyncProvider", () => {
       {
         externalId: "1001",
         invoiceNumber: "INV-1001",
+        reference: null,
+        description: null,
         customerExternalId: "C1",
         amountCents: 50025,
         amountPaidCents: 30000,
@@ -115,6 +117,37 @@ describe("QuickbooksInvoiceSyncProvider", () => {
       },
     ]);
     expect(page.hasMore).toBe(false);
+  });
+
+  it("maps CustomerMemo to reference and joins Line descriptions", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        ok(
+          invoiceResponse([
+            {
+              ...sampleInvoice,
+              CustomerMemo: { value: "Thanks for your business" },
+              Line: [
+                { Description: "Consulting — March" },
+                { Description: "Travel" },
+                { Description: "" },
+              ],
+            },
+          ]),
+        ),
+      )
+      .mockResolvedValueOnce(ok(customerResponse([sampleCustomer])));
+
+    const page = await provider.fetchPage({
+      tokens,
+      tenantId: "realm-1",
+      cursor: new Date("2026-01-01T00:00:00Z"),
+      offset: 0,
+      pageSize: 1000,
+    });
+
+    expect(page.invoices[0].reference).toBe("Thanks for your business");
+    expect(page.invoices[0].description).toBe("Consulting — March; Travel");
   });
 
   it("sets lifecycle='voided' when TxnStatus='Voided'", async () => {
