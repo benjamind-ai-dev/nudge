@@ -205,6 +205,8 @@ export class SyncSingleInvoiceUseCase {
     const synthetic: CanonicalInvoice = {
       externalId: job.externalInvoiceId,
       invoiceNumber: snapshot.invoiceNumber,
+      reference: null,
+      description: null,
       customerExternalId: snapshot.customerExternalId,
       amountCents: snapshot.amountCents,
       amountPaidCents: snapshot.amountPaidCents,

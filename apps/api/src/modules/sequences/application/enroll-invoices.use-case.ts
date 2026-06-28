@@ -26,10 +26,13 @@ export class EnrollInvoicesUseCase {
         items.push({ invoiceId, outcome: "skipped_not_chaseable", runId: null }); continue;
       }
       const nextSendAt = firstSendAt(ctx.dueDate, target.firstStepDelayDays, ctx.businessTimezone);
-      const { moved, runId } = await this.repo.moveAndCreateRun({
+      const { outcome, runId } = await this.repo.moveAndCreateRun({
         invoiceId, businessId, sequenceId, currentStepId: target.firstStepId, nextSendAt,
       });
-      items.push({ invoiceId, outcome: moved ? "moved" : "enrolled", runId });
+      // Already running on this sequence is a no-op skip — don't churn the run.
+      const itemOutcome: EnrollResultItem["outcome"] =
+        outcome === "already_enrolled" ? "skipped_already_enrolled" : outcome;
+      items.push({ invoiceId, outcome: itemOutcome, runId });
     }
 
     return {

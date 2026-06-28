@@ -86,6 +86,12 @@ function ExpandedPanel({ row }: { row: OverdueRow }) {
             </span>
           </div>
           <div className="flex flex-col gap-1.5 text-sm">
+            {row.reference && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Reference</span>
+                <span className="truncate text-right text-foreground">{row.reference}</span>
+              </div>
+            )}
             {row.issuedDate && (
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Issued</span>
@@ -100,6 +106,12 @@ function ExpandedPanel({ row }: { row: OverdueRow }) {
               <span className="text-muted-foreground">Balance due</span>
               <span className="font-bold tabular-nums text-foreground">{row.balanceDue}</span>
             </div>
+            {row.description && (
+              <div className="flex flex-col gap-0.5 border-t pt-1.5">
+                <span className="text-muted-foreground">Description</span>
+                <span className="text-foreground">{row.description}</span>
+              </div>
+            )}
           </div>
           {row.paymentLinkUrl && (
             <Button
@@ -300,6 +312,11 @@ export function OverdueWorklist({
                     <span className="text-xs text-muted-foreground">
                       {row.invoiceNumber} &bull; Due {row.dueDateShort}
                     </span>
+                    {row.reference && (
+                      <span className="truncate text-xs text-muted-foreground/70">
+                        {row.reference}
+                      </span>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {expandedId === row.id ? (
@@ -390,9 +407,16 @@ export function OverdueWorklist({
                     {row.customerName}
                   </TableCell>
 
-                  {/* Invoice # */}
+                  {/* Invoice # (+ reference label when present) */}
                   <TableCell className="px-4 text-sm text-muted-foreground">
-                    {row.invoiceNumber}
+                    <div className="flex flex-col">
+                      <span>{row.invoiceNumber}</span>
+                      {row.reference && (
+                        <span className="max-w-[16rem] truncate text-xs text-muted-foreground/70">
+                          {row.reference}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
 
                   {/* Due Date */}

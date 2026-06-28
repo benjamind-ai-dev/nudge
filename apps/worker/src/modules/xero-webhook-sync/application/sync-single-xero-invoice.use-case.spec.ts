@@ -54,6 +54,8 @@ const mkConnection = (
 const mkInvoice = (over: Partial<CanonicalInvoice> = {}): CanonicalInvoice => ({
   externalId: "inv_1",
   invoiceNumber: "1001",
+  reference: null,
+  description: null,
   customerExternalId: "C1",
   amountCents: 10_000,
   amountPaidCents: 0,

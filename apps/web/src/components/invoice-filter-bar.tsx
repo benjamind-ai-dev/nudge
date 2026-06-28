@@ -1,5 +1,3 @@
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -7,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchInput } from "@/components/common/search-input";
 import { DateRangePicker, type DateRange } from "./date-range-picker";
 
 // Radix Select does not allow an empty string as an item value.
@@ -45,16 +44,12 @@ export function InvoiceFilterBar(props: InvoiceFilterBarProps) {
       />
 
       {/* Customer / invoice search (filters the loaded set) */}
-      <div className="relative min-w-[200px] flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="text"
-          value={props.search}
-          onChange={(e) => props.onSearchChange(e.target.value)}
-          placeholder="Search customer or invoice #…"
-          className="pl-10"
-        />
-      </div>
+      <SearchInput
+        value={props.search}
+        onChange={props.onSearchChange}
+        placeholder="Search customer or invoice #…"
+        className="min-w-[200px] flex-1"
+      />
 
       <div className="flex items-center gap-3">
         <Select value={statusSelectValue} onValueChange={handleStatusChange}>

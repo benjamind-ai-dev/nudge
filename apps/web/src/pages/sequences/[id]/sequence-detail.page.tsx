@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Mail, Smartphone, MailOpen, FileText, Users, X, AlertTriangle } from "lucide-react";
 import { useSequenceDetailViewModel } from "./sequence-detail.view-model";
@@ -174,7 +174,13 @@ export function SequenceDetailPage() {
   const [audienceSelection, setAudienceSelection] = useState<AudienceSelection | null>(null);
   const [audienceSummary, setAudienceSummary] = useState<AudienceSummary | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
+  const [attachSuccess, setAttachSuccess] = useState<string | null>(null);
   const [isAttaching, setIsAttaching] = useState(false);
+  // Synchronous reentrancy guard: a disabled button can still lose the race
+  // between two very fast clicks (state/re-render is async), so guard with a ref.
+  const isAttachingRef = useRef(false);
+  // Bumping this remounts the picker to clear its selection after a successful attach.
+  const [pickerKey, setPickerKey] = useState(0);
 
   // Detach customer confirm dialog
   const [confirmDetachCustomer, setConfirmDetachCustomer] = useState<{
@@ -193,31 +199,63 @@ export function SequenceDetailPage() {
   function handleSelectionChange(sel: AudienceSelection, summary: AudienceSummary) {
     setAudienceSelection(sel);
     setAudienceSummary(summary);
+    // Only clear feedback on a real user selection — not the empty selection the
+    // picker emits when it remounts after a successful attach.
+    const hasSel =
+      (sel.mode === "invoices" && sel.invoiceIds.length > 0) ||
+      (sel.mode === "customer" && sel.customerIds.length > 0);
+    if (hasSel) {
+      setAttachSuccess(null);
+      setAttachError(null);
+    }
   }
 
   async function handleAttach() {
     if (!audienceSelection || !businessId) return;
+    if (isAttachingRef.current) return;
+    isAttachingRef.current = true;
     setAttachError(null);
+    setAttachSuccess(null);
     setIsAttaching(true);
     try {
+      let enrolled = 0;
+      let moved = 0;
+      let skipped = 0;
       if (audienceSelection.mode === "invoices") {
-        await enrollMut.mutateAsync({
+        const res = await enrollMut.mutateAsync({
           sequenceId: sequenceId,
           businessId,
           invoiceIds: audienceSelection.invoiceIds,
         });
+        enrolled += res.data.enrolled;
+        moved += res.data.moved;
+        skipped += res.data.skipped;
       } else {
         for (const customerId of audienceSelection.customerIds) {
-          await attachMut.mutateAsync({
+          const res = await attachMut.mutateAsync({
             sequenceId: sequenceId,
             businessId,
             customerId,
           });
+          enrolled += res.data.enrollment.enrolled;
+          moved += res.data.enrollment.moved;
+          skipped += res.data.enrollment.skipped;
         }
       }
+      const added = enrolled + moved;
+      const parts = [`Added ${added} invoice${added === 1 ? "" : "s"} to this sequence.`];
+      if (skipped > 0) {
+        parts.push(`${skipped} already in this sequence (skipped).`);
+      }
+      setAttachSuccess(parts.join(" "));
+      // Clear the selection so the Attach button returns to its disabled state.
+      setAudienceSelection(null);
+      setAudienceSummary(null);
+      setPickerKey((k) => k + 1);
     } catch (err) {
       setAttachError(err instanceof Error ? err.message : "Failed to attach audience.");
     } finally {
+      isAttachingRef.current = false;
       setIsAttaching(false);
     }
   }
@@ -436,27 +474,35 @@ export function SequenceDetailPage() {
 
           {/* Add audience */}
           <div className="space-y-3">
-            <div className="text-sm font-semibold text-foreground">Add to this sequence</div>
-            <AudiencePicker
-              businessId={businessId}
-              onSelectionChange={handleSelectionChange}
-            />
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-foreground">Add to this sequence</div>
+              <Button
+                disabled={!hasAudienceSelection || isAttaching}
+                onClick={() => void handleAttach()}
+                className="shrink-0"
+              >
+                {isAttaching
+                  ? "Attaching…"
+                  : audienceSummary && hasAudienceSelection
+                    ? audienceSelection?.mode === "invoices"
+                      ? `Attach ${audienceSummary.invoiceCount} invoice${audienceSummary.invoiceCount === 1 ? "" : "s"}`
+                      : `Attach ${audienceSummary.customerCount} customer${audienceSummary.customerCount === 1 ? "" : "s"}`
+                    : "Attach"}
+              </Button>
+            </div>
             {attachError && (
               <p className="text-sm text-destructive">{attachError}</p>
             )}
-            <Button
-              disabled={!hasAudienceSelection || isAttaching}
-              onClick={() => void handleAttach()}
-              className="w-full sm:w-auto"
-            >
-              {isAttaching
-                ? "Attaching…"
-                : audienceSummary && hasAudienceSelection
-                  ? audienceSelection?.mode === "invoices"
-                    ? `Attach ${audienceSummary.invoiceCount} invoice${audienceSummary.invoiceCount === 1 ? "" : "s"}`
-                    : `Attach ${audienceSummary.customerCount} customer${audienceSummary.customerCount === 1 ? "" : "s"}`
-                  : "Attach"}
-            </Button>
+            {attachSuccess && (
+              <p className="text-sm text-emerald-600">{attachSuccess}</p>
+            )}
+            <AudiencePicker
+              key={pickerKey}
+              businessId={businessId}
+              onSelectionChange={handleSelectionChange}
+              enrolledCustomerIds={vm.enrolledCustomerIds}
+              enrolledInvoiceIds={vm.enrolledInvoiceIds}
+            />
           </div>
         </TabsContent>
       </Tabs>

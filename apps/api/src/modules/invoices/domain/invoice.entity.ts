@@ -19,6 +19,8 @@ export type InvoiceSortOrder = "asc" | "desc";
 export interface InvoiceListItem {
   id: string;
   invoiceNumber: string | null;
+  reference: string | null;
+  description: string | null;
   status: InvoiceStatus;
   amountCents: number;
   amountPaidCents: number;
@@ -76,6 +78,8 @@ export interface InvoiceMessageDetail {
 export interface InvoiceDetail {
   id: string;
   invoiceNumber: string | null;
+  reference: string | null;
+  description: string | null;
   status: InvoiceStatus;
   amountCents: number;
   amountPaidCents: number;

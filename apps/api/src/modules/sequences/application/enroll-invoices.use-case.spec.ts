@@ -15,7 +15,7 @@ function makeRepo(over: Partial<EnrollmentRepository> = {}): jest.Mocked<Enrollm
     findEnrollTarget: jest.fn().mockResolvedValue({ isActive: true, firstStepId: "step-1", firstStepDelayDays: 0 }),
     getInvoiceContext: jest.fn(),
     findChaseableInvoiceIdsForCustomer: jest.fn(),
-    moveAndCreateRun: jest.fn().mockResolvedValue({ moved: false, runId: "run-1" }),
+    moveAndCreateRun: jest.fn().mockResolvedValue({ outcome: "enrolled", runId: "run-1" }),
     setCustomerSequenceOverride: jest.fn(),
     ...over,
   } as jest.Mocked<EnrollmentRepository>;
@@ -40,21 +40,31 @@ it("throws SequenceNotActiveError when the sequence is inactive", async () => {
 it("enrolls a chaseable invoice with no existing run", async () => {
   const repo = makeRepo({
     getInvoiceContext: jest.fn().mockResolvedValue(ctx({ activeRunId: null })),
-    moveAndCreateRun: jest.fn().mockResolvedValue({ moved: false, runId: "run-1" }),
+    moveAndCreateRun: jest.fn().mockResolvedValue({ outcome: "enrolled", runId: "run-1" }),
   });
   const res = await new EnrollInvoicesUseCase(repo).execute("seq-1", "biz-1", ["inv-1"]);
   expect(res).toMatchObject({ enrolled: 1, moved: 0, skipped: 0 });
   expect(res.items[0]).toMatchObject({ invoiceId: "inv-1", outcome: "enrolled", runId: "run-1" });
 });
 
-it("moves an invoice that already has an active run", async () => {
+it("moves an invoice that already has an active run on another sequence", async () => {
   const repo = makeRepo({
     getInvoiceContext: jest.fn().mockResolvedValue(ctx({ activeRunId: "old-run" })),
-    moveAndCreateRun: jest.fn().mockResolvedValue({ moved: true, runId: "run-2" }),
+    moveAndCreateRun: jest.fn().mockResolvedValue({ outcome: "moved", runId: "run-2" }),
   });
   const res = await new EnrollInvoicesUseCase(repo).execute("seq-1", "biz-1", ["inv-1"]);
   expect(res).toMatchObject({ enrolled: 0, moved: 1, skipped: 0 });
   expect(res.items[0].outcome).toBe("moved");
+});
+
+it("skips (no-op) an invoice already enrolled on this same sequence", async () => {
+  const repo = makeRepo({
+    getInvoiceContext: jest.fn().mockResolvedValue(ctx({ activeRunId: "run-1" })),
+    moveAndCreateRun: jest.fn().mockResolvedValue({ outcome: "already_enrolled", runId: "run-1" }),
+  });
+  const res = await new EnrollInvoicesUseCase(repo).execute("seq-1", "biz-1", ["inv-1"]);
+  expect(res).toMatchObject({ enrolled: 0, moved: 0, skipped: 1 });
+  expect(res.items[0]).toMatchObject({ invoiceId: "inv-1", outcome: "skipped_already_enrolled", runId: "run-1" });
 });
 
 it("skips a non-chaseable invoice and a not-found invoice", async () => {

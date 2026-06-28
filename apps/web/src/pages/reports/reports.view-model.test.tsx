@@ -73,6 +73,8 @@ function invoice(over: Partial<InvoiceListItem> = {}): InvoiceListItem {
   return {
     id: "inv-1",
     invoiceNumber: "9022",
+    reference: null,
+    description: null,
     status: "overdue",
     amountCents: 1_245_000,
     amountPaidCents: 0,

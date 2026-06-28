@@ -4,6 +4,8 @@ import { deriveStatus, detectInvoiceTransition } from "./canonical-invoice";
 const baseInvoice = (overrides: Partial<CanonicalInvoice> = {}): CanonicalInvoice => ({
   externalId: "inv_1",
   invoiceNumber: "1001",
+  reference: null,
+  description: null,
   customerExternalId: "cust_1",
   amountCents: 10_000,
   amountPaidCents: 0,

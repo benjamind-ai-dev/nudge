@@ -61,7 +61,7 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
     sequenceId: string;
     currentStepId: string;
     nextSendAt: Date;
-  }): Promise<{ moved: boolean; runId: string }> {
+  }): Promise<{ outcome: "enrolled" | "moved" | "already_enrolled"; runId: string }> {
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.sequenceRun.findFirst({
         where: {
@@ -69,9 +69,15 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
           invoice: { businessId: args.businessId },
           status: { in: [SEQUENCE_RUN_STATUSES.ACTIVE, SEQUENCE_RUN_STATUSES.PAUSED] },
         },
-        select: { id: true },
+        select: { id: true, sequenceId: true },
       });
-      let moved = false;
+
+      // Already running on this same sequence → idempotent no-op. Re-adding a
+      // customer/invoice must NOT restart their run or reset progress.
+      if (existing && existing.sequenceId === args.sequenceId) {
+        return { outcome: "already_enrolled" as const, runId: existing.id };
+      }
+
       if (existing) {
         await tx.sequenceRun.update({
           where: { id: existing.id },
@@ -81,8 +87,8 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
             completedAt: new Date(),
           },
         });
-        moved = true;
       }
+
       const run = await tx.sequenceRun.create({
         data: {
           invoiceId: args.invoiceId,
@@ -94,7 +100,7 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
         },
         select: { id: true },
       });
-      return { moved, runId: run.id };
+      return { outcome: existing ? ("moved" as const) : ("enrolled" as const), runId: run.id };
     });
   }
 

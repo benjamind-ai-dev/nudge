@@ -16,6 +16,8 @@ export interface InvoiceSequenceRun {
 export interface InvoiceListItem {
   id: string;
   invoiceNumber: string | null;
+  reference: string | null;
+  description: string | null;
   status: InvoiceStatus;
   amountCents: number;
   amountPaidCents: number;

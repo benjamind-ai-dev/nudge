@@ -48,6 +48,32 @@ export function centsFromDecimal(value: number | string | null | undefined): num
   return Math.round(n * 100);
 }
 
+/** Max length stored for the joined line-item description. */
+const MAX_DESCRIPTION_LENGTH = 2000;
+
+/**
+ * Join provider line-item descriptions into a single string for the canonical
+ * invoice's `description`. Trims, drops empties, de-dupes consecutive repeats,
+ * and caps overall length. Returns null when there's nothing usable.
+ */
+export function joinDescriptions(
+  descriptions: Array<string | null | undefined> | null | undefined,
+): string | null {
+  if (!descriptions) return null;
+  const parts: string[] = [];
+  for (const raw of descriptions) {
+    const text = raw?.trim();
+    if (!text) continue;
+    if (parts[parts.length - 1] === text) continue; // collapse consecutive dupes
+    parts.push(text);
+  }
+  if (parts.length === 0) return null;
+  const joined = parts.join("; ");
+  return joined.length > MAX_DESCRIPTION_LENGTH
+    ? joined.slice(0, MAX_DESCRIPTION_LENGTH)
+    : joined;
+}
+
 /**
  * Build a contact display name from optional first/last parts.
  * Falls back to `fallback` if both parts are empty/whitespace.

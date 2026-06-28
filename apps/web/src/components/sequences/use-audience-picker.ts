@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useCustomers } from "@/queries/use-customers";
 import { useCustomerOverdueInvoices } from "@/queries/use-invoices";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 import type { CustomerListItem } from "@/api/customers.api";
 import type { InvoiceListItem } from "@/api/invoices.api";
 
@@ -49,7 +50,14 @@ export function useAudiencePicker(businessId: string) {
   );
 
   // ---- queries ----
-  const customersQuery = useCustomers({ businessId, search: search || undefined, hasOverdue: true });
+  // `search` stays immediate so the input feels instant; the query reads the
+  // debounced value so typing doesn't fire a request (and refetch) per keystroke.
+  const debouncedSearch = useDebounce(search, 300);
+  const customersQuery = useCustomers({
+    businessId,
+    search: debouncedSearch || undefined,
+    hasOverdue: true,
+  });
   const overdueQuery = useCustomerOverdueInvoices(businessId, expandedCustomerId ?? "");
 
   // ---- mode switching ----

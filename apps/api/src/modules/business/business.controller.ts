@@ -112,12 +112,12 @@ export class BusinessController {
   async triggerManualSync(
     @AccountId() clerkUserId: string,
     @Param("id") id: string,
-    @Body(new ZodValidationPipe(triggerManualSyncSchema)) _body: TriggerManualSyncDto,
+    @Body(new ZodValidationPipe(triggerManualSyncSchema)) body: TriggerManualSyncDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.businessAuth.assertCallerOwnsBusiness(clerkUserId, id);
     try {
-      const result = await this.triggerSync.execute(id);
+      const result = await this.triggerSync.execute(id, { full: body.full });
       return { data: result };
     } catch (error) {
       // SyncRateLimitedError needs a Retry-After header and a custom envelope

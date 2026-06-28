@@ -187,6 +187,8 @@ describe("PrismaInvoiceRepository (integration)", () => {
   const mkCanonicalInvoice = (over: Partial<CanonicalInvoice>): CanonicalInvoice => ({
     externalId: over.externalId ?? `inv-${randomUUID()}`,
     invoiceNumber: over.invoiceNumber ?? "1001",
+    reference: over.reference ?? null,
+    description: over.description ?? null,
     customerExternalId: over.customerExternalId ?? customerExternalId,
     amountCents: over.amountCents ?? 10_000,
     amountPaidCents: over.amountPaidCents ?? 0,

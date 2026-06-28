@@ -9,6 +9,8 @@ import type { InvoiceListItem } from "../domain/invoice.entity";
 const mkItem = (over: Partial<InvoiceListItem> = {}): InvoiceListItem => ({
   id: "inv-1",
   invoiceNumber: "INV-001",
+  reference: null,
+  description: null,
   status: "overdue",
   amountCents: 10_000,
   amountPaidCents: 0,
