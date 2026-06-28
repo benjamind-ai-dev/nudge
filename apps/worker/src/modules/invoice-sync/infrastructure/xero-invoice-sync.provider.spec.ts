@@ -78,6 +78,26 @@ describe("mapXeroInvoice", () => {
     expect(result.lastUpdatedAt).toEqual(new Date(1736071200000));
   });
 
+  it("maps Reference to reference and joins LineItems descriptions", () => {
+    const result = mapXeroInvoice({
+      ...sampleXeroInvoice,
+      Reference: "PO-4815",
+      LineItems: [
+        { Description: "Design retainer" },
+        { Description: "" },
+        { Description: "Hosting" },
+      ],
+    });
+    expect(result.reference).toBe("PO-4815");
+    expect(result.description).toBe("Design retainer; Hosting");
+  });
+
+  it("reference/description default to null when absent", () => {
+    const result = mapXeroInvoice(sampleXeroInvoice);
+    expect(result.reference).toBeNull();
+    expect(result.description).toBeNull();
+  });
+
   it("Status VOIDED → lifecycle 'voided'", () => {
     const result = mapXeroInvoice({ ...sampleXeroInvoice, Status: "VOIDED" });
     expect(result.lifecycle).toBe("voided");
