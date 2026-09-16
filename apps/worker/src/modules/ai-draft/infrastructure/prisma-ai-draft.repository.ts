@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { PrismaClient } from "@nudge/database";
+import { type PrismaClient, entitledBusinessWhere } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   AiDraftMessageContext,
@@ -17,7 +17,8 @@ export class PrismaAiDraftRepository implements AiDraftRepository {
     businessId: string,
   ): Promise<AiDraftMessageContext | null> {
     const row = await this.prisma.message.findFirst({
-      where: { id: messageId, businessId },
+      // No AI spend for deleted businesses / unpaid accounts.
+      where: { id: messageId, businessId, business: entitledBusinessWhere() },
       select: {
         id: true,
         body: true,
@@ -65,7 +66,7 @@ export class PrismaAiDraftRepository implements AiDraftRepository {
     draft: string | null,
   ): Promise<void> {
     await this.prisma.message.updateMany({
-      where: { id: messageId, businessId },
+      where: { id: messageId, businessId, business: entitledBusinessWhere() },
       data: { aiDraftResponse: draft },
     });
   }

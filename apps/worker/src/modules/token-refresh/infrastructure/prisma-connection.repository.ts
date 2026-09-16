@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { PrismaClient } from "@nudge/database";
+import { PrismaClient, entitledBusinessWhere } from "@nudge/database";
 import {
   Connection,
   type ConnectionRepository,
@@ -77,7 +77,11 @@ export class PrismaConnectionRepository implements ConnectionRepository {
 
   async findDueForRefresh(expiringBefore: Date): Promise<Connection[]> {
     const rows = await this.prisma.connection.findMany({
-      where: { status: "connected", tokenExpiresAt: { lt: expiringBefore } },
+      where: {
+        status: "connected",
+        tokenExpiresAt: { lt: expiringBefore },
+        business: entitledBusinessWhere(),
+      },
     });
     return rows.map((r) => this.toDomain(r));
   }

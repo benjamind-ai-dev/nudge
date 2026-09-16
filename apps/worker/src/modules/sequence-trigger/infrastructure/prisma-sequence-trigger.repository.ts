@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaClient } from "@nudge/database";
+import { PrismaClient, entitledBusinessWhere } from "@nudge/database";
 import { SEQUENCE_RUN_STATUSES, STOPPED_REASONS } from "@nudge/shared";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
@@ -31,6 +31,7 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
           },
         },
         business: {
+          ...entitledBusinessWhere(),
           connections: {
             some: { status: "connected" },
           },
@@ -113,7 +114,11 @@ export class PrismaSequenceTriggerRepository implements SequenceTriggerRepositor
         // can't accidentally read an invoice from another business if a job
         // payload is mis-routed.
         const invoice = await tx.invoice.findFirst({
-          where: { id: data.invoiceId, businessId: data.businessId },
+          where: {
+            id: data.invoiceId,
+            businessId: data.businessId,
+            business: entitledBusinessWhere(),
+          },
           select: { status: true },
         });
 

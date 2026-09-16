@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaClient } from "@nudge/database";
+import { PrismaClient, entitledBusinessWhere } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   BusinessForDispatch,
@@ -12,7 +12,7 @@ export class PrismaBusinessTimezoneReader implements BusinessTimezoneReader {
 
   async listAll(): Promise<BusinessForDispatch[]> {
     return this.prisma.business.findMany({
-      where: { isActive: true },
+      where: entitledBusinessWhere(),
       select: { id: true, timezone: true },
     });
   }

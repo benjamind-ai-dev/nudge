@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaClient } from "@nudge/database";
+import { PrismaClient, entitledBusinessWhere } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   BusinessReadModel,
@@ -14,7 +14,9 @@ export class PrismaMetricsRepository implements MetricsRepository {
 
   async loadBusiness(businessId: string): Promise<BusinessReadModel | null> {
     return this.prisma.business.findFirst({
-      where: { id: businessId },
+      // Re-check entitlement at generation time: the job may have been
+      // enqueued before the account lapsed or the business was deleted.
+      where: { id: businessId, ...entitledBusinessWhere() },
       select: {
         id: true,
         accountId: true,

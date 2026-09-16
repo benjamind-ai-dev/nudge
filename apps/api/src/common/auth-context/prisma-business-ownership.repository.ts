@@ -1,7 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaClient } from "@nudge/database";
 import { PRISMA_CLIENT } from "../database/database.module";
-import type { BusinessOwnershipRepository } from "./business-ownership.repository";
+import type {
+  BusinessOwnership,
+  BusinessOwnershipRepository,
+} from "./business-ownership.repository";
 
 @Injectable()
 export class PrismaBusinessOwnershipRepository
@@ -9,14 +12,15 @@ export class PrismaBusinessOwnershipRepository
 {
   constructor(@Inject(PRISMA_CLIENT) private readonly prisma: PrismaClient) {}
 
-  async existsForAccount(
+  async findForAccount(
     businessId: string,
     accountId: string,
-  ): Promise<boolean> {
+  ): Promise<BusinessOwnership | null> {
     const row = await this.prisma.business.findFirst({
       where: { id: businessId, accountId },
-      select: { id: true },
+      select: { isActive: true, account: { select: { status: true } } },
     });
-    return row !== null;
+    if (!row) return null;
+    return { isActive: row.isActive, accountStatus: row.account.status };
   }
 }
