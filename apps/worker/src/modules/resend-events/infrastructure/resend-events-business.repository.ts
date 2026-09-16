@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { PrismaClient } from "@nudge/database";
+import { type PrismaClient, entitledBusinessWhere } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   BusinessWithOwner,
@@ -15,8 +15,9 @@ export class PrismaResendEventsBusinessRepository
   ) {}
 
   async findWithOwner(businessId: string): Promise<BusinessWithOwner | null> {
-    const business = await this.prisma.business.findUnique({
-      where: { id: businessId },
+    // null for deleted businesses / unpaid accounts → no owner alert is sent.
+    const business = await this.prisma.business.findFirst({
+      where: { id: businessId, ...entitledBusinessWhere() },
       select: {
         name: true,
         account: { select: { email: true } },

@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { PrismaClient, Prisma } from "@nudge/database";
+import { PrismaClient, Prisma, entitledBusinessWhere } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import {
   isValidChannel,
@@ -38,6 +38,8 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
         status: "active",
         nextSendAt: { lte: now },
         currentStepId: { not: null },
+        // Never send on behalf of a deleted business or an unpaid account.
+        invoice: { business: entitledBusinessWhere() },
       },
       orderBy: { nextSendAt: "asc" },
       take: limit,
@@ -173,7 +175,9 @@ export class PrismaMessageSendRepository implements MessageSendRepository {
     const run = await this.prisma.sequenceRun.findFirst({
       where: {
         id,
-        invoice: { businessId },
+        // Re-check at send time: the run may have been enqueued before the
+        // account lapsed or the business was deleted.
+        invoice: { businessId, business: entitledBusinessWhere() },
       },
       select: {
         id: true,

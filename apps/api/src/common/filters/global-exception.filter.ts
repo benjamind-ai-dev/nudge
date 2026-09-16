@@ -13,6 +13,7 @@ import { DomainError } from "../errors/domain.error";
 const HTTP_STATUS_NAMES: Record<number, string> = {
   400: "Bad Request",
   401: "Unauthorized",
+  402: "Payment Required",
   403: "Forbidden",
   404: "Not Found",
   408: "Request Timeout",

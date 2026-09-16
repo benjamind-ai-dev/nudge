@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { PrismaClient } from "@nudge/database";
+import { PrismaClient, entitledBusinessWhere } from "@nudge/database";
 import {
   Connection,
   type ConnectionStatus,
@@ -68,13 +68,16 @@ export class PrismaSyncConnectionReader implements SyncConnectionReader {
       where: {
         status: "connected" satisfies ConnectionStatus,
         provider: { in: [...providerNames] },
+        business: entitledBusinessWhere(),
       },
     });
     return rows.map((r) => this.toDomain(r));
   }
 
   async findById(id: string): Promise<Connection | null> {
-    const row = await this.prisma.connection.findFirst({ where: { id } });
+    const row = await this.prisma.connection.findFirst({
+      where: { id, business: entitledBusinessWhere() },
+    });
     return row ? this.toDomain(row) : null;
   }
 

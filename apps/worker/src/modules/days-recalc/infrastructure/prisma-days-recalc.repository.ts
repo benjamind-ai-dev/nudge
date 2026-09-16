@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaClient } from "@nudge/database";
+import { PrismaClient, entitledBusinessWhere } from "@nudge/database";
 import { PRISMA_CLIENT } from "../../../common/database/database.module";
 import type {
   DaysRecalcRepository,
@@ -53,6 +53,7 @@ export class PrismaDaysRecalcRepository implements DaysRecalcRepository {
     const rows = await this.prisma.invoice.findMany({
       where: {
         id: { in: invoiceIds },
+        business: entitledBusinessWhere(),
         sequenceRuns: {
           none: { status: { in: ["active", "paused"] } },
         },

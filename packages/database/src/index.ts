@@ -1,6 +1,12 @@
 export { PrismaClient } from "@prisma/client";
 export * from "@prisma/client";
 export { createDefaultTiersAndSequences } from "./create-defaults";
+export {
+  ENTITLED_ACCOUNT_STATUSES,
+  isAccountEntitled,
+  entitledAccountWhere,
+  entitledBusinessWhere,
+} from "./entitlement";
 
 import { PrismaClient } from "@prisma/client";
 
