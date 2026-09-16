@@ -20,7 +20,7 @@ async function main() {
       name: "Seed Test Company",
       email: "seed@nudge.test",
       plan: "starter",
-      status: "trial",
+      status: "active", // paid: worker + business API only serve entitled accounts
       maxBusinesses: 1,
     },
   });
