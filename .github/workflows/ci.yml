@@ -123,7 +123,10 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @nudge/database db:push
+      # Apply the real migration files (same command Railway runs pre-deploy),
+      # then fail if schema.prisma has changes no migration captures.
+      - run: pnpm --filter @nudge/database db:deploy
+      - run: pnpm --filter @nudge/database db:check-drift
       - run: pnpm turbo test --filter=@nudge/api --filter=@nudge/worker
 
   test-web:
