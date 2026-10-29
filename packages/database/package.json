@@ -10,6 +10,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
+    "db:deploy": "prisma migrate deploy",
+    "db:check-drift": "prisma migrate diff --from-url \"$DATABASE_URL\" --to-schema-datamodel prisma/schema.prisma --exit-code",
     "db:studio": "prisma studio",
     "db:seed": "tsx src/seed.ts",
     "postinstall": "if [ \"$CI\" != 'true' ] && command -v prisma > /dev/null 2>&1; then prisma generate; fi",
