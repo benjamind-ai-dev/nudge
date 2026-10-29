@@ -50,6 +50,14 @@ async function bootstrap() {
 
   const port = config.get("PORT", { infer: true });
   await app.listen(port);
+
+  // Host and username only, never the password, to debug Redis auth on deploy.
+  const redisUrl = config.get("REDIS_URL", { infer: true });
+  const redis = redisUrl ? new URL(redisUrl) : undefined;
+  app.get(Logger).log(
+    `API listening on port ${port} (redis host=${redis?.hostname ?? "unset"}, user=${redis?.username || "none"})`,
+    "Bootstrap",
+  );
 }
 
 bootstrap();
